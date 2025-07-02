@@ -266,11 +266,7 @@ export function WaveformEditor({
     return () => window.removeEventListener('resize', resizeCanvas);
   }, [height, drawWaveform]);
 
-  const handleZoomClick = () => {
-    onZoomEdit?.();
-  };
-
-  const handleCanvasClick = (e: React.MouseEvent) => {
+  const handleCanvasClick = (_e: React.MouseEvent) => {
     // If onZoomEdit is provided, the entire waveform is clickable for zooming
     if (onZoomEdit) {
       onZoomEdit();

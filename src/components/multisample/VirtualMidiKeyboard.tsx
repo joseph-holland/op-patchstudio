@@ -88,6 +88,19 @@ export function VirtualMidiKeyboard({
   // Keyboard event handlers
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if user is typing in an input field
+      const activeElement = document.activeElement;
+      const isTyping = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.hasAttribute('contenteditable')
+      );
+      
+      // If user is typing, don't process keyboard shortcuts
+      if (isTyping) {
+        return;
+      }
+      
       const key = e.key.toLowerCase();
       
       // Prevent default for our mapped keys to avoid browser shortcuts
@@ -123,6 +136,19 @@ export function VirtualMidiKeyboard({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      // Check if user is typing in an input field
+      const activeElement = document.activeElement;
+      const isTyping = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.hasAttribute('contenteditable')
+      );
+      
+      // If user is typing, don't process keyboard shortcuts
+      if (isTyping) {
+        return;
+      }
+      
       const key = e.key.toLowerCase();
       if (key in keyboardMapping) {
         setPressedKeys(prev => {

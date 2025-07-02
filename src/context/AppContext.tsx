@@ -39,6 +39,8 @@ export interface MultisampleFile {
   note?: string; // Detected or assigned note (e.g., "C4", "F#3")
   inPoint: number;
   outPoint: number;
+  loopStart: number;
+  loopEnd: number;
   // WAV metadata from header parsing
   originalBitDepth?: number;
   originalSampleRate?: number;
@@ -161,7 +163,9 @@ const initialMultisampleFile: MultisampleFile = {
   isLoaded: false,
   rootNote: 60, // Middle C
   inPoint: 0,
-  outPoint: 0
+  outPoint: 0,
+  loopStart: 0,
+  loopEnd: 0
 };
 
 // Function to get initial tab from cookie
@@ -457,6 +461,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
         note: detectedNote,
         inPoint: 0,
         outPoint: action.payload.audioBuffer.length - 1,
+        loopStart: 0,
+        loopEnd: action.payload.audioBuffer.length - 1,
         // Store WAV metadata
         originalBitDepth: action.payload.metadata.bitDepth,
         originalSampleRate: action.payload.metadata.sampleRate,

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { Button } from '@carbon/react';
+
 import { WaveformEditor } from '../common/WaveformEditor';
 import { WaveformZoomModal } from '../common/WaveformZoomModal';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
