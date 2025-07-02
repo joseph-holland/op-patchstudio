@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { Button } from '@carbon/react';
 import { WaveformEditor } from '../common/WaveformEditor';
+import { WaveformZoomModal } from '../common/WaveformZoomModal';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { DrumSampleSettingsModal, useDrumSampleSettingsKeyboard } from './DrumSampleSettingsModal';
 
@@ -39,6 +40,8 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
   const [isMobile, setIsMobile] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number>(0);
+  const [zoomModalOpen, setZoomModalOpen] = useState(false);
+  const [zoomSampleIndex, setZoomSampleIndex] = useState<number>(0);
 
   // Detect mobile screen size
   useEffect(() => {
@@ -100,6 +103,29 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
 
   const closeSettingsModal = () => {
     setSettingsModalOpen(false);
+  };
+
+  const openZoomModal = (index: number) => {
+    setZoomSampleIndex(index);
+    setZoomModalOpen(true);
+  };
+
+  const closeZoomModal = () => {
+    setZoomModalOpen(false);
+  };
+
+  const handleZoomSave = (inPoint: number, outPoint: number) => {
+    dispatch({
+      type: 'UPDATE_DRUM_SAMPLE',
+      payload: {
+        index: zoomSampleIndex,
+        updates: {
+          inPoint,
+          outPoint,
+          hasBeenEdited: true
+        }
+      }
+    });
   };
 
   const playSelectedSample = () => {
@@ -322,6 +348,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                                  }
                                });
                              }}
+                             onZoomEdit={() => openZoomModal(index)}
                            />
                          ) : (
                            <div style={{
@@ -547,6 +574,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                           }
                         });
                       }}
+                      onZoomEdit={() => openZoomModal(index)}
                     />
                   ) : (
                     <div style={{
@@ -666,6 +694,16 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
         isOpen={settingsModalOpen}
         onClose={closeSettingsModal}
         sampleIndex={selectedSampleIndex}
+      />
+
+      {/* Waveform Zoom Modal */}
+      <WaveformZoomModal
+        isOpen={zoomModalOpen}
+        onClose={closeZoomModal}
+        audioBuffer={state.drumSamples[zoomSampleIndex]?.audioBuffer || null}
+        initialInPoint={state.drumSamples[zoomSampleIndex]?.inPoint || 0}
+        initialOutPoint={state.drumSamples[zoomSampleIndex]?.outPoint || state.drumSamples[zoomSampleIndex]?.audioBuffer?.length || 0}
+        onSave={handleZoomSave}
       />
     </div>
   );

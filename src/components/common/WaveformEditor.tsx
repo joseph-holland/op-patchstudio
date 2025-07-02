@@ -10,6 +10,7 @@ interface WaveformEditorProps {
   showLoopMarkers?: boolean;
   height?: number;
   className?: string;
+  onZoomEdit?: () => void;
 }
 
 export function WaveformEditor({
@@ -21,7 +22,8 @@ export function WaveformEditor({
   onMarkersChange,
   showLoopMarkers = false,
   height = 80,
-  className = ''
+  className = '',
+  onZoomEdit
 }: WaveformEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dragState, setDragState] = useState<{
@@ -31,120 +33,103 @@ export function WaveformEditor({
 
   const finalOutPoint = outPoint ?? (audioBuffer ? audioBuffer.length - 1 : 0);
 
-  // Draw waveform
-  const drawWaveform = useCallback(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx || !audioBuffer) return;
+  const drawWaveformPath = (ctx: CanvasRenderingContext2D, width: number, height: number, data: Float32Array) => {
+    const step = Math.ceil(data.length / width);
+    const amp = height / 2;
 
-    const width = canvas.width;
-    const height = canvas.height;
-    const data = audioBuffer.getChannelData(0);
-    const samples = data.length;
-    const samplesPerPixel = samples / width;
-
-    // Clear canvas
-    ctx.fillStyle = '#f8f9fa';
-    ctx.fillRect(0, 0, width, height);
-
-    // Draw waveform
-    ctx.strokeStyle = '#666';
-    ctx.lineWidth = 1;
+    ctx.fillStyle = '#000000'; // Waveform color
     ctx.beginPath();
 
-    const centerY = height / 2;
-    let hasMovedTo = false;
+    for (let i = 0; i < width; i++) {
+      let min = 1.0;
+      let max = -1.0;
 
-    for (let x = 0; x < width; x++) {
-      const startSample = Math.floor(x * samplesPerPixel);
-      const endSample = Math.floor((x + 1) * samplesPerPixel);
-      
-      let min = 0;
-      let max = 0;
-      
-      for (let i = startSample; i < endSample && i < samples; i++) {
-        const value = data[i];
-        if (value < min) min = value;
-        if (value > max) max = value;
+      for (let j = 0; j < step; j++) {
+        const datum = data[(i * step) + j];
+        if (datum < min) {
+          min = datum;
+        }
+        if (datum > max) {
+          max = datum;
+        }
       }
-
-      const minY = centerY - (min * centerY);
-      const maxY = centerY - (max * centerY);
-
-      if (!hasMovedTo) {
-        ctx.moveTo(x, minY);
-        hasMovedTo = true;
-      }
-      ctx.lineTo(x, minY);
-      ctx.lineTo(x, maxY);
+      // Draw a vertical line from min to max for each pixel column
+      ctx.rect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
     }
+    ctx.fill();
+  };
 
-    ctx.stroke();
+  // Main drawing function
+  const drawWaveform = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !audioBuffer) return;
 
-    // Draw markers
-    drawMarkers(ctx, width, height, samples);
-  }, [audioBuffer, inPoint, finalOutPoint, loopStart, loopEnd, showLoopMarkers]);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width / window.devicePixelRatio;
+    const height = canvas.height / window.devicePixelRatio;
+
+    // Clear canvas with background color
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    const data = audioBuffer.getChannelData(0);
+
+    drawWaveformPath(ctx, width, height, data);
+    drawMarkers(ctx, width, height, audioBuffer.length);
+  }, [audioBuffer, height, inPoint, finalOutPoint, loopStart, loopEnd, showLoopMarkers]);
 
   const drawMarkers = (ctx: CanvasRenderingContext2D, width: number, height: number, samples: number) => {
     if (!samples) return;
 
-    // Helper to convert sample position to pixel
-    const sampleToPixel = (sample: number) => (sample / samples) * width;
+    // This logic can now be simplified as the waveform drawing handles the scaling correctly.
+    // We just need to map sample points to pixels.
+    const sampleToPixel = (sample: number) => (samples > 1 ? (sample / samples) * width : 0);
+    
+    // The rest of drawMarkers remains the same...
+    const strokeWidth = 2;
+    const halfStroke = strokeWidth / 2;
+    
+    // Ensure markers stay within canvas bounds by constraining to stroke width
+    const inX = Math.max(halfStroke, Math.min(width - halfStroke, sampleToPixel(inPoint)));
+    const outX = Math.max(halfStroke, Math.min(width - halfStroke, sampleToPixel(finalOutPoint)));
 
-    // Draw in/out points
-    if (inPoint > 0) {
-      const x = sampleToPixel(inPoint);
-      ctx.strokeStyle = '#2e7d32';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-      
-      // Label
-      ctx.fillStyle = '#2e7d32';
-      ctx.font = '10px Arial';
-      ctx.fillText('IN', x + 2, 12);
-    }
+    // Draw IN marker - simple vertical line
+    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = strokeWidth;
+    ctx.beginPath();
+    ctx.moveTo(inX, 0);
+    ctx.lineTo(inX, height);
+    ctx.stroke();
 
-    if (finalOutPoint < samples - 1) {
-      const x = sampleToPixel(finalOutPoint);
-      ctx.strokeStyle = '#c62828';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-      
-      // Label
-      ctx.fillStyle = '#c62828';
-      ctx.font = '10px Arial';
-      ctx.fillText('OUT', x + 2, 12);
-    }
+    // Draw OUT marker - simple vertical line
+    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = strokeWidth;
+    ctx.beginPath();
+    ctx.moveTo(outX, 0);
+    ctx.lineTo(outX, height);
+    ctx.stroke();
 
     // Draw loop markers if enabled
     if (showLoopMarkers && loopStart !== undefined && loopEnd !== undefined) {
       if (loopStart > 0) {
-        const x = sampleToPixel(loopStart);
-        ctx.strokeStyle = '#1976d2';
+        const x = Math.max(halfStroke, Math.min(width - halfStroke, sampleToPixel(loopStart)));
+        ctx.strokeStyle = '#555555'; // Medium gray
         ctx.lineWidth = 1;
-        ctx.setLineDash([5, 5]);
+        ctx.setLineDash([3, 3]);
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, height);
         ctx.stroke();
         ctx.setLineDash([]);
-        
-        ctx.fillStyle = '#1976d2';
-        ctx.font = '10px Arial';
-        ctx.fillText('LOOP', x + 2, height - 5);
       }
 
       if (loopEnd < samples - 1) {
-        const x = sampleToPixel(loopEnd);
-        ctx.strokeStyle = '#1976d2';
+        const x = Math.max(halfStroke, Math.min(width - halfStroke, sampleToPixel(loopEnd)));
+        ctx.strokeStyle = '#555555'; // Medium gray
         ctx.lineWidth = 1;
-        ctx.setLineDash([5, 5]);
+        ctx.setLineDash([3, 3]);
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, height);
@@ -153,17 +138,17 @@ export function WaveformEditor({
       }
     }
 
-    // Highlight active region
+    // Highlight active region with subtle overlay
     if (inPoint > 0 || finalOutPoint < samples - 1) {
       const startX = sampleToPixel(inPoint);
       const endX = sampleToPixel(finalOutPoint);
       
-      ctx.fillStyle = 'rgba(76, 175, 80, 0.1)';
+      ctx.fillStyle = 'rgba(51, 51, 51, 0.1)'; // Subtle dark overlay
       ctx.fillRect(startX, 0, endX - startX, height);
     }
   };
 
-  // Handle mouse interactions
+  // Handle mouse interactions for dragging markers
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!audioBuffer) return;
 
@@ -173,6 +158,9 @@ export function WaveformEditor({
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const samples = audioBuffer.length;
+    const canvasWidth = canvas.width / window.devicePixelRatio;
+    
+    const sampleToPixel = (sample: number) => (samples > 1 ? (sample / samples) * canvasWidth : 0);
 
     // Determine which marker is closest
     const markers: Array<{ type: 'inPoint' | 'outPoint' | 'loopStart' | 'loopEnd', pos: number, tolerance: number }> = [
@@ -185,11 +173,11 @@ export function WaveformEditor({
       if (loopEnd !== undefined) markers.push({ type: 'loopEnd' as const, pos: loopEnd, tolerance: 10 });
     }
 
-    let closestMarker = null;
+    let closestMarker: 'inPoint' | 'outPoint' | 'loopStart' | 'loopEnd' | null = null;
     let closestDistance = Infinity;
 
     for (const marker of markers) {
-      const markerX = (marker.pos / samples) * canvas.width;
+      const markerX = sampleToPixel(marker.pos);
       const distance = Math.abs(x - markerX);
       if (distance < marker.tolerance && distance < closestDistance) {
         closestMarker = marker.type;
@@ -207,11 +195,12 @@ export function WaveformEditor({
 
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const canvasWidth = canvas.width / window.devicePixelRatio;
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const samples = audioBuffer.length;
-    const newSample = Math.max(0, Math.min(samples - 1, Math.floor((x / canvas.width) * samples)));
+    const newSample = Math.max(0, Math.min(samples - 1, Math.floor((x / canvasWidth) * (samples - 1))));
 
     // Update marker position
     const newMarkers = { 
@@ -277,6 +266,21 @@ export function WaveformEditor({
     return () => window.removeEventListener('resize', resizeCanvas);
   }, [height, drawWaveform]);
 
+  const handleZoomClick = () => {
+    onZoomEdit?.();
+  };
+
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    // If onZoomEdit is provided, the entire waveform is clickable for zooming
+    if (onZoomEdit) {
+      onZoomEdit();
+      return;
+    }
+
+    // Fallback or other click functionality if needed
+    // For example, could implement play from click position
+  };
+
   if (!audioBuffer) {
     return (
       <div className={`waveform-editor ${className}`} style={{ 
@@ -284,31 +288,64 @@ export function WaveformEditor({
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        backgroundColor: '#f8f9fa',
+        backgroundColor: 'var(--color-bg-secondary)',
         borderRadius: '3px',
-        border: '1px solid #e0e0e0'
+        border: '1px solid var(--color-border-subtle)'
       }}>
-        <span style={{ color: '#666', fontSize: '0.9rem' }}>no audio loaded</span>
+        <span style={{ 
+          color: 'var(--color-text-secondary)', 
+          fontSize: '0.9rem' 
+        }}>
+          no sample
+        </span>
       </div>
     );
   }
 
   return (
-    <div className={`waveform-editor ${className}`}>
+    <div className={`waveform-editor ${className}`} style={{ width: '100%', position: 'relative' }}>
+      {/* Zoom icon in top-left corner */}
+      {audioBuffer && onZoomEdit && (
+        <button
+          onClick={handleZoomClick}
+          style={{
+            position: 'absolute',
+            top: '4px',
+            left: '4px',
+            width: '20px',
+            height: '20px',
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#666666',
+            fontSize: '12px',
+            zIndex: 10,
+            padding: 0
+          }}
+          title="zoom & edit"
+        >
+          <i className="fas fa-search-plus"></i>
+        </button>
+      )}
       <canvas
         ref={canvasRef}
         style={{ 
           width: '100%', 
           height: height,
-          cursor: dragState.type ? 'grabbing' : 'grab',
-          border: '1px solid #e0e0e0',
+          cursor: dragState.type ? 'grabbing' : onZoomEdit && audioBuffer ? 'pointer' : 'grab',
+          border: '1px solid var(--color-border-subtle)',
           borderRadius: '3px',
-          backgroundColor: '#fff'
+          backgroundColor: '#ffffff',
+          display: 'block'
         }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseDown={!onZoomEdit ? handleMouseDown : undefined}
+        onMouseMove={!onZoomEdit ? handleMouseMove : undefined}
+        onMouseUp={!onZoomEdit ? handleMouseUp : undefined}
+        onMouseLeave={!onZoomEdit ? handleMouseUp : undefined}
+        onClick={handleCanvasClick}
       />
     </div>
   );

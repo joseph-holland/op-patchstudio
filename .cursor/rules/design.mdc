@@ -4,6 +4,7 @@ globs:
 alwaysApply: true
 ---
 - use carbon design system for all ui elements
+- use font awesome icons for all icons
 - ui palette is monochrome (op-xy device aesthetic)
 - NEVER hard-code colours; use variables from `opxy-theme.scss`
 - text must be lowercase everywhere except:
