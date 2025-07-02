@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>unofficial OP-PatchLab</title>
+    <!-- Meta description for search engines and social sharing -->
+    <meta name="description" content="unofficial online tools for creating custom drum and multisample presets for the OP-XY synthesizer. generate and convert samples for your OP-XY device." />
+    <!-- Open Graph tags for social media sharing -->
+    <meta property="og:title" content="unofficial OP-PatchLab" />
+    <meta property="og:description" content="unofficial online tools for creating custom drum and multisample presets for the OP-XY synthesizer. generate and convert samples for your OP-XY device." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://opxy-tools.pages.dev/" />
+    <meta property="og:image" content="assets/preview-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="unofficial OP-PatchLab" />
+    <!-- Additional meta tags -->
+    <meta name="keywords" content="OP-XY, teenage engineering, synthesizer, drum samples, multisample, preset generator, audio tools" />
+    <meta name="author" content="Joseph Holland" />
+    <meta name="robots" content="index, follow" />
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- Bootstrap JS (for tabs) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- WAV File Parser for reading SMPL chunks -->
+    <script src="https://cdn.jsdelivr.net/npm/wavefile-parser"></script>
+    <!-- Geometric/Monospaced Font -->
+    <link href="https://fonts.googleapis.com/css?family=IBM+Plex+Mono:400,700|Montserrat:400,700&display=swap" rel="stylesheet" />
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="multi-sample-btn.css" />
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <link rel="alternate icon" type="image/png" href="assets/favicon.png" sizes="32x32" />
+    <link rel="shortcut icon" type="image/x-icon" href="assets/favicon.ico" />
+  </head>
+  <body>
+    <div class="container py-4">
+      <div class="app-header mb-4">unofficial OP-PatchLab</div>
+      <ul class="nav nav-tabs mb-4" id="toolTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="drum-tab" data-bs-toggle="tab" data-bs-target="#drum" type="button" role="tab" aria-controls="drum" aria-selected="true">
+            drum
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="multi-tab" data-bs-toggle="tab" data-bs-target="#multi" type="button" role="tab" aria-controls="multi" aria-selected="false">
+            multisample
+          </button>
+        </li>
+      </ul>
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="drum" role="tabpanel" aria-labelledby="drum-tab">
+          <div class="section-block">
+            <h5 class="mb-3" data-bs-toggle="collapse" data-bs-target="#drumHowToUseCollapse" aria-expanded="true" aria-controls="drumHowToUseCollapse" style="cursor: pointer;">
+              how to use
+              <i class="fa fa-chevron-down float-end" id="drumHowToUseChevron"></i>
+            </h5>
+            <div class="collapse show" id="drumHowToUseCollapse">
+              <p>
+                drag and drop samples onto each row or click the search button to browse. use your keyboard to demo each sample. use the <b>import settings</b> button to load engine-level settings from existing drum preset files. when finished, press <b>generate patch</b> to download a zip file containing the preset. unzip into a folder
+                named <b>presetname.preset</b>. copy to your OP-XY via usb and drop into the presets folder (create a subfolder called 'drum' or any custom name to arrange your custom drum presets.
+              </p>
+            </div>
+          </div>
+          <div class="section-block">
+            <h5 class="mb-3" data-bs-toggle="collapse" data-bs-target="#drumSettingsCollapse" aria-expanded="true" aria-controls="drumSettingsCollapse" style="cursor: pointer;">
+              settings
+              <i class="fa fa-chevron-down float-end" id="drumSettingsChevron"></i>
+            </h5>
+            <div class="collapse show" id="drumSettingsCollapse">
+              <!-- Drum tool settings -->
+              <div class="mb-2 d-flex align-items-center">
+                <label for="preset-name-drum" class="form-label mb-0 me-2" style="min-width: 110px;">preset name</label>
+                <input id="preset-name-drum" type="text" class="form-control" value="my preset name" style="max-width: 300px;" />
+              </div>
+              <div class="mb-2 d-flex align-items-center">
+                <label for="sample-rate-drum" class="form-label mb-0 me-2" style="min-width: 110px;">sample rate</label>
+                <select class="form-select" id="sample-rate-drum" style="max-width: 300px;">
+                  <option value="0">keep original</option>
+                  <option value="1">re-encode 11khz</option>
+                  <option value="2">re-encode 22khz</option>
+                  <option value="3">re-encode 44khz</option>
+                </select>
+              </div>
+              <div class="mb-2 d-flex align-items-center">
+                <label for="bit-depth-drum" class="form-label mb-0 me-2" style="min-width: 110px;">bit depth</label>
+                <select class="form-select" id="bit-depth-drum" style="max-width: 300px;">
+                  <option value="keep" selected>keep original</option>
+                  <option value="16">convert to 16-bit</option>
+                  <option value="24">convert to 24-bit</option>
+                </select>
+              </div>
+              <div class="mb-2 d-flex align-items-center">
+                <label for="channels-drum" class="form-label mb-0 me-2" style="min-width: 110px;">channels</label>
+                <select class="form-select" id="channels-drum" style="max-width: 300px;">
+                  <option value="keep" selected>keep original</option>
+                  <option value="mono">convert to mono</option>
+                </select>
+              </div>
+              <div class="form-text mb-2">
+                for best results, set the sample rate to 22khz or lower and the bit depth to 16-bit. if notes are missing during playback, try reducing the sample rate further.
+              </div>
+              <!-- Advanced Preset Settings Modal Trigger Button -->
+              <div class="d-flex gap-2 mt-2">
+                <button class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#preset-advanced-modal" id="open-preset-advanced-modal" style="background: #444; color: #fff; border: none;"><i class="fa fa-sliders-h me-1"></i>preset settings</button>
+              </div>
+              <!-- Advanced Preset Settings Modal -->
+              <div class="modal fade" id="preset-advanced-modal" tabindex="-1" aria-labelledby="preset-advanced-modal-label" aria-hidden="true">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title" id="preset-advanced-modal-label">
+                        preset settings
+                      </h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                      <!-- Import Settings Button -->
+                      <div class="d-flex gap-2 mb-3 pb-3 border-bottom">
+                        <button class="btn btn-sm" id="import-drum-settings-btn" style="background: #444; color: #fff; border: none;">
+                          <i class="fa fa-upload me-1"></i>import settings
+                        </button>
+                        <input type="file" id="import-drum-settings-input" accept=".json" style="display: none;">
+                      </div>
+                      
+                      <div class="mb-3 d-flex align-items-center">
+                        <label for="preset-playmode" class="form-label mb-0 me-2" style="min-width: 110px;">play mode</label>
+                        <select class="form-select" id="preset-playmode" style="max-width: 220px;">
+                          <option value="poly">poly</option>
+                          <option value="mono">mono</option>
+                          <option value="legato">legato</option>
+                        </select>
+                      </div>
+                      <div class="mb-3">
+                        <label for="preset-transpose" class="form-label">transpose (semitones)</label>
+                        <div class="d-flex align-items-center">
+                          <input
+                            type="range"
+                            class="form-range"
+                            id="preset-transpose"
+                            min="-36"
+                            max="36"
+                            value="0"
+                            style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                          />
+                          <input type="number" class="form-control form-control-sm" id="preset-transpose-number" min="-36" max="36" value="0" style="width: 80px; flex-shrink: 0;" />
+                        </div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="preset-velocity-sensitivity" class="form-label">velocity sensitivity (%)</label>
+                        <div class="d-flex align-items-center">
+                          <input
+                            type="range"
+                            class="form-range"
+                            id="preset-velocity-sensitivity"
+                            min="0"
+                            max="100"
+                            value="15"
+                            style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                          />
+                          <input type="number" class="form-control form-control-sm" id="preset-velocity-sensitivity-number" min="0" max="100" value="15" style="width: 80px; flex-shrink: 0;" />
+                        </div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="preset-volume" class="form-label">volume (%)</label>
+                        <div class="d-flex align-items-center">
+                          <input
+                            type="range"
+                            class="form-range"
+                            id="preset-volume"
+                            min="0"
+                            max="100"
+                            value="80"
+                            style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                          />
+                          <input type="number" class="form-control form-control-sm" id="preset-volume-number" min="0" max="100" value="80" style="width: 80px; flex-shrink: 0;" />
+                        </div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="preset-width" class="form-label">stereo width (%)</label>
+                        <div class="d-flex align-items-center">
+                          <input
+                            type="range"
+                            class="form-range"
+                            id="preset-width"
+                            min="0"
+                            max="100"
+                            value="0"
+                            style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                          />
+                          <input type="number" class="form-control form-control-sm" id="preset-width-number" min="0" max="100" value="0" style="width: 80px; flex-shrink: 0;" />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        cancel
+                      </button>
+                      <button type="button" class="btn btn-dark btn-sm" id="save-preset-advanced-settings" data-bs-dismiss="modal"><i class="fa fa-save me-1"></i>save</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="section-block">
+            <!-- Patch Size Indicator -->
+            <label class="form-label">estimated patch size</label>
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <small class="text-muted"><span id="drum-current-patch-size">0.0 MB</span></small>
+              </div>
+              <div class="progress" style="height: 8px; background-color: #f8f9fa; border: 1px solid #dee2e6;">
+                <div class="progress-bar" id="drum-patch-size-progress" role="progressbar" style="width: 0%; background-color: #000;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+              <div class="small text-muted mt-1" id="drum-patch-size-status">
+                plenty of space remaining
+              </div>
+            </div>
+            
+            <!-- Drum Patch Summary -->
+            <div id="drum-patch-summary" class="mt-3 mb-3" style="display: none;">
+              <div class="card border-0" style="background-color: #f8f9fa;">
+                <div class="card-body p-3">
+                  <h6 class="card-title mb-2">
+                    <i class="fa fa-info-circle me-1"></i>patch summary
+                  </h6>
+                  <div id="drum-patch-stats" class="small text-muted"></div>
+                </div>
+              </div>
+            </div>
+            
+            <button class="accent-btn mt-3">generate patch</button>
+          </div>
+          <div class="section-block">
+            <h5 class="mb-3">demo samples</h5>
+            <div class="mb-2">
+              use the virtual keys below to demo each sample. click with cursor or use your keyboard.
+            </div>
+            <div class="keyboard-grid-container mb-4 position-relative" id="drum-keyboard">
+              <!-- Top row (offset like a real keyboard) -->
+              <div class="key-wrapper key-w">
+                <div class="kbd bg-light border rounded kbd-w"><span class="osk-circle"></span><span class="osk-letter">W</span></div>
+                <div class="small text-muted">KD2</div>
+              </div>
+              <div class="key-wrapper key-e">
+                <div class="kbd bg-light border rounded"><span class="osk-circle"></span><span class="osk-letter">E</span></div>
+                <div class="small text-muted">SD2</div>
+              </div>
+              <div class="key-wrapper key-r">
+                <div class="kbd bg-light border rounded"><span class="osk-circle"></span><span class="osk-letter">R</span></div>
+                <div class="small text-muted">CP</div>
+              </div>
+              <!-- T is omitted to simulate the piano gap -->
+              <div class="key-wrapper key-y">
+                <div class="kbd bg-light border rounded"><span class="osk-circle"></span><span class="osk-letter">Y</span></div>
+                <div class="small text-muted">CH</div>
+              </div>
+              <div class="key-wrapper key-u">
+                <div class="kbd bg-light border rounded"><span class="osk-circle"></span><span class="osk-letter">U</span></div>
+                <div class="small text-muted">OH</div>
+              </div>
+              <!-- Bottom row -->
+              <div class="key-wrapper key-a">
+                <div class="kbd bg-light border rounded"><span class="osk-circle"></span><span class="osk-letter">A</span></div>
+                <div class="small text-muted">KD1</div>
+              </div>
+              <div class="key-wrapper key-s">
+                <div class="kbd bg-light border rounded"><span class="osk-circle"></span><span class="osk-letter">S</span></div>
+                <div class="small text-muted">SD1</div>
+              </div>
+              <div class="key-wrapper key-d">
+                <div class="kbd bg-light border rounded"><span class="osk-circle"></span><span class="osk-letter">D</span></div>
+                <div class="small text-muted">RIM</div>
+              </div>
+              <div class="key-wrapper key-f">
+                <div class="kbd bg-light border rounded"><span class="osk-circle"></span><span class="osk-letter">F</span></div>
+                <div class="small text-muted">TB</div>
+              </div>
+              <div class="key-wrapper key-g">
+                <div class="kbd bg-light border rounded"><span class="osk-circle"></span><span class="osk-letter">G</span></div>
+                <div class="small text-muted">SH</div>
+              </div>
+              <div class="key-wrapper key-h">
+                <div class="kbd bg-light border rounded"><span class="osk-circle"></span><span class="osk-letter">H</span></div>
+                <div class="small text-muted">CL</div>
+              </div>
+              <div class="key-wrapper key-j">
+                <div class="kbd bg-light border rounded"><span class="osk-circle"></span><span class="osk-letter">J</span></div>
+                <div class="small text-muted">CAB</div>
+              </div>
+            </div>
+            <div class="octave-controls">
+              <div class="text-center">
+                <div class="kbd bg-light border rounded mb-1 octave-kbd" tabindex="0" role="button"><span class="osk-circle"></span><span class="osk-letter">z</span></div>
+                <div class="small text-muted">octave down</div>
+              </div>
+              <div class="text-center">
+                <div class="kbd bg-light border rounded mb-1 octave-kbd" tabindex="0" role="button"><span class="osk-circle"></span><span class="osk-letter">x</span></div>
+                <div class="small text-muted">octave up</div>
+              </div>
+            </div>
+          </div>
+          <div class="section-block">
+            <h5 class="mb-3">sample files</h5>
+                          <div class="mb-2 d-flex align-items-center" style="gap: 0.5em;">
+                <button type="button" class="btn btn-sm dark-btn" id="drum-bulk-edit-btn" data-bs-toggle="modal" data-bs-target="#bulk-edit-modal" title="edit settings for all loaded samples" disabled><i class="fa fa-pencil" aria-hidden="true"></i> bulk edit</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="drum-clear-all-btn" title="remove all loaded samples" disabled><i class="fa fa-trash" aria-hidden="true"></i> clear all</button>
+              </div>
+
+            <!-- Bulk Edit Modal -->
+            <div class="modal fade" id="bulk-edit-modal" tabindex="-1" aria-labelledby="bulk-edit-modal-label" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="bulk-edit-modal-label">bulk edit sample settings</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="mb-3 d-flex align-items-center">
+                      <label class="form-label mb-0 me-2" style="min-width: 90px;">playmode</label>
+                      <select class="form-select form-select-sm" id="bulk-playmode" style="width: auto; display: inline-block; max-width: 350px;">
+                        <option value="oneshot">oneshot - play whole sample</option>
+                        <option value="group">mute group - choke when another sample plays</option>
+                        <option value="loop">loop - loop at sample end</option>
+                        <option value="gate">key - play while held</option>
+                      </select>
+                    </div>
+                    <div class="mb-3 d-flex align-items-center">
+                      <label class="form-label mb-0 me-2" style="min-width: 90px;">playback direction</label>
+                      <button type="button" class="btn btn-secondary btn-sm" id="bulk-reverse" style="background: #444; color: #fff; border: none; min-width: 90px;">
+                        <i class="fa fa-play"></i>
+                        <span class="ms-2">forward</span>
+                      </button>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">tuning (semitones)</label>
+                      <div class="d-flex align-items-center">
+                        <input type="range" class="form-range" id="bulk-tune-slider" min="-48" max="48" value="0" step="1" 
+                          style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;" />
+                        <input type="number" class="form-control form-control-sm" id="bulk-tune" min="-48" max="48" value="0" style="width: 80px; flex-shrink: 0;" />
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">gain (db)</label>
+                      <div class="d-flex align-items-center">
+                        <input type="range" class="form-range" id="bulk-gain-slider" min="-30" max="20" value="0" step="1"
+                          style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;" />
+                        <input type="number" class="form-control form-control-sm" id="bulk-gain" min="-30" max="20" value="0" style="width: 80px; flex-shrink: 0;" />
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">pan</label>
+                      <div class="d-flex align-items-center">
+                        <input type="range" class="form-range" id="bulk-pan-slider" min="-100" max="100" value="0" step="1"
+                          style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;" />
+                        <input type="number" class="form-control form-control-sm" id="bulk-pan" min="-100" max="100" value="0" style="width: 80px; flex-shrink: 0;" />
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">cancel</button>
+                    <button type="button" class="btn btn-dark btn-sm" id="bulk-save"><i class="fa fa-save me-1"></i>save</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <form id="drum-sample-form">
+              <div class="table-responsive">
+                <table class="table align-middle table-sm mb-0">
+                  <thead>
+                    <tr>
+                      <th>drum key</th>
+                      <th>file details</th>
+                      <th class="text-right" style="text-align: right;">
+                        actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>kick</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-1" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-1"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-1" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-1" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-1" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-1" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-1" data-sample-idx="1">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>kick alternative</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-2" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-2"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-2" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-2" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-2" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-2" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-2" data-sample-idx="2">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>snare</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-3" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-3"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-3" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-3" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-3" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-3" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-3" data-sample-idx="3">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>snare alternative</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-4" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-4"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-4" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-4" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-4" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-4" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-4" data-sample-idx="4">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>rim</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-5" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-5"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-5" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-5" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-5" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-5" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-5" data-sample-idx="5">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>hand clap</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-6" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-6"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-6" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-6" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-6" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-6" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-6" data-sample-idx="6">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>tambourine</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-7" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-7"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-7" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-7" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-7" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-7" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-7" data-sample-idx="7">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>shaker</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-8" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-8"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-8" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-8" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-8" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-8" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-8" data-sample-idx="8">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>closed hi-hat</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-9" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-9"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-9" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-9" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-9" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-9" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-9" data-sample-idx="9">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>clave</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-10" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-10"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-10" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-10" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-10" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-10" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-10" data-sample-idx="10">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>open hi-hat</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-11" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-11"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-11" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-11" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-11" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-11" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-11" data-sample-idx="11">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>cabasa</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-12" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-12"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-12" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-12" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-12" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-12" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-12" data-sample-idx="12">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>low tom</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-13" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-13"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-13" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-13" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-13" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-13" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-13" data-sample-idx="13">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>ride cymbal</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-14" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-14"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-14" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-14" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-14" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-14" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-14" data-sample-idx="14">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>mid-tom</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-15" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-15"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-15" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-15" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-15" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-15" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-15" data-sample-idx="15">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>crash cymbal</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-16" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-16"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-16" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-16" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-16" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-16" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-16" data-sample-idx="16">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>hi-tom</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-17" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-17"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-17" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-17" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-17" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-17" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-17" data-sample-idx="17">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>cowbell</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-18" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-18"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-18" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-18" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-18" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-18" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-18" data-sample-idx="18">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>triangle</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-19" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-19"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-19" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-19" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-19" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-19" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-19" data-sample-idx="19">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>low tom</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-20" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-20"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-20" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-20" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-20" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-20" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-20" data-sample-idx="20">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>low conga</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-21" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-21"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-21" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-21" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-21" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-21" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-21" data-sample-idx="21">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>clave</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-22" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-22"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-22" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-22" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-22" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-22" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-22" data-sample-idx="22">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>hi-conga</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-23" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-23"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-23" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-23" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-23" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-23" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-23" data-sample-idx="23">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>guiro</td>
+                      <td>
+                        <div class="input-group input-group-sm sample-file-col">
+                          <input type="file" accept=".wav" class="form-control form-control-sm" id="sample-24" style="display: none;" />
+                          <div class="small text-muted" id="sample-name-24"></div>
+                        </div>
+                      </td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm search-btn" id="search-24" title="Browse for sample file">
+                          <i class="fa fa-search"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm record-btn" id="record-24" title="Record sample">
+                          <i class="fa fa-microphone"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="play-24" disabled>
+                          <i class="bi bi-play-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-24" disabled>
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm advanced-btn" id="adv-24" data-sample-idx="24">
+                          <i class="fa fa-cog" title="Sample options"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="tab-pane fade" id="multi" role="tabpanel" aria-labelledby="multi-tab">
+          <div class="section-block">
+            <h5 class="mb-3" data-bs-toggle="collapse" data-bs-target="#howToUseCollapse" aria-expanded="true" aria-controls="howToUseCollapse" style="cursor: pointer;">
+              how to use
+              <i class="fa fa-chevron-down float-end" id="howToUseChevron"></i>
+            </h5>
+            <div class="collapse show" id="howToUseCollapse">
+              <p>
+                drag and drop samples below. samples are auto-assigned to notes based on their names or wav metadata. click a note name to change it using a midi number (e.g., 60 for middle c) or note name (e.g., C3, G#5, Bb2). use the <b>import settings</b> button to load engine-level settings from existing multisample preset files. <br>all samples
+                must have a note assigned! when done, click <b>generate patch</b> to download a zip file containing the preset. unzip into a folder named <b>presetname.preset</b>. copy to your OP-XY via usb and drop into the presets folder
+                (or create a subfolder called 'lead' 'pad' or any custom name to arrange your custom multisample presets.
+              </p>
+            </div>
+            <h5 class="mb-3" data-bs-toggle="collapse" data-bs-target="#sampleReqCollapse" aria-expanded="true" aria-controls="sampleReqCollapse" style="cursor: pointer;">
+              sample requirements
+              <i class="fa fa-chevron-down float-end" id="sampleReqChevron"></i>
+            </h5>
+            <div class="collapse show" id="sampleReqCollapse">
+              <ul class="mb-0">
+                <li>20 seconds max per sample</li>
+                <li>24 samples max per multisample preset</li>
+                <li>multiple velocities are not supported</li>
+                <li>
+                  file names should end with either a midi note number (0-127) or a note name like C#3
+                </li>
+              </ul>
+              <p class="small text-muted mt-2 mb-0">
+                <strong>naming examples:</strong> "my awesome sample-60.wav", "my cool sound C3.wav", "sickfuzz-G#4-127.wav"<br />
+                <strong>note:</strong> if your wav files contain smpl metadata, root keys and loop points will be detected automatically
+              </p>
+            </div>
+          </div>
+          <div class="section-block">
+            <h5 class="mb-3" data-bs-toggle="collapse" data-bs-target="#settingsCollapse" aria-expanded="true" aria-controls="settingsCollapse" style="cursor: pointer;">
+              settings
+              <i class="fa fa-chevron-down float-end" id="settingsChevron"></i>
+            </h5>
+            <div class="collapse show" id="settingsCollapse">
+              <div class="mb-2 d-flex align-items-center">
+                <label for="preset-name-multi" class="form-label mb-0 me-2" style="min-width: 110px;">preset name</label>
+                <input id="preset-name-multi" type="text" class="form-control" value="my preset name" style="max-width: 300px;" />
+              </div>
+              <!-- Removed loop enabled and preset gain controls, now only in advanced modal -->
+              <div class="mb-2 d-flex align-items-center">
+                <label for="sample-rate-multi" class="form-label mb-0 me-2" style="min-width: 110px;">sample rate</label>
+                <select class="form-select" id="sample-rate-multi" style="max-width: 300px;">
+                  <option value="0">keep original</option>
+                  <option value="1">re-encode 11khz</option>
+                  <option value="2">re-encode 22khz</option>
+                  <option value="3">re-encode 44khz</option>
+                </select>
+              </div>
+              <div class="mb-2 d-flex align-items-center">
+                <label for="bit-depth-multi" class="form-label mb-0 me-2" style="min-width: 110px;">bit depth</label>
+                <select class="form-select" id="bit-depth-multi" style="max-width: 300px;">
+                  <option value="keep" selected>keep original</option>
+                  <option value="16">convert to 16-bit</option>
+                  <option value="24">convert to 24-bit</option>
+                </select>
+              </div>
+              <div class="mb-2 d-flex align-items-center">
+                <label for="channels-multi" class="form-label mb-0 me-2" style="min-width: 110px;">channels</label>
+                <select class="form-select" id="channels-multi" style="max-width: 300px;">
+                  <option value="keep" selected>keep original</option>
+                  <option value="mono">convert to mono</option>
+                </select>
+              </div>
+              <div class="form-text mb-2">
+                for best results, set the sample rate to 22khz or lower and the bit depth to 16-bit. if notes are missing during playback, try reducing the sample rate further.
+              </div>
+              <!-- Advanced Preset Settings Modal Trigger Button -->
+              <div class="d-flex gap-2 mt-2">
+                <button class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#multisample-preset-advanced-modal" id="open-multisample-preset-advanced-modal" style="background: #444; color: #fff; border: none;">
+                  <i class="fa fa-sliders-h me-1"></i>preset settings
+                </button>
+              </div>
+              <!-- Hidden file input for importing settings -->
+              <input type="file" id="import-multisample-settings-input" accept=".json" style="display: none;">
+            </div>
+            <!-- Advanced Preset Settings Modal for Multisample -->
+            <div class="modal fade" id="multisample-preset-advanced-modal" tabindex="-1" aria-labelledby="multisample-preset-advanced-modal-label" aria-hidden="true">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="multisample-preset-advanced-modal-label">
+                      advanced preset settings
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <!-- Import Settings Button -->
+                    <div class="d-flex gap-2 mb-3 pb-3 border-bottom">
+                      <button class="btn btn-sm" id="import-multisample-settings-btn" style="background: #444; color: #fff; border: none;">
+                        <i class="fa fa-upload me-1"></i>import settings
+                      </button>
+                    </div>
+                    <!-- Engine Settings -->
+                    <div class="mb-3 d-flex align-items-center">
+                      <label for="multisample-preset-playmode" class="form-label mb-0 me-2" style="min-width: 110px;">play mode</label>
+                      <select class="form-select" id="multisample-preset-playmode" style="max-width: 220px;">
+                        <option value="poly">poly</option>
+                        <option value="mono">mono</option>
+                        <option value="legato">legato</option>
+                      </select>
+                    </div>
+                    <div class="mb-3 d-flex align-items-center">
+                      <label class="form-label mb-0 me-2" style="min-width: 110px;">loop samples</label>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="multisample-preset-loop-enabled" />
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="multisample-preset-velocity-sensitivity" class="form-label">velocity sensitivity (%)</label>
+                      <div class="d-flex align-items-center">
+                        <input
+                          type="range"
+                          class="form-range"
+                          id="multisample-preset-velocity-sensitivity"
+                          min="0"
+                          max="100"
+                          value="31"
+                          style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                        />
+                        <input type="number" class="form-control form-control-sm" id="multisample-preset-velocity-sensitivity-number" min="0" max="100" value="31" style="width: 80px; flex-shrink: 0;" />
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="multisample-preset-volume" class="form-label">volume (%)</label>
+                      <div class="d-flex align-items-center">
+                        <input
+                          type="range"
+                          class="form-range"
+                          id="multisample-preset-volume"
+                          min="0"
+                          max="100"
+                          value="50"
+                          style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                        />
+                        <input type="number" class="form-control form-control-sm" id="multisample-preset-volume-number" min="0" max="100" value="50" style="width: 80px; flex-shrink: 0;" />
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="multisample-preset-width" class="form-label">stereo width (%)</label>
+                      <div class="d-flex align-items-center">
+                        <input
+                          type="range"
+                          class="form-range"
+                          id="multisample-preset-width"
+                          min="0"
+                          max="100"
+                          value="9"
+                          style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                        />
+                        <input type="number" class="form-control form-control-sm" id="multisample-preset-width-number" min="0" max="100" value="9" style="width: 80px; flex-shrink: 0;" />
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="multisample-preset-highpass" class="form-label">high pass filter (%)</label>
+                      <div class="d-flex align-items-center">
+                        <input
+                          type="range"
+                          class="form-range"
+                          id="multisample-preset-highpass"
+                          min="0"
+                          max="100"
+                          value="0"
+                          style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                        />
+                        <input type="number" class="form-control form-control-sm" id="multisample-preset-highpass-number" min="0" max="100" value="0" style="width: 80px; flex-shrink: 0;" />
+                      </div>
+                    </div>
+                    <!-- Portamento Settings (no header) -->
+                    <div class="mb-3 d-flex align-items-center">
+                      <label for="multisample-preset-portamento-type" class="form-label mb-0 me-2" style="min-width: 110px;">portamento type</label>
+                      <select class="form-select" id="multisample-preset-portamento-type" style="max-width: 220px;">
+                        <option value="32767">linear</option>
+                        <option value="12779">exponential</option>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label for="multisample-preset-portamento-amount" class="form-label">portamento amount (%)</label>
+                      <div class="d-flex align-items-center">
+                        <input
+                          type="range"
+                          class="form-range"
+                          id="multisample-preset-portamento-amount"
+                          min="0"
+                          max="100"
+                          value="0"
+                          style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                        />
+                        <input type="number" class="form-control form-control-sm" id="multisample-preset-portamento-amount-number" min="0" max="100" value="0" style="width: 80px; flex-shrink: 0;" />
+                      </div>
+                    </div>
+                    <!-- Tuning Settings (no header) -->
+                    <div class="mb-3 d-flex align-items-center">
+                      <label for="multisample-preset-tuning-root" class="form-label mb-0 me-2" style="min-width: 110px;">tuning root</label>
+                      <select class="form-select" id="multisample-preset-tuning-root" style="max-width: 220px;">
+                        <option value="0">C</option>
+                        <option value="2730">C#</option>
+                        <option value="5461">D</option>
+                        <option value="8192">D#</option>
+                        <option value="10922">E</option>
+                        <option value="13653">F</option>
+                        <option value="16384">F#</option>
+                        <option value="19114">G</option>
+                        <option value="21845">G#</option>
+                        <option value="24575">A</option>
+                        <option value="27306">A#</option>
+                        <option value="30037">B</option>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label for="multisample-preset-transpose" class="form-label">transpose (semitones)</label>
+                      <div class="d-flex align-items-center">
+                        <input
+                          type="range"
+                          class="form-range"
+                          id="multisample-preset-transpose"
+                          min="-36"
+                          max="36"
+                          value="0"
+                          style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                        />
+                        <input type="number" class="form-control form-control-sm" id="multisample-preset-transpose-number" min="-36" max="36" value="0" style="width: 80px; flex-shrink: 0;" />
+                      </div>
+                    </div>
+                    <!-- Envelope Settings (no header) -->
+                    <div class="row">
+                      <div class="col-md-6">
+                        <h6 class="mb-2 text-muted">amp envelope</h6>
+                        <div class="mb-2">
+                          <label for="multisample-amp-attack" class="form-label">attack (%)</label>
+                          <div class="d-flex align-items-center">
+                            <input
+                              type="range"
+                              class="form-range"
+                              id="multisample-amp-attack"
+                              min="0"
+                              max="100"
+                              value="0"
+                              style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                            />
+                            <input type="number" class="form-control form-control-sm" id="multisample-amp-attack-number" min="0" max="100" value="0" style="width: 80px; flex-shrink: 0;" />
+                          </div>
+                        </div>
+                        <div class="mb-2">
+                          <label for="multisample-amp-decay" class="form-label">decay (%)</label>
+                          <div class="d-flex align-items-center">
+                            <input
+                              type="range"
+                              class="form-range"
+                              id="multisample-amp-decay"
+                              min="0"
+                              max="100"
+                              value="0"
+                              style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                            />
+                            <input type="number" class="form-control form-control-sm" id="multisample-amp-decay-number" min="0" max="100" value="0" style="width: 80px; flex-shrink: 0;" />
+                          </div>
+                        </div>
+                        <div class="mb-2">
+                          <label for="multisample-amp-sustain" class="form-label">sustain (%)</label>
+                          <div class="d-flex align-items-center">
+                            <input
+                              type="range"
+                              class="form-range"
+                              id="multisample-amp-sustain"
+                              min="0"
+                              max="100"
+                              value="0"
+                              style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                            />
+                            <input type="number" class="form-control form-control-sm" id="multisample-amp-sustain-number" min="0" max="100" value="0" style="width: 80px; flex-shrink: 0;" />
+                          </div>
+                        </div>
+                        <div class="mb-2">
+                          <label for="multisample-amp-release" class="form-label">release (%)</label>
+                          <div class="d-flex align-items-center">
+                            <input
+                              type="range"
+                              class="form-range"
+                              id="multisample-amp-release"
+                              min="0"
+                              max="100"
+                              value="100"
+                              style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                            />
+                            <input type="number" class="form-control form-control-sm" id="multisample-amp-release-number" min="0" max="100" value="100" style="width: 80px; flex-shrink: 0;" />
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <h6 class="mb-2 text-muted">filter envelope</h6>
+                        <div class="mb-2">
+                          <label for="multisample-filter-attack" class="form-label">attack (%)</label>
+                          <div class="d-flex align-items-center">
+                            <input
+                              type="range"
+                              class="form-range"
+                              id="multisample-filter-attack"
+                              min="0"
+                              max="100"
+                              value="100"
+                              style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                            />
+                            <input type="number" class="form-control form-control-sm" id="multisample-filter-attack-number" min="0" max="100" value="100" style="width: 80px; flex-shrink: 0;" />
+                          </div>
+                        </div>
+                        <div class="mb-2">
+                          <label for="multisample-filter-decay" class="form-label">decay (%)</label>
+                          <div class="d-flex align-items-center">
+                            <input
+                              type="range"
+                              class="form-range"
+                              id="multisample-filter-decay"
+                              min="0"
+                              max="100"
+                              value="100"
+                              style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                            />
+                            <input type="number" class="form-control form-control-sm" id="multisample-filter-decay-number" min="0" max="100" value="100" style="width: 80px; flex-shrink: 0;" />
+                          </div>
+                        </div>
+                        <div class="mb-2">
+                          <label for="multisample-filter-sustain" class="form-label">sustain (%)</label>
+                          <div class="d-flex align-items-center">
+                            <input
+                              type="range"
+                              class="form-range"
+                              id="multisample-filter-sustain"
+                              min="0"
+                              max="100"
+                              value="100"
+                              style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                            />
+                            <input type="number" class="form-control form-control-sm" id="multisample-filter-sustain-number" min="0" max="100" value="100" style="width: 80px; flex-shrink: 0;" />
+                          </div>
+                        </div>
+                        <div class="mb-2">
+                          <label for="multisample-filter-release" class="form-label">release (%)</label>
+                          <div class="d-flex align-items-center">
+                            <input
+                              type="range"
+                              class="form-range"
+                              id="multisample-filter-release"
+                              min="0"
+                              max="100"
+                              value="0"
+                              style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                            />
+                            <input type="number" class="form-control form-control-sm" id="multisample-filter-release-number" min="0" max="100" value="0" style="width: 80px; flex-shrink: 0;" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                      cancel
+                    </button>
+                    <button type="button" class="btn btn-dark btn-sm" id="save-multisample-preset-advanced-settings"><i class="fa fa-save me-1"></i>save</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="section-block">
+            <!-- Patch Size Indicator -->
+            <label class="form-label">estimated patch size</label>
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <small class="text-muted"><span id="multi-current-patch-size">0.0 MB</span> / 8 MB</small>
+                <small class="text-muted" id="multi-patch-size-status">plenty of space remaining</small>
+              </div>
+              <div class="progress" style="height: 8px; background-color: #f8f9fa; border: 1px solid #dee2e6;">
+                <div class="progress-bar" id="multi-patch-size-progress" role="progressbar" style="width: 0%; background-color: #000;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+            
+            <!-- Multi Patch Summary -->
+            <div id="multi-patch-summary" class="mt-3 mb-3" style="display: none;">
+              <div class="card border-0" style="background-color: #f8f9fa;">
+                <div class="card-body p-3">
+                  <h6 class="card-title mb-2">
+                    <i class="fa fa-info-circle me-1"></i>patch summary
+                  </h6>
+                  <div id="multi-patch-stats" class="small text-muted"></div>
+                </div>
+              </div>
+            </div>
+            
+            <button class="accent-btn mt-2" id="generate-multisample-patch" disabled title="load at least one sample to enable">
+              generate patch
+            </button>
+          </div>
+          <div class="section-block">
+            <h5 class="mb-3">sample files</h5>
+            <div class="mb-2 d-flex align-items-center" style="gap: 0.5em;">
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="multisample-browse-btn" title="Browse for sample files">
+                <i class="fa fa-search"></i> browse
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="multisample-record-btn" title="Record a new sample">
+                <i class="fa fa-microphone"></i> record
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="multisample-clear-all-btn" title="Remove all loaded samples" disabled>
+                <i class="fa fa-trash"></i> clear all
+              </button>
+              <input type="file" id="multisample-file-input" accept=".wav" multiple style="display: none;" />
+            </div>
+            <div id="multisample-drop-area" class="drop-area position-relative">
+              <div id="multisample-rows-container" class="multisample-rows"></div>
+              <div id="multisample-drop-label" class="drop-label">
+                drag samples here
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <footer class="text-center disclaimer">
+        <div class="mt-2">
+          OP-XY is a trademark of teenage engineering. this is an unofficial tool and is not affiliated with or endorsed by teenage engineering.<br />
+          <br />
+        </div>
+        <div class="d-flex justify-content-center align-items-center flex-wrap gap-2" style="gap: 1.2em; font-size: 0.98em;">
+          <span class="text-muted">v0.4.0</span>
+          <a href="https://github.com/joseph-holland/opxy-tools" target="_blank" rel="noopener">github</a>
+          <a href="CHANGELOG.txt" target="_blank" rel="noopener">changelog</a>
+        </div>
+        <div class="mt-2">
+          based on the awesome
+          <a href="https://buba447.github.io/opxy-drum-tool/" target="_blank" rel="noopener">original opxy-drum-tool</a>
+          created by zeitgeese
+        </div>
+      </footer>
+    </div>
+    <!-- Advanced Modal -->
+    <div id="advanced-modal" class="modal fade" tabindex="-1" style="display: none; background: rgba(0, 0, 0, 0.4);">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">sample options</h5>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-info py-2 mb-3" style="font-size: 0.97em; background: #e0e0e0; color: #222; border-color: #bbb;">tip: press <b>p</b> to demo the sample.</div>
+            <div class="mb-3 d-flex align-items-center">
+              <label class="form-label mb-0 me-2" style="min-width: 90px;">playmode</label>
+              <select class="form-select form-select-sm adv-playmode" style="width: auto; display: inline-block; max-width: 350px;">
+                <option value="oneshot">oneshot - play whole sample</option>
+                <option value="group">
+                  mute group - choke when another sample plays
+                </option>
+                <option value="loop">loop - loop at sample end</option>
+                <option value="gate">key - play while held</option>
+              </select>
+            </div>
+            <div class="mb-3 d-flex align-items-center">
+              <label class="form-label mb-0 me-2" style="min-width: 90px;">playback direction</label>
+              <button type="button" class="btn btn-secondary btn-sm adv-reverse ms-0" style="background: #444; color: #fff; border: none; min-width: 90px;">
+                <i class="fa fa-play"></i>
+                <span class="adv-reverse-label ms-2">forward</span>
+              </button>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">tuning (semitones)</label>
+              <div class="d-flex align-items-center">
+                <input
+                  type="range"
+                  class="form-range adv-tune-slider"
+                  min="-48"
+                  max="48"
+                  value="0"
+                  step="1"
+                  style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                />
+                <input type="number" class="form-control form-control-sm adv-tune" min="-48" max="48" value="0" style="width: 80px; flex-shrink: 0;" />
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">gain (db)</label>
+              <div class="d-flex align-items-center">
+                <input
+                  type="range"
+                  class="form-range adv-gain-slider"
+                  min="-30"
+                  max="20"
+                  value="0"
+                  step="1"
+                  style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                />
+                <input type="number" class="form-control form-control-sm adv-gain" min="-30" max="20" value="0" style="width: 80px; flex-shrink: 0;" />
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">pan</label>
+              <div class="d-flex align-items-center">
+                <input
+                  type="range"
+                  id="advancedPanSlider"
+                  class="form-range"
+                  min="-100"
+                  max="100"
+                  value="0"
+                  step="1"
+                  style="accent-color: #222; background: #fff; height: 2.2em; border-radius: 8px; outline: none; box-shadow: none; flex: 1; margin-right: 8px;"
+                />
+                <input type="number" id="advancedPanNumber" class="form-control form-control-sm" min="-100" max="100" value="0" step="1" style="width: 80px; flex-shrink: 0;" />
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">sample editor</label>
+              <button type="button" class="btn btn-secondary btn-sm ms-2" id="zoom-btn" style="background: #444; color: #fff; border: none;"><i class="fa fa-search-plus"></i> zoom & edit</button>
+              <div id="waveform-container-modal" style="height: 60px; width: 100%; background: #ececec; position: relative;"></div>
+              <div class="d-flex align-items-center mt-2">
+                <label class="me-2">start</label>
+                <input type="number" class="form-control form-control-sm adv-sample-start" min="0" value="0" style="width: 80px;" />
+                <label class="mx-2">end</label>
+                <input type="number" class="form-control form-control-sm adv-sample-end" min="0" value="0" style="width: 80px;" />
+                <span class="ms-2 small text-muted adv-sample-length"></span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm adv-cancel" style="background: #888; color: #fff; border: none;">
+              cancel
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm adv-play-modal" style="background: #222; color: #fff; border: none;"><i class="fa fa-play"></i> play</button>
+            <button type="button" class="btn btn-dark btn-sm adv-save" style="background: #000; color: #fff; border: none;"><i class="fa fa-save me-1"></i>save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Zoom Modal -->
+    <div class="modal fade" id="zoom-modal" tabindex="-1" aria-labelledby="zoom-modal-label" aria-hidden="true">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="zoom-modal-label">
+              edit start & end points
+            </h5>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-info py-2 mb-3" style="font-size: 0.97em; background: #e0e0e0; color: #222; border-color: #bbb;">tip: press <b>p</b> to demo the sample.</div>
+            <canvas id="zoom-canvas" width="1100" height="200"></canvas>
+            <div class="form-check mb-2 ms-2">
+              <input class="form-check-input" type="checkbox" id="zero-crossing-snap" checked />
+              <label class="form-check-label" for="zero-crossing-snap">
+                snap to zero crossings
+              </label>
+            </div>
+            <div class="row mt-2">
+              <div class="col">
+                <label for="zoom-start-point" class="form-label">start point</label>
+                <div class="d-flex align-items-center">
+                  <input type="text" class="form-control" id="zoom-start-point" />
+                  <span class="ms-2 badge bg-secondary" id="zoom-start-value">0.000</span>
+                </div>
+              </div>
+              <div class="col">
+                <label for="zoom-end-point" class="form-label">end point</label>
+                <div class="d-flex align-items-center">
+                  <input type="text" class="form-control" id="zoom-end-point" />
+                  <span class="ms-2 badge bg-secondary" id="zoom-end-value">0.000</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm" data-bs-dismiss="modal" style="background: #888; color: #fff; border: none; min-width: 80px; height: 38px; font-size: 1rem; padding: 6px 16px;">
+              cancel
+            </button>
+            <button type="button" class="btn btn-sm" id="zoom-play-button" style="background: #222; color: #fff; border: none; min-width: 80px; height: 38px; font-size: 1rem; padding: 6px 16px;">
+              play
+            </button>
+            <button type="button" class="btn btn-sm" id="zoom-save-button" style="background: #000; color: #fff; border: none; min-width: 80px; height: 38px; font-size: 1rem; padding: 6px 16px;">
+              done
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audio Recording Modal -->
+    <div class="modal fade" id="audio-recording-modal" tabindex="-1" aria-labelledby="audio-recording-modal-label" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="audio-recording-modal-label">record audio sample</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <!-- Recording Status -->
+            <div id="recording-status" class="mb-3">
+              <div class="d-flex justify-content-center align-items-center mb-2">
+                <div id="recording-indicator" class="recording-dot me-2" style="display: none;"></div>
+                <span id="recording-status-text" class="h5 mb-0">ready to record</span>
+              </div>
+              <div id="recording-timer" class="h4 mb-0 text-muted">00:00</div>
+              <div class="small text-muted">max length: 20 seconds</div>
+            </div>
+
+            <!-- Recording Controls -->
+            <div id="recording-controls" class="mb-3">
+              <button type="button" class="btn btn-lg" id="start-recording-btn" style="background: #333; color: #fff; border: none; min-width: 140px; height: 48px;">
+                <i class="fa fa-microphone"></i> start recording
+              </button>
+              <button type="button" class="btn btn-lg" id="stop-recording-btn" style="display: none; background: #666; color: #fff; border: none; min-width: 140px; height: 48px;">
+                <i class="fa fa-stop"></i> stop recording
+              </button>
+            </div>
+
+            <!-- Playback Controls (shown after recording) -->
+            <div id="playback-controls" class="mb-3" style="display: none;">
+              <div class="mb-3">
+                <canvas id="recording-waveform" width="400" height="60" style="border: 1px solid #dee2e6; border-radius: 4px; max-width: 100%;"></canvas>
+              </div>
+              <div class="d-flex justify-content-center gap-2">
+                <button type="button" class="btn" id="play-recording-btn" style="background: #333; color: #fff; border: none; min-width: 80px; height: 38px;">
+                  <i class="fa fa-play"></i> play
+                </button>
+                <button type="button" class="btn" id="retake-recording-btn" style="background: #666; color: #fff; border: none; min-width: 80px; height: 38px;">
+                  <i class="fa fa-redo"></i> retake
+                </button>
+              </div>
+            </div>
+
+            <!-- Sample Naming -->
+            <div id="sample-naming" class="mb-3" style="display: none;">
+              <label for="recorded-sample-name" class="form-label">sample name</label>
+              <input type="text" class="form-control" id="recorded-sample-name" placeholder="mic-sample-2025-06-26-12:34:56" maxlength="50" style="max-width: 400px; margin: 0 auto;">
+            </div>
+
+            <!-- Error Messages -->
+            <div id="recording-error" class="alert" style="display: none; background: #f5f5f5; border: 1px solid #ccc; color: #333;"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn" data-bs-dismiss="modal" style="background: #888; color: #fff; border: none; min-width: 80px; height: 38px;">cancel</button>
+            <button type="button" class="btn" id="save-recording-btn" style="display: none; background: #000; color: #fff; border: none; min-width: 140px; height: 38px;">
+              <i class="fa fa-save"></i> add to samples
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multisample Zoom Modal -->
+    <div class="modal fade" id="multisample-zoom-modal" tabindex="-1" aria-labelledby="multisample-zoom-modal-label" aria-hidden="true">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="multisample-zoom-modal-label">
+              edit markers
+            </h5>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-info py-2 mb-3" style="font-size: 0.97em; background: #e0e0e0; color: #222; border-color: #bbb;">
+              tip: drag markers to adjust positions. press <b>p</b> to preview the sample.
+            </div>
+            <canvas id="multisample-zoom-canvas" width="1100" height="200"></canvas>
+            <div class="form-check mb-2 ms-2">
+              <input class="form-check-input" type="checkbox" id="multisample-zero-crossing-snap" checked />
+              <label class="form-check-label" for="multisample-zero-crossing-snap">
+                snap to zero crossings
+              </label>
+            </div>
+            <div class="row mt-3">
+              <div class="col-6 col-md-3">
+                <label for="multisample-zoom-in-point" class="form-label">in point</label>
+                <div class="d-flex align-items-center">
+                  <input type="text" class="form-control form-control-sm" id="multisample-zoom-in-point" />
+                  <span class="ms-2 badge bg-secondary" id="multisample-zoom-in-value">0.000</span>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <label for="multisample-zoom-loop-start" class="form-label">loop start</label>
+                <div class="d-flex align-items-center">
+                  <input type="text" class="form-control form-control-sm" id="multisample-zoom-loop-start" />
+                  <span class="ms-2 badge bg-secondary" id="multisample-zoom-loop-start-value">0.000</span>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <label for="multisample-zoom-loop-end" class="form-label">loop end</label>
+                <div class="d-flex align-items-center">
+                  <input type="text" class="form-control form-control-sm" id="multisample-zoom-loop-end" />
+                  <span class="ms-2 badge bg-secondary" id="multisample-zoom-loop-end-value">0.000</span>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <label for="multisample-zoom-out-point" class="form-label">out point</label>
+                <div class="d-flex align-items-center">
+                  <input type="text" class="form-control form-control-sm" id="multisample-zoom-out-point" />
+                  <span class="ms-2 badge bg-secondary" id="multisample-zoom-out-value">0.000</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm" data-bs-dismiss="modal" style="background: #888; color: #fff; border: none; min-width: 80px; height: 38px; font-size: 1rem; padding: 6px 16px;">
+              cancel
+            </button>
+            <button type="button" class="btn btn-sm" id="multisample-zoom-play-button" style="background: #222; color: #fff; border: none; min-width: 80px; height: 38px; font-size: 1rem; padding: 6px 16px;">
+              play
+            </button>
+            <button type="button" class="btn btn-sm" id="multisample-zoom-save-button" style="background: #000; color: #fff; border: none; min-width: 80px; height: 38px; font-size: 1rem; padding: 6px 16px;">
+              done
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="lib/audio_tools.js"></script>
+    <script src="lib/session_manager.js"></script>
+    <script src="lib/drum_sample_tool.js"></script>
+    <script src="lib/multisample_tool.js"></script>
+  </body>
+</html>

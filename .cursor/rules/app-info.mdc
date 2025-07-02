@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+- app name: op-xy drum & multisample tool
+- purpose: load wav samples, edit settings, and generate `.preset.zip` files compatible with teenage engineering op-1 field/op-z (op-xy firmware)
+- two main modes: `drum` (24 slots) and `multisample` (up to 24 zones)
+- output must follow op-xy json schema (see `baseDrumJson.ts` and `baseMultisampleJson.ts`)
+- target users: musicians wanting quick desktop workflow to prepare patches for hardware
+- priority: accuracy of exported preset files, fast drag-&-drop ui, faithful visual mimic of op-xy hardware

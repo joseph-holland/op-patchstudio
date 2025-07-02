@@ -1,0 +1,16 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+- use carbon design system for all ui elements
+- ui palette is monochrome (op-xy device aesthetic)
+- NEVER hard-code colours; use variables from `opxy-theme.scss`
+- text must be lowercase everywhere except:
+    - keyboard letters (A, S, D, F, G, H, J, W, E, R, T, Y, U)
+    - musical note names (C4, F#3, Ab2, etc.)
+- border-radius scale:
+    - 15px  → outer containers (main panels, modals, keyboards)
+    - 6px   → secondary elements (buttons, badges)
+    - 3px   → small inner elements (toggles, inputs)
+- when reusing carbon components, override tokens so colours match the theme (monochrome)

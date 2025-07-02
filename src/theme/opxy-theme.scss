@@ -1,0 +1,130 @@
+// Custom Carbon theme for OP-XY monochrome aesthetic
+// Based on Carbon Design System theming capabilities
+
+@use '@carbon/styles/scss/colors' as *;
+@use '@carbon/styles/scss/theme' as *;
+
+// OP-XY Monochrome Color Palette
+$opxy-white: #ffffff;
+$opxy-black: #000000;
+$opxy-dark-gray: #222222;
+$opxy-medium-gray: #444444;
+$opxy-light-gray: #888888;
+$opxy-border-gray: #f0f0f0;
+$opxy-bg-gray: #f8f9fa;
+
+// Custom theme tokens for OP-XY
+// This map overrides Carbon's default tokens.
+$opxy-theme-map: (
+  // Core Tokens
+  background: $opxy-white,
+  layer: $opxy-white,
+  text-primary: $opxy-dark-gray,
+  text-secondary: $opxy-light-gray,
+  interactive: $opxy-dark-gray,
+  
+  // ==========================================
+  // KEY FIX: Override Success and Focus colors
+  // This is what controls the toggle's green and blue
+  // ==========================================
+  support-success: $opxy-dark-gray,
+  focus: $opxy-dark-gray,
+
+  // General UI
+  background-hover: $opxy-bg-gray,
+  text-placeholder: $opxy-light-gray,
+  text-inverse: $opxy-white,
+  text-on-color: $opxy-white,
+  border-subtle: $opxy-border-gray,
+  border-strong: $opxy-light-gray,
+  border-inverse: $opxy-white,
+  border-interactive: $opxy-dark-gray,
+  
+  // Buttons
+  button-primary: $opxy-dark-gray,
+  button-primary-hover: $opxy-medium-gray,
+  button-primary-active: $opxy-black,
+  button-secondary: $opxy-white,
+  button-secondary-hover: $opxy-bg-gray,
+  button-secondary-active: $opxy-border-gray,
+  
+  // Fields & Inputs
+  field: $opxy-white,
+  field-hover: $opxy-bg-gray,
+);
+
+// Apply the custom theme to the .opxy-theme class
+.opxy-theme {
+  @include theme($opxy-theme-map);
+
+  // Global font override to match legacy
+  font-family: "Montserrat", "Arial", sans-serif;
+
+  // Manual overrides for components that need adjustments beyond tokens
+  .cds--tabs__nav-link {
+    &[aria-selected="true"] {
+      border-bottom-color: $opxy-dark-gray;
+    }
+  }
+
+  // Ensure sliders are monochrome, as they use complex gradients
+  .cds--slider__track {
+    background: #e5e7eb !important;
+  }
+  .cds--slider__filled-track {
+    background: #374151 !important;
+  }
+  .cds--slider__thumb {
+    background: #374151 !important;
+    border-color: #374151 !important;
+  }
+}
+
+.pin-button {
+  color: #666;
+  
+  .fa-thumbtack {
+    transition: transform 0.2s ease-in-out;
+    transform: rotate(45deg); // Unpinned state - tilted
+  }
+}
+
+.virtual-midi-keyboard.pinned {
+  .pin-button {
+    color: #000; // Black when pinned
+    
+    .fa-thumbtack {
+      transform: rotate(0deg); // Pinned state - upright
+    }
+  }
+}
+
+:root {
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8f9fa;
+  --color-bg-body: #ececec;
+  --color-text-primary: #222222;
+  --color-text-secondary: #666666;
+  --color-border-subtle: #f0f0f0;
+  --color-border-medium: #dee2e6;
+  --color-shadow-primary: rgba(0, 0, 0, 0.1);
+  --color-interactive-secondary: #6b7280;
+  --color-interactive-dark: #374151;
+  --color-interactive-focus: #111827;
+  --color-interactive-focus-ring: #d1d5db;
+  --color-bg-slider-track: #e5e7eb;
+  --color-white: #ffffff;
+  --color-bg-panel: #fafafa;
+  --color-border-light: #dddddd;
+  --color-progress-track: #e0e0e0;
+  --color-text-info: #999999;
+  --color-bg-notification: #f8f9fa;
+  --color-border-notification: #e5e7eb;
+  --color-shadow-elevated: rgba(0,0,0,0.15);
+  
+  /* Keyboard colors */
+  --color-key-inactive-white-bg: #BFC0C0;
+  --color-key-inactive-black-bg: #959696;
+  --color-key-inactive-border: #959696;
+  --color-black: #000000;
+}

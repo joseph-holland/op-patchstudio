@@ -1,0 +1,41 @@
+export const baseDrumJson = {
+  engine: {
+    bendrange: 8191,
+    highpass: 0,
+    modulation: {
+      aftertouch: { amount: 16383, target: 0 },
+      modwheel: { amount: 16383, target: 0 },
+      pitchbend: { amount: 16383, target: 0 },
+      velocity: { amount: 16383, target: 0 },
+    },
+    params: Array(8).fill(16384),
+    playmode: "poly",
+    "portamento.amount": 0,
+    "portamento.type": 32767,
+    transpose: 0,
+    "tuning.root": 0,
+    "tuning.scale": 0,
+    "velocity.sensitivity": 19660,
+    volume: 18348,
+    width: 0,
+  },
+  envelope: {
+    amp: { attack: 0, decay: 0, release: 1000, sustain: 32767 },
+    filter: { attack: 0, decay: 3276, release: 23757, sustain: 983 },
+  },
+  fx: {
+    active: false,
+    params: [22014, 0, 30285, 11880, 0, 32767, 0, 0],
+    type: "ladder",
+  },
+  lfo: {
+    active: false,
+    params: [20309, 5679, 19114, 15807, 0, 0, 0, 12287],
+    type: "random",
+  },
+  octave: 0,
+  platform: "OP-XY",
+  regions: [],
+  type: "drum",
+  version: 4,
+}; 

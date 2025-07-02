@@ -1,0 +1,351 @@
+/* Global styles for OPXY Tools React app */
+/* Preserving the OP-XY monochrome aesthetic */
+
+/* Import Font Awesome */
+@import '@fortawesome/fontawesome-free/css/all.css';
+
+:root {
+  font-family: "Montserrat", "Arial", sans-serif;
+  line-height: 1.7;
+  font-weight: 400;
+  
+  color-scheme: light;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: var(--color-bg-body);
+  color: var(--color-text-primary);
+  font-size: 0.98rem;
+  letter-spacing: 0.01em;
+  line-height: 1.7;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Preserve legacy link styling */
+a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-text-primary);
+}
+
+/* Override Carbon defaults for OP-XY aesthetic */
+.cds--content {
+  background: var(--color-bg-body);
+}
+
+/* Make Carbon Design label text larger to match preset size text */
+.cds--label,
+.cds--text-input__label-text,
+.cds--list-box__label {
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+}
+
+/* Override Carbon Design slider colors */
+.cds--slider__track {
+  background-color: var(--color-bg-slider-track) !important;
+}
+
+.cds--slider__filled-track {
+  background-color: var(--color-interactive-secondary) !important;
+}
+
+.cds--slider__thumb {
+  background-color: var(--color-interactive-dark) !important;
+  border: 2px solid var(--color-interactive-dark) !important;
+}
+
+.cds--slider__thumb:hover {
+  background-color: var(--color-interactive-focus) !important;
+  border-color: var(--color-interactive-focus) !important;
+}
+
+.cds--slider__thumb:focus {
+  background-color: var(--color-interactive-focus) !important;
+  border-color: var(--color-interactive-focus) !important;
+  box-shadow: 0 0 0 2px var(--color-interactive-focus-ring) !important;
+}
+
+.cds--slider__thumb:active {
+  background-color: var(--color-interactive-focus) !important;
+  border-color: var(--color-interactive-focus) !important;
+}
+
+/* Global Carbon Design System monochrome overrides */
+.cds--toggle-input__appearance {
+  background-color: var(--color-bg-slider-track) !important;
+}
+
+.cds--toggle-input__appearance:before {
+  background-color: var(--color-interactive-secondary) !important;
+}
+
+.cds--toggle-input:checked + .cds--toggle-input__appearance {
+  background-color: var(--color-interactive-dark) !important;
+}
+
+.cds--toggle-input:checked + .cds--toggle-input__appearance:before {
+  background-color: var(--color-white) !important;
+}
+
+.cds--toggle__text--off,
+.cds--toggle__text--on {
+  color: var(--color-interactive-secondary) !important;
+}
+
+/* Specific override for multisample loop enabled toggle */
+#multisample-loop-enabled .cds--toggle-input__appearance {
+  background-color: var(--color-bg-slider-track) !important;
+}
+
+#multisample-loop-enabled .cds--toggle-input__appearance:before {
+  background-color: var(--color-interactive-secondary) !important;
+}
+
+#multisample-loop-enabled .cds--toggle-input:checked + .cds--toggle-input__appearance {
+  background-color: var(--color-interactive-dark) !important;
+}
+
+#multisample-loop-enabled .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
+  background-color: var(--color-white) !important;
+}
+
+#multisample-loop-enabled .cds--toggle__text--off,
+#multisample-loop-enabled .cds--toggle__text--on {
+  color: var(--color-interactive-secondary) !important;
+}
+
+/* Additional overrides just for the multisample loop enabled toggle */
+#multisample-loop-enabled + .cds--toggle-input__appearance {
+  background-color: var(--color-bg-slider-track) !important;
+  border-color: var(--color-bg-slider-track) !important;
+}
+
+#multisample-loop-enabled + .cds--toggle-input__appearance:before {
+  background-color: var(--color-interactive-secondary) !important;
+}
+
+#multisample-loop-enabled:checked + .cds--toggle-input__appearance {
+  background-color: var(--color-interactive-dark) !important;
+  border-color: var(--color-interactive-dark) !important;
+}
+
+#multisample-loop-enabled:checked + .cds--toggle-input__appearance:before {
+  background-color: var(--color-white) !important;
+}
+
+#multisample-loop-enabled:focus-visible + .cds--toggle-input__appearance {
+  outline: 2px solid var(--color-interactive-dark) !important;
+}
+
+/* Ensure proper spacing and layout */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Prevent horizontal overflow on all containers */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Responsive grid for drum preset settings */
+.drum-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4rem;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .drum-preset-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .drum-preset-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Carbon Design System dropdown styling */
+.cds--dropdown,
+.cds--list-box {
+  max-width: 180px !important;
+  min-width: 120px !important;
+}
+
+/* Slider container improvements for better usability */
+.cds--slider-container {
+  margin-bottom: 1rem !important;
+}
+
+/* Ensure sliders have adequate width according to UI best practices */
+.cds--slider {
+  min-width: 240px !important;
+  max-width: 100% !important;
+}
+
+/* Mobile responsive slider adjustments */
+@media (max-width: 768px) {
+  .cds--slider {
+    min-width: 180px !important;
+    max-width: 100% !important;
+  }
+  
+  .cds--toggle {
+    font-size: 0.8rem !important;
+  }
+
+  /* More subtle centering for form containers only */
+  div[style*="maxWidth: 150px"] {
+    margin: 0 auto !important;
+  }
+
+  /* Center only the slider containers when they're in grid layouts */
+  div[style*="display: grid"] > div {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .cds--slider {
+    min-width: 140px !important;
+    max-width: 100% !important;
+  }
+  
+  .cds--toggle {
+    font-size: 0.75rem !important;
+  }
+  
+  .cds--toggle__text--off,
+  .cds--toggle__text--on {
+    font-size: 0.7rem !important;
+  }
+
+  /* Keep the subtle centering for very small screens */
+  div[style*="maxWidth: 150px"] {
+    margin: 0 auto !important;
+  }
+}
+
+/* Value labels for sliders */
+.cds--slider__range-label {
+  font-size: 0.75rem !important;
+  color: var(--color-interactive-secondary) !important;
+  min-width: 2rem !important;
+  text-align: center !important;
+}
+
+/* Numeric input styling - properly sized for values */
+.cds--text-input {
+  max-width: 80px !important;
+  text-align: center !important;
+}
+
+/* Debug utilities for responsive development - remove in production */
+/* Uncomment these classes during development to debug mobile layouts */
+/*
+.debug-mobile {
+  border: 2px solid red !important;
+  box-sizing: border-box !important;
+}
+
+.debug-mobile::before {
+  content: attr(class);
+  position: absolute;
+  top: -20px;
+  left: 0;
+  background: red;
+  color: white;
+  font-size: 10px;
+  padding: 2px 4px;
+  z-index: 1000;
+}
+
+.debug-overflow {
+  outline: 2px dashed orange !important;
+  background: rgba(255, 165, 0, 0.1) !important;
+}
+
+@media (max-width: 768px) {
+  .debug-mobile-tablet {
+    border: 2px solid blue !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .debug-mobile-phone {
+    border: 2px solid green !important;
+  }
+}
+*/
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Custom Portal-based Tooltip Styles */
+.custom-tooltip-content {
+  padding: 8px 12px;
+  background: rgba(51, 51, 51, 0.95);
+  color: white;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: normal;
+  line-height: 1.4;
+  white-space: pre-line;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: max-content;
+  max-width: 300px;
+}
+
+.custom-tooltip-arrow {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -5px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid rgba(51, 51, 51, 0.95);
+}
