@@ -5,6 +5,43 @@ import { useFileUpload } from '../../hooks/useFileUpload'
 // Mock the context hook to avoid needing the provider
 vi.mock('../../context/AppContext', () => ({
   useAppContext: vi.fn(() => ({
+    state: {
+      currentTab: 'drum',
+      drumSamples: [],
+      multisampleFiles: [],
+      selectedMultisample: null,
+      isLoading: false,
+      error: null,
+      isDrumKeyboardPinned: false,
+      isMultisampleKeyboardPinned: false,
+      drumSettings: {
+        sampleRate: 44100,
+        bitDepth: 16,
+        channels: 2,
+        presetName: '',
+        normalize: false,
+        normalizeLevel: 0,
+        presetSettings: {
+          playmode: 'poly',
+          transpose: 0,
+          velocity: 100,
+          volume: 100,
+          width: 100
+        }
+      },
+      multisampleSettings: {
+        sampleRate: 44100,
+        bitDepth: 16,
+        channels: 2,
+        presetName: '',
+        normalize: false,
+        normalizeLevel: 0,
+        cutAtLoopEnd: false
+      },
+      notifications: [],
+      importedDrumPreset: null,
+      importedMultisamplePreset: null
+    },
     dispatch: vi.fn()
   }))
 }))
@@ -29,7 +66,6 @@ vi.mock('../../utils/audio', () => ({
 
 // Get access to the mocked functions
 const mockDispatch = vi.fn()
-const mockReadWavMetadata = vi.fn()
 
 // Import after mocking
 import { useAppContext } from '../../context/AppContext'
@@ -39,7 +75,46 @@ describe('useFileUpload', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Reset mocks to default implementations
-    vi.mocked(useAppContext).mockReturnValue({ dispatch: mockDispatch })
+    vi.mocked(useAppContext).mockReturnValue({ 
+      state: {
+        currentTab: 'drum',
+        drumSamples: [],
+        multisampleFiles: [],
+        selectedMultisample: null,
+        isLoading: false,
+        error: null,
+        isDrumKeyboardPinned: false,
+        isMultisampleKeyboardPinned: false,
+        drumSettings: {
+          sampleRate: 44100,
+          bitDepth: 16,
+          channels: 2,
+          presetName: '',
+          normalize: false,
+          normalizeLevel: 0,
+          presetSettings: {
+            playmode: 'poly',
+            transpose: 0,
+            velocity: 100,
+            volume: 100,
+            width: 100
+          }
+        },
+        multisampleSettings: {
+          sampleRate: 44100,
+          bitDepth: 16,
+          channels: 2,
+          presetName: '',
+          normalize: false,
+          normalizeLevel: 0,
+          cutAtLoopEnd: false
+        },
+        notifications: [],
+        importedDrumPreset: null,
+        importedMultisamplePreset: null
+      },
+      dispatch: mockDispatch 
+    })
     vi.mocked(audioModule.readWavMetadata).mockResolvedValue({
       sampleRate: 44100,
       numberOfChannels: 1,

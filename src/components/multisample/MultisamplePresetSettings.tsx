@@ -30,9 +30,7 @@ interface MultisampleAdvancedSettings {
 }
 
 // Convert percentage to internal value (0-100% -> 0-32767)
-const percentToInternal = (percent: number): number => {
-  return Math.round((percent / 100) * 32767);
-};
+
 
 const defaultSettings: MultisampleAdvancedSettings = {
   playmode: 'poly',
@@ -133,51 +131,7 @@ export function MultisamplePresetSettings() {
     }
   };
 
-  const handleSave = () => {
-    // Store advanced settings in the imported preset which gets used during patch generation
-    dispatch({
-      type: 'SET_IMPORTED_MULTISAMPLE_PRESET',
-      payload: {
-        engine: {
-          playmode: settings.playmode,
-          transpose: settings.transpose,
-          'velocity.sensitivity': percentToInternal(settings.velocitySensitivity),
-          volume: percentToInternal(settings.volume),
-          width: percentToInternal(settings.width),
-          highpass: percentToInternal(settings.highpass),
-          'portamento.amount': percentToInternal(settings.portamentoAmount),
-          'portamento.type': settings.portamentoType === 'linear' ? 32767 : 0,
-          'tuning.root': settings.tuningRoot,
-        },
-        envelope: {
-          amp: {
-            attack: settings.ampEnvelope.attack,
-            decay: settings.ampEnvelope.decay,
-            sustain: settings.ampEnvelope.sustain,
-            release: settings.ampEnvelope.release,
-          },
-          filter: {
-            attack: settings.filterEnvelope.attack,
-            decay: settings.filterEnvelope.decay,
-            sustain: settings.filterEnvelope.sustain,
-            release: settings.filterEnvelope.release,
-          },
-        },
-        regions: [] // Will be populated during patch generation
-      }
-    });
 
-    // Show success notification
-    dispatch({
-      type: 'ADD_NOTIFICATION',
-      payload: {
-        id: Date.now().toString(),
-        type: 'success',
-        title: 'Settings Saved',
-        message: 'Advanced multisample settings have been saved'
-      }
-    });
-  };
 
   const handleReset = () => {
     setSettings(defaultSettings);

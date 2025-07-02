@@ -12,6 +12,7 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
+  // @ts-ignore - Vitest extends Vite config with test options
   test: {
     globals: true,
     environment: 'jsdom',

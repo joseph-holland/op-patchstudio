@@ -225,14 +225,7 @@ export function VirtualMidiKeyboard({
     ...dynamicStyles,
   };
 
-  // Helper function to get note name from MIDI number
-  const getMidiNoteName = (midiNote: number): string => {
-    if (midiNote < 0 || midiNote > 127) return '';
-    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const octave = Math.floor(midiNote / 12) - 1;
-    const note = noteNames[midiNote % 12];
-    return `${note}${octave}`;
-  };
+
 
   // Helper function to get computer key for a MIDI note in the active octave
   const getComputerKeyForNote = (midiNote: number): string | null => {

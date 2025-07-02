@@ -510,7 +510,6 @@ export function MultisampleTool() {
             onClearSample={handleClearSample}
             onRecordSample={handleOpenRecording}
             onFilesSelected={handleFilesSelected}
-            onClearAll={handleClearAll}
             onBrowseFilesRef={browseFilesRef}
           />
         </div>

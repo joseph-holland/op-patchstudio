@@ -2,14 +2,13 @@ import React, { useState, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { WaveformEditor } from '../common/WaveformEditor';
-import { Button } from '@carbon/react';
+
 
 interface MultisampleSampleTableProps {
   onFileUpload: (index: number, file: File) => void;
   onClearSample: (index: number) => void;
   onRecordSample: (index: number) => void;
   onFilesSelected: (files: File[]) => void;
-  onClearAll: () => void;
   onBrowseFilesRef?: React.MutableRefObject<(() => void) | null>;
 }
 
@@ -33,7 +32,6 @@ export function MultisampleSampleTable({
   onClearSample,
   onRecordSample,
   onFilesSelected,
-  onClearAll,
   onBrowseFilesRef
 }: MultisampleSampleTableProps) {
   const { state, dispatch } = useAppContext();

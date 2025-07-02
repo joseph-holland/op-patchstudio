@@ -4,7 +4,7 @@ import { ConfirmationModal } from '../common/ConfirmationModal';
 import { RecordingModal } from '../common/RecordingModal';
 import { AudioProcessingSection } from '../common/AudioProcessingSection';
 import { GeneratePresetSection } from '../common/GeneratePresetSection';
-import { DrumKeyboard } from './DrumKeyboard';
+
 import { DrumSampleTable } from './DrumSampleTable';
 import { DrumPresetSettings } from './DrumPresetSettings';
 import { DrumBulkEditModal } from './DrumBulkEditModal';

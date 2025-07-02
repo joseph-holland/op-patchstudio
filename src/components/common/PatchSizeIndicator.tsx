@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ProgressBar, InlineLoading } from '@carbon/react';
+import { InlineLoading } from '@carbon/react';
 import { useAppContext } from '../../context/AppContext';
-import { calculatePatchSize, formatFileSize, getPatchSizeWarning, isPatchSizeValid } from '../../utils/audio';
+import { calculatePatchSize, formatFileSize, getPatchSizeWarning } from '../../utils/audio';
 
 interface PatchSizeIndicatorProps {
   type: 'drum' | 'multisample';
@@ -12,18 +12,7 @@ export function PatchSizeIndicator({ type, className = '' }: PatchSizeIndicatorP
   const { state } = useAppContext();
   const [patchSize, setPatchSize] = useState(0);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
-  // Detect mobile screen size
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Get relevant audio buffers and settings based on type
   const audioBuffers = type === 'drum' 
@@ -63,15 +52,8 @@ export function PatchSizeIndicator({ type, className = '' }: PatchSizeIndicatorP
   const maxSize = 8 * 1024 * 1024; // 8mb limit
   const percentage = Math.min(100, (patchSize / maxSize) * 100);
   const warning = getPatchSizeWarning(patchSize);
-  const isValid = isPatchSizeValid(patchSize);
 
-  // Determine progress bar status
-  let progressStatus: 'finished' | 'error' | 'active' = 'finished';
-  if (!isValid) {
-    progressStatus = 'error';
-  } else if (percentage >= 75) {
-    progressStatus = 'active';
-  }
+
 
   // Always show the indicator, even with 0 samples
 

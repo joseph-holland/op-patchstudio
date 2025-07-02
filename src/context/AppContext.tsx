@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect } from 'react';
+import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
 import type { WavMetadata } from '../utils/audio';
 import { midiNoteToString } from '../utils/audio';
