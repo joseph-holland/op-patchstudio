@@ -384,7 +384,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
       {/* Table Header */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '140px 1fr 120px 140px',
+        gridTemplateColumns: '100px 1fr 160px 140px',
         gap: '0.5rem',
         padding: '0.75rem',
         background: c.bgAlt,
@@ -430,7 +430,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '140px 1fr 120px 140px',
+                  gridTemplateColumns: '100px 1fr 160px 140px',
                   gap: '0.5rem',
                   padding: '0.75rem',
                   background: c.bg,

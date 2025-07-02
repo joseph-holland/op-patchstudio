@@ -1,6 +1,4 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { IconButton } from '@carbon/react';
-import { Play, Pause, Reset } from '@carbon/icons-react';
 
 interface WaveformEditorProps {
   audioBuffer: AudioBuffer | null;
@@ -9,7 +7,6 @@ interface WaveformEditorProps {
   loopStart?: number;
   loopEnd?: number;
   onMarkersChange?: (markers: { inPoint: number; outPoint: number; loopStart?: number; loopEnd?: number }) => void;
-  onPlay?: (startTime?: number, endTime?: number) => void;
   showLoopMarkers?: boolean;
   height?: number;
   className?: string;
@@ -22,13 +19,11 @@ export function WaveformEditor({
   loopStart,
   loopEnd,
   onMarkersChange,
-  onPlay,
   showLoopMarkers = false,
   height = 80,
   className = ''
 }: WaveformEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [dragState, setDragState] = useState<{
     type: 'inPoint' | 'outPoint' | 'loopStart' | 'loopEnd' | null;
     startX: number;
@@ -282,34 +277,10 @@ export function WaveformEditor({
     return () => window.removeEventListener('resize', resizeCanvas);
   }, [height, drawWaveform]);
 
-  const handlePlay = () => {
-    if (onPlay) {
-      const startTime = inPoint / (audioBuffer?.sampleRate || 44100);
-      const endTime = finalOutPoint / (audioBuffer?.sampleRate || 44100);
-      onPlay(startTime, endTime);
-      setIsPlaying(true);
-      
-      // Auto-stop after duration
-      const duration = endTime - startTime;
-      setTimeout(() => setIsPlaying(false), duration * 1000);
-    }
-  };
-
-  const handleReset = () => {
-    if (audioBuffer && onMarkersChange) {
-      onMarkersChange({
-        inPoint: 0,
-        outPoint: audioBuffer.length - 1,
-        loopStart: showLoopMarkers ? 0 : undefined,
-        loopEnd: showLoopMarkers ? audioBuffer.length - 1 : undefined,
-      });
-    }
-  };
-
   if (!audioBuffer) {
     return (
       <div className={`waveform-editor ${className}`} style={{ 
-        height: height + 40, 
+        height, 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
@@ -317,43 +288,13 @@ export function WaveformEditor({
         borderRadius: '3px',
         border: '1px solid #e0e0e0'
       }}>
-        <span style={{ color: '#666', fontSize: '0.9rem' }}>No audio loaded</span>
+        <span style={{ color: '#666', fontSize: '0.9rem' }}>no audio loaded</span>
       </div>
     );
   }
 
   return (
     <div className={`waveform-editor ${className}`}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '0.5rem'
-      }}>
-        <div style={{ fontSize: '0.9rem', color: '#666' }}>
-          {audioBuffer.duration.toFixed(2)}s • {audioBuffer.sampleRate}Hz
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <IconButton
-            kind="ghost"
-            size="sm"
-            onClick={handlePlay}
-            disabled={isPlaying}
-            label={isPlaying ? "playing..." : "play region"}
-          >
-            {isPlaying ? <Pause /> : <Play />}
-          </IconButton>
-          <IconButton
-            kind="ghost"
-            size="sm"
-            onClick={handleReset}
-            label="reset markers"
-          >
-            <Reset />
-          </IconButton>
-        </div>
-      </div>
-
       <canvas
         ref={canvasRef}
         style={{ 
@@ -369,18 +310,6 @@ export function WaveformEditor({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       />
-
-      <div style={{ 
-        fontSize: '0.8rem', 
-        color: '#666', 
-        marginTop: '0.5rem',
-        display: 'flex',
-        justifyContent: 'space-between'
-      }}>
-        <span>In: {(inPoint / audioBuffer.sampleRate).toFixed(3)}s</span>
-        <span>Out: {(finalOutPoint / audioBuffer.sampleRate).toFixed(3)}s</span>
-        <span>Length: {((finalOutPoint - inPoint) / audioBuffer.sampleRate).toFixed(3)}s</span>
-      </div>
     </div>
   );
 }
