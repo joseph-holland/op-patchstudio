@@ -1,5 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { Toggle } from '@carbon/react';
+import React, { useState, useCallback } from 'react';
 import { FourKnobControl } from './FourKnobControl';
 
 interface ADSRValues {
@@ -24,48 +23,7 @@ const valueToPercent = (value: number): number => Math.round((value / 32767) * 1
 // Convert 0-100% to 0-32767 for storage
 const percentToValue = (percent: number): number => Math.round((percent / 100) * 32767);
 
-// Generate mathematically accurate exponential curve points
-// One-pole filter approach for mathematically accurate exponential curves
-// Based on DSP research from music-dsp mailing list and EarLevel Engineering
-const generateExponentialCurve = (
-  startX: number,
-  endX: number,
-  startY: number,
-  endY: number,
-  isRising: boolean,
-  numPoints: number = 40 // higher resolution for smoother SVG
-): Array<{ x: number; y: number }> => {
-  const points: Array<{ x: number; y: number }> = [];
-
-  // Exponential steepness factor. 4 ≈ classic synth response.
-  const k = 4;
-
-  for (let i = 0; i <= numPoints; i++) {
-    const t = i / numPoints; // 0 … 1
-    const x = startX + t * (endX - startX);
-
-    // Rising (attack) – inverse exponential: fast rise then slow finish
-    // Falling (decay/release) – exponential: fast drop then slow tail
-    let y: number;
-    if (isRising) {
-      // y(t) = start + (1 - e^(−k t)) * (end - start)
-      const shape = 1 - Math.exp(-k * t);
-      y = startY + shape * (endY - startY);
-    } else {
-      // y(t) = end + e^(−k t) * (start - end)
-      const shape = Math.exp(-k * t);
-      y = endY + shape * (startY - endY);
-    }
-
-    points.push({ x, y });
-  }
-
-  // Ensure exact endpoints (floating-point guard)
-  points[0].y = startY;
-  points[points.length - 1].y = endY;
-
-  return points;
-};
+// Generate mathematically accurate exponential curve points with factor
 
 const generateExponentialCurveWithFactor = (
   startX: number, 
@@ -91,29 +49,7 @@ const generateExponentialCurveWithFactor = (
   return points;
 };
 
-const generatePowerCurve = (
-  startX: number, 
-  endX: number, 
-  startY: number, 
-  endY: number, 
-  power: number, 
-  numPoints: number = 20
-): Array<{x: number, y: number}> => {
-  const points: Array<{x: number, y: number}> = [];
-  
-  for (let i = 0; i <= numPoints; i++) {
-    const t = i / numPoints;
-    const x = startX + (endX - startX) * t;
-    
-    // Power curve: y = t^power (power < 1 = concave, power > 1 = convex)
-    const poweredT = Math.pow(t, power);
-    const y = startY + (endY - startY) * poweredT;
-    
-    points.push({ x, y });
-  }
-  
-  return points;
-};
+
 
 /**
  * ADSREnvelope Component - OP-XY Device Faithful Recreation
@@ -351,8 +287,7 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
       if (Math.abs(x - pos.x) <= handleSize && Math.abs(y - pos.y) <= handleSize) {
         setIsDragging(handleName);
         
-        // Store the SVG rect for global mouse events
-        const svgRect = svg.getBoundingClientRect();
+
         
         // Add global mouse and touch event listeners to prevent losing drag when leaving canvas
         const handleGlobalMove = (e: MouseEvent | TouchEvent) => {
@@ -461,7 +396,7 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
   }, [currentEnvelope, getHandlePositions, activeEnvelope, height, width, onAmpEnvelopeChange, onFilterEnvelopeChange, getPhasePositions]);
 
   // Simplified mouse move handler for when dragging inside SVG
-  const handleMouseMove = useCallback((event: React.MouseEvent<SVGElement>) => {
+  const handleMouseMove = useCallback(() => {
     // This is now only for hover effects or other non-drag interactions
     // Actual dragging is handled by global listeners
   }, []);

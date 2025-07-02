@@ -29,16 +29,19 @@ global.AudioContext = vi.fn().mockImplementation(() => ({
 }))
 
 // Mock MediaRecorder
-global.MediaRecorder = vi.fn().mockImplementation(() => ({
-  start: vi.fn(),
-  stop: vi.fn(),
-  pause: vi.fn(),
-  resume: vi.fn(),
-  state: 'inactive',
-  ondataavailable: null,
-  onstop: null,
-  onerror: null
-}))
+const MediaRecorderMock = function (this: any) {
+  this.start = vi.fn()
+  this.stop = vi.fn()
+  this.pause = vi.fn()
+  this.resume = vi.fn()
+  this.state = 'inactive'
+  this.ondataavailable = null
+  this.onstop = null
+  this.onerror = null
+}
+MediaRecorderMock.isTypeSupported = vi.fn(() => true)
+
+global.MediaRecorder = MediaRecorderMock as any
 
 // Mock navigator.mediaDevices
 Object.defineProperty(navigator, 'mediaDevices', {
@@ -68,6 +71,8 @@ const localStorageMock = {
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
+  length: 0,
+  key: vi.fn()
 }
-global.localStorage = localStorageMock
-global.sessionStorage = localStorageMock
+global.localStorage = localStorageMock as any
+global.sessionStorage = localStorageMock as any

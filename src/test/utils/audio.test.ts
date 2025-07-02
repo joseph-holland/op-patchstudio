@@ -30,7 +30,7 @@ const createMockAudioBuffer = (length: number = 100, sampleRate: number = 44100)
   sampleRate,
   numberOfChannels: 1,
   duration: length / sampleRate,
-  getChannelData: (channel: number) => {
+  getChannelData: (_channel: number) => {
     // Create a simple test signal with zero crossings
     const data = new Float32Array(length)
     for (let i = 0; i < length; i++) {

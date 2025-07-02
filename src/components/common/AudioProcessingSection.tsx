@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Toggle, Slider } from '@carbon/react';
 import { AudioFormatControls } from './AudioFormatControls';
 

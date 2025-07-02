@@ -24,10 +24,41 @@ import * as patchModule from '../../utils/patchGeneration'
 // Default mock implementation
 const defaultMockState = {
   state: {
-    drumSamples: [{ isLoaded: true, name: 'test' }],
-    multisampleFiles: [{ fileName: 'test.wav' }],
-    drumSettings: { presetName: 'Test Kit' },
-    multisampleSettings: { presetName: 'Test Multisample' }
+    currentTab: 'drum' as const,
+    drumSamples: [{ isLoaded: true, name: 'test' }] as any,
+    multisampleFiles: [{ fileName: 'test.wav' }] as any,
+    selectedMultisample: null,
+    isLoading: false,
+    error: null,
+    isDrumKeyboardPinned: false,
+    isMultisampleKeyboardPinned: false,
+    drumSettings: {
+      sampleRate: 44100,
+      bitDepth: 16,
+      channels: 2,
+      presetName: 'Test Kit',
+      normalize: false,
+      normalizeLevel: 0,
+      presetSettings: {
+        playmode: 'poly' as const,
+        transpose: 0,
+        velocity: 100,
+        volume: 100,
+        width: 100
+      }
+    },
+    multisampleSettings: {
+      sampleRate: 44100,
+      bitDepth: 16,
+      channels: 2,
+      presetName: 'Test Multisample',
+      normalize: false,
+      normalizeLevel: 0,
+      cutAtLoopEnd: false
+    },
+    notifications: [],
+    importedDrumPreset: null,
+    importedMultisamplePreset: null
   },
   dispatch: mockDispatch
 }
@@ -110,10 +141,41 @@ describe('usePatchGeneration', () => {
     // Override mock for this test
     vi.mocked(useAppContext).mockReturnValue({
       state: {
+        currentTab: 'drum' as const,
         drumSamples: [], // No loaded samples
         multisampleFiles: [],
-        drumSettings: { presetName: 'Test' },
-        multisampleSettings: { presetName: 'Test' }
+        selectedMultisample: null,
+        isLoading: false,
+        error: null,
+        isDrumKeyboardPinned: false,
+        isMultisampleKeyboardPinned: false,
+        drumSettings: {
+          sampleRate: 44100,
+          bitDepth: 16,
+          channels: 2,
+          presetName: 'Test',
+          normalize: false,
+          normalizeLevel: 0,
+          presetSettings: {
+            playmode: 'poly' as const,
+            transpose: 0,
+            velocity: 100,
+            volume: 100,
+            width: 100
+          }
+        },
+        multisampleSettings: {
+          sampleRate: 44100,
+          bitDepth: 16,
+          channels: 2,
+          presetName: 'Test',
+          normalize: false,
+          normalizeLevel: 0,
+          cutAtLoopEnd: false
+        },
+        notifications: [],
+        importedDrumPreset: null,
+        importedMultisamplePreset: null
       },
       dispatch: mockDispatch
     })

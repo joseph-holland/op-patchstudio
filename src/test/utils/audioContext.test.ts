@@ -27,8 +27,8 @@ describe('audioContextManager', () => {
     
     // Mock AudioContext constructor
     mockAudioContext = createMockAudioContext()
-    global.AudioContext = vi.fn(() => mockAudioContext)
-    global.OfflineAudioContext = vi.fn(() => mockOfflineAudioContext)
+    global.AudioContext = vi.fn(() => mockAudioContext) as any
+    global.OfflineAudioContext = vi.fn(() => mockOfflineAudioContext) as any
   })
 
   afterEach(() => {
@@ -71,7 +71,7 @@ describe('audioContextManager', () => {
       
       // Second call should create new context
       const newMockContext = createMockAudioContext()
-      global.AudioContext = vi.fn(() => newMockContext)
+      global.AudioContext = vi.fn(() => newMockContext) as any
       
       const context = await audioContextManager.getAudioContext()
       expect(global.AudioContext).toHaveBeenCalledTimes(1) // Called once more with new mock
