@@ -38,16 +38,16 @@ export function FileDetailsBadges({
   const badgeStyle: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '0.25rem',
+    gap: '0.2rem',
     background: 'var(--color-bg-secondary)',
     border: '1px solid var(--color-border-light)',
     borderRadius: '3px',
-    padding: '0.125rem 0.375rem',
+    padding: '0.1rem 0.25rem',
     fontSize: '0.7rem',
     color: 'var(--color-text-secondary)',
     fontWeight: '500',
-    marginRight: '0.25rem',
-    marginBottom: '0.125rem',
+    marginRight: '0.2rem',
+    marginBottom: '0.1rem',
     whiteSpace: 'nowrap'
   };
 
@@ -60,7 +60,7 @@ export function FileDetailsBadges({
     <div style={{
       display: 'flex',
       flexWrap: 'wrap',
-      gap: '0.125rem',
+      gap: '0.1rem',
       alignItems: 'center'
     }}>
       {/* File Size */}
