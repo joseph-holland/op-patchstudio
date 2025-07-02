@@ -67,7 +67,7 @@ function AppContent() {
                 <span style={{ color: '#999' }}>proudly open source</span>
                 <span style={{ color: '#999' }}>|</span>
                 <a 
-                  href="https://github.com/joseph-holland/opxy-tools" 
+                  href="https://github.com/joseph-holland/op-patchstudio" 
                   target="_blank" 
                   rel="noopener"
                   style={{ color: '#666' }}
