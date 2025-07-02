@@ -34,6 +34,25 @@ const c = {
   actionHover: 'var(--color-interactive-dark)',
 };
 
+// Style for action buttons to ensure accessibility (44x44px target)
+const actionButtonStyle: React.CSSProperties = {
+  width: '44px',
+  height: '44px',
+  minWidth: '44px',
+  minHeight: '44px',
+  maxWidth: '44px',
+  maxHeight: '44px',
+  padding: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  border: `1px solid ${c.borderMed}`,
+  borderRadius: '3px',
+  backgroundColor: c.bg,
+  cursor: 'pointer',
+  flexShrink: 0
+};
+
 export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }: DrumSampleTableProps) {
   const { state, dispatch } = useAppContext();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -200,7 +219,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                         <i 
                           className="fas fa-pencil-alt" 
                           style={{ 
-                            fontSize: '0.7rem', 
+                            fontSize: '14px', 
                             color: c.textSecondary,
                             opacity: 0.8
                           }}
@@ -214,89 +233,49 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                        display: 'flex',
                        gap: '0.25rem'
                      }}>
-                       <Button
-                         kind="ghost"
-                         size="sm"
+                       <button
                          disabled={!isLoaded}
                          onClick={() => playSample(index)}
                          style={{
-                           minHeight: '32px',
-                           width: '32px',
-                           padding: '0',
-                           display: 'flex',
-                           alignItems: 'center',
-                           justifyContent: 'center',
-                           border: `1px solid ${c.borderMed}`,
-                           borderRadius: '3px',
-                           backgroundColor: c.bg,
+                           ...actionButtonStyle,
                            color: isLoaded ? c.action : c.textSecondary
                          }}
                          title="play"
                        >
-                         <i className="fas fa-play"></i>
-                       </Button>
-                       <Button
-                         kind="ghost"
-                         size="sm"
+                         <i className="fas fa-play" style={{ fontSize: '18px' }}></i>
+                       </button>
+                       <button
                          disabled={!isLoaded}
                          onClick={() => onClearSample(index)}
                          style={{
-                           minHeight: '32px',
-                           width: '32px',
-                           padding: '0',
-                           display: 'flex',
-                           alignItems: 'center',
-                           justifyContent: 'center',
-                           border: `1px solid ${c.borderMed}`,
-                           borderRadius: '3px',
-                           backgroundColor: c.bg,
+                           ...actionButtonStyle,
                            color: isLoaded ? c.action : c.textSecondary
                          }}
                          title="clear"
                        >
-                         <i className="fas fa-times"></i>
-                       </Button>
-                       <Button
-                         kind="ghost"
-                         size="sm"
+                         <i className="fas fa-times" style={{ fontSize: '18px' }}></i>
+                       </button>
+                       <button
                          onClick={() => onRecordSample?.(index)}
                          style={{
-                           minHeight: '32px',
-                           width: '32px',
-                           padding: '0',
-                           display: 'flex',
-                           alignItems: 'center',
-                           justifyContent: 'center',
-                           border: `1px solid ${c.borderMed}`,
-                           borderRadius: '3px',
-                           backgroundColor: c.bg,
+                           ...actionButtonStyle,
                            color: c.action
                          }}
                          title="record"
                        >
-                         <i className="fas fa-microphone"></i>
-                       </Button>
-                       <Button
-                         kind="ghost"
-                         size="sm"
+                         <i className="fas fa-microphone" style={{ fontSize: '18px' }}></i>
+                       </button>
+                       <button
                          disabled={!isLoaded}
                          onClick={() => openSettingsModal(index)}
                          style={{
-                           minHeight: '32px',
-                           width: '32px',
-                           padding: '0',
-                           display: 'flex',
-                           alignItems: 'center',
-                           justifyContent: 'center',
-                           border: `1px solid ${c.borderMed}`,
-                           borderRadius: '3px',
-                           backgroundColor: c.bg,
+                           ...actionButtonStyle,
                            color: isLoaded ? c.action : c.textSecondary
                          }}
                          title="settings"
                        >
-                         <i className="fas fa-cog"></i>
-                       </Button>
+                         <i className="fas fa-cog" style={{ fontSize: '18px' }}></i>
+                       </button>
                      </div>
                   </div>
 
@@ -411,7 +390,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
       {/* Table Header */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '100px 1fr 160px 140px',
+        gridTemplateColumns: '100px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
         gap: '0.5rem',
         padding: '0.75rem',
         background: c.bgAlt,
@@ -457,14 +436,14 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '100px 1fr 160px 140px',
+                  gridTemplateColumns: '100px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
                   gap: '0.5rem',
                   padding: '0.75rem',
                   background: c.bg,
                   borderBottom: index < 23 ? `1px solid ${c.border}` : 'none',
                   transition: 'background 0.2s ease',
                   alignItems: 'center',
-                  minHeight: '60px'
+                  minHeight: '54px'
                 }}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, index)}
@@ -489,7 +468,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                     <i 
                       className="fas fa-pencil-alt" 
                       style={{ 
-                        fontSize: '0.6rem', 
+                        fontSize: '14px', 
                         color: c.textSecondary,
                         opacity: 0.8
                       }}
@@ -498,20 +477,21 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                   )}
                 </div>
 
-                {/* Sample Info */}
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.25rem'
-                }}>
-                  {isLoaded ? (
-                    <>
+                {/* Sample Info and Waveform - Combined when empty */}
+                {isLoaded ? (
+                  <>
+                    {/* Sample Info */}
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.15rem'
+                    }}>
                       <div style={{
                         fontSize: '0.8rem',
                         fontWeight: '500',
                         color: c.text,
                         wordBreak: 'break-word',
-                        marginBottom: '0.25rem'
+                        marginBottom: '0.1rem'
                       }}>
                         {sample.name}
                       </div>
@@ -522,19 +502,70 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                         bitDepth={sample.originalBitDepth}
                         sampleRate={sample.originalSampleRate}
                       />
-                    </>
-                  ) : (
+                    </div>
+
+                    {/* Waveform */}
+                    <div style={{
+                      height: '44px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      {sample.audioBuffer ? (
+                        <WaveformEditor
+                          audioBuffer={sample.audioBuffer}
+                          height={44}
+                          inPoint={sample.inPoint || 0}
+                          outPoint={sample.outPoint || sample.audioBuffer.length - 1}
+                          onMarkersChange={(markers) => {
+                            dispatch({
+                              type: 'UPDATE_DRUM_SAMPLE',
+                              payload: {
+                                index,
+                                updates: {
+                                  inPoint: markers.inPoint,
+                                  outPoint: markers.outPoint
+                                }
+                              }
+                            });
+                          }}
+                          onZoomEdit={() => openZoomModal(index)}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '100%',
+                          height: '44px',
+                          background: c.borderSubtle,
+                          borderRadius: '3px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: c.textSecondary,
+                          fontSize: '0.7rem'
+                        }}>
+                          no sample
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  // Empty state - spans both columns
+                  <div style={{ gridColumn: 'span 2' }}>
                     <button
                       onClick={() => openFileDialog(index)}
                       style={{
+                        width: '100%',
+                        height: '44px',
                         background: 'none',
                         border: `2px dashed ${c.borderMed}`,
                         borderRadius: '3px',
-                        padding: '1rem',
+                        padding: '0 1rem',
                         color: c.textSecondary,
                         fontSize: '0.8rem',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.borderColor = c.textSecondary;
@@ -547,141 +578,59 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                     >
                       drop sample here or click to browse
                     </button>
-                  )}
-                </div>
-
-                {/* Waveform */}
-                <div style={{
-                  height: '40px',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  {isLoaded && sample.audioBuffer ? (
-                    <WaveformEditor
-                      audioBuffer={sample.audioBuffer}
-                      height={40}
-                      inPoint={sample.inPoint || 0}
-                      outPoint={sample.outPoint || sample.audioBuffer.length - 1}
-                      onMarkersChange={(markers) => {
-                        dispatch({
-                          type: 'UPDATE_DRUM_SAMPLE',
-                          payload: {
-                            index,
-                            updates: {
-                              inPoint: markers.inPoint,
-                              outPoint: markers.outPoint
-                            }
-                          }
-                        });
-                      }}
-                      onZoomEdit={() => openZoomModal(index)}
-                    />
-                  ) : (
-                    <div style={{
-                      width: '100%',
-                      height: '40px',
-                      background: c.borderSubtle,
-                      borderRadius: '3px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: c.textSecondary,
-                      fontSize: '0.7rem'
-                    }}>
-                      no sample
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* Actions - Only play, clear, and settings */}
                 <div style={{
                   display: 'flex',
                   gap: '0.25rem',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>
-                  <Button
-                    kind="ghost"
-                    size="sm"
+                  <button
                     disabled={!isLoaded}
                     onClick={() => playSample(index)}
                     style={{
-                      minHeight: '28px',
-                      width: '28px',
-                      padding: '0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: `1px solid ${c.borderMed}`,
-                      borderRadius: '3px',
-                      backgroundColor: c.bg,
+                      ...actionButtonStyle,
                       color: isLoaded ? c.action : c.textSecondary
                     }}
                     title="play"
                   >
-                    <i className="fas fa-play"></i>
-                  </Button>
-                  <Button
-                    kind="ghost"
-                    size="sm"
+                    <i className="fas fa-play" style={{ fontSize: '18px' }}></i>
+                  </button>
+                  <button
                     disabled={!isLoaded}
                     onClick={() => onClearSample(index)}
                     style={{
-                      minHeight: '28px',
-                      width: '28px',
-                      padding: '0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: `1px solid ${c.borderMed}`,
-                      borderRadius: '3px',
-                      backgroundColor: c.bg,
+                      ...actionButtonStyle,
                       color: isLoaded ? c.action : c.textSecondary
                     }}
                     title="clear"
                   >
-                    <i className="fas fa-times"></i>
-                  </Button>
-                  <Button
-                    kind="ghost"
-                    size="sm"
+                    <i className="fas fa-times" style={{ fontSize: '18px' }}></i>
+                  </button>
+                  <button
                     onClick={() => onRecordSample?.(index)}
                     style={{
-                      minHeight: '28px',
-                      width: '28px',
-                      padding: '0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: `1px solid ${c.borderMed}`,
-                      borderRadius: '3px',
-                      backgroundColor: c.bg,
+                      ...actionButtonStyle,
                       color: c.action
                     }}
                     title="record"
                   >
-                    <i className="fas fa-microphone"></i>
-                  </Button>
-                  <Button
-                    kind="ghost"
-                    size="sm"
+                    <i className="fas fa-microphone" style={{ fontSize: '18px' }}></i>
+                  </button>
+                  <button
                     disabled={!isLoaded}
                     onClick={() => openSettingsModal(index)}
                     style={{
-                      minHeight: '28px',
-                      width: '28px',
-                      padding: '0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: `1px solid ${c.borderMed}`,
-                      borderRadius: '3px',
-                      backgroundColor: c.bg,
+                      ...actionButtonStyle,
                       color: isLoaded ? c.action : c.textSecondary
                     }}
                     title="settings"
                   >
-                    <i className="fas fa-cog"></i>
-                  </Button>
+                    <i className="fas fa-cog" style={{ fontSize: '18px' }}></i>
+                  </button>
                 </div>
               </div>
             </div>

@@ -249,6 +249,23 @@ export function WaveformZoomModal({
     setOutPoint(newOutPoint);
   };
 
+  const handleSnapToZeroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isEnabled = e.target.checked;
+    setSnapToZero(isEnabled);
+
+    if (isEnabled && audioBuffer) {
+      // Find the nearest zero crossing for the current in point
+      const snappedIn = findNearestZeroCrossing(audioBuffer, inPoint, 'both', 500);
+      const finalIn = Math.max(0, Math.min(snappedIn, outPoint - 10));
+      setInPoint(finalIn);
+
+      // Find the nearest zero crossing for the current out point
+      const snappedOut = findNearestZeroCrossing(audioBuffer, outPoint, 'both', 500);
+      const finalOut = Math.max(finalIn + 10, Math.min(snappedOut, audioBuffer.length));
+      setOutPoint(finalOut);
+    }
+  };
+
   if (!audioBuffer || !isOpen) return null;
 
   return (
@@ -298,7 +315,7 @@ export function WaveformZoomModal({
               color: '#222',
               fontSize: '1.25rem'
             }}></i>
-            zoom & edit markers
+            zoom and edit markers
           </h3>
         </div>
 
@@ -348,14 +365,16 @@ export function WaveformZoomModal({
                 type="checkbox"
                 id="snap-to-zero"
                 checked={snapToZero}
-                onChange={(e) => setSnapToZero(e.target.checked)}
+                onChange={handleSnapToZeroChange}
                 style={{
                   width: '16px',
                   height: '16px',
                   accentColor: '#333'
                 }}
               />
-              snap to zero crossings
+              <label htmlFor="snap-to-zero" style={{ marginLeft: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                snap to zero crossings
+              </label>
             </label>
           </div>
 

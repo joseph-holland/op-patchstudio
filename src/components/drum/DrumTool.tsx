@@ -201,6 +201,7 @@ export function DrumTool() {
   };
 
   const hasLoadedSamples = state.drumSamples.some(s => s.isLoaded);
+  const hasMultipleLoadedSamples = state.drumSamples.filter(s => s.isLoaded).length > 1;
   const hasPresetName = state.drumSettings.presetName.trim().length > 0;
   const canGeneratePatch = hasLoadedSamples && hasPresetName;
   
@@ -315,17 +316,17 @@ export function DrumTool() {
                     </button>
                     <button
                       onClick={() => setBulkEditModal(true)}
-                      disabled={!hasLoadedSamples}
+                      disabled={!hasMultipleLoadedSamples}
                       style={{
                         padding: '0.625rem 1.25rem',
                         border: 'none',
                         borderRadius: '3px',
-                        backgroundColor: hasLoadedSamples ? 'var(--color-interactive-focus)' : 'var(--color-border-medium)',
+                        backgroundColor: hasMultipleLoadedSamples ? 'var(--color-interactive-focus)' : 'var(--color-border-medium)',
                         color: 'var(--color-white)',
                         fontSize: '0.9rem',
                         fontWeight: '500',
-                        cursor: hasLoadedSamples ? 'pointer' : 'not-allowed',
-                        opacity: hasLoadedSamples ? 1 : 0.6,
+                        cursor: hasMultipleLoadedSamples ? 'pointer' : 'not-allowed',
+                        opacity: hasMultipleLoadedSamples ? 1 : 0.6,
                         transition: 'all 0.2s ease',
                         fontFamily: 'inherit',
                         display: 'flex',
@@ -335,12 +336,12 @@ export function DrumTool() {
                         flex: isMobile ? '1' : 'none'
                       }}
                       onMouseEnter={(e) => {
-                        if (hasLoadedSamples) {
+                        if (hasMultipleLoadedSamples) {
                           e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
                         }
                       }}
                       onMouseLeave={(e) => {
-                        if (hasLoadedSamples) {
+                        if (hasMultipleLoadedSamples) {
                           e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
                         }
                       }}

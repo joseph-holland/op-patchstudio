@@ -104,7 +104,7 @@ function AppContent() {
                   rel="noopener"
                   style={{ color: '#666' }}
                 >
-                  original opxy-drum-tool
+                  opxy-drum-tool
                 </a>
                 {' '} by zeitgeese
               </div>

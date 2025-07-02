@@ -3,6 +3,17 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "description": "Free & open source preset creator for OP synthesizers. Upload samples, edit waveforms, adjust settings, and generate patches instantly.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joseph-holland/op-patchstudio.git"
+  },
+  "homepage": "https://op-patch.studio",
+  "bugs": {
+    "url": "https://github.com/joseph-holland/op-patchstudio/issues"
+  },
+  "author": "Joseph Holland",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

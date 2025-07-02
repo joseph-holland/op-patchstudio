@@ -15,3 +15,4 @@ alwaysApply: true
     - 6px   → secondary elements (buttons, badges)
     - 3px   → small inner elements (toggles, inputs)
 - when reusing carbon components, override tokens so colours match the theme (monochrome)
+- need to also take accesability into account, should aim for WCAG 2.1 level AA

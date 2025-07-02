@@ -304,28 +304,29 @@ export function WaveformEditor({
 
   return (
     <div className={`waveform-editor ${className}`} style={{ width: '100%', position: 'relative' }}>
-      {/* Zoom icon in top-left corner */}
+      {/* Zoom icon in top-right corner */}
       {audioBuffer && onZoomEdit && (
         <button
-          onClick={handleZoomClick}
+          onClick={handleCanvasClick}
           style={{
             position: 'absolute',
-            top: '4px',
-            left: '4px',
-            width: '20px',
-            height: '20px',
+            top: '2px',
+            right: '2px',
+            width: '24px',
+            height: '24px',
             border: 'none',
             background: 'none',
+            borderRadius: '0',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#666666',
-            fontSize: '12px',
+            color: '#333333',
+            fontSize: '14px',
             zIndex: 10,
             padding: 0
           }}
-          title="zoom & edit"
+          title="zoom and edit"
         >
           <i className="fas fa-search-plus"></i>
         </button>
