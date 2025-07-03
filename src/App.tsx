@@ -5,41 +5,110 @@ import { NotificationSystem } from './components/common/NotificationSystem';
 import { AppContextProvider, useAppContext } from './context/AppContext';
 import './theme/device-themes.scss';
 import { useState, useEffect } from 'react';
+import { isMobile, isTablet } from 'react-device-detect';
+import { registerOverlayControl } from './components/common/WaveformEditor';
+
+// Global state for overlay control
+let showRotateOverlayGlobal = false;
+let setShowRotateOverlayGlobal: ((show: boolean) => void) | null = null;
+let pendingZoomCallback: (() => void) | null = null;
+
+// Export function to control overlay from other components
+export const triggerRotateOverlay = (zoomCallback?: () => void) => {
+  if (setShowRotateOverlayGlobal) {
+    setShowRotateOverlayGlobal(true);
+    if (zoomCallback) {
+      pendingZoomCallback = zoomCallback;
+    }
+  }
+};
+
+export const hideRotateOverlay = () => {
+  if (setShowRotateOverlayGlobal) {
+    setShowRotateOverlayGlobal(false);
+  }
+};
 
 function AppContent() {
   const { state, dispatch } = useAppContext();
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [isPortrait, setIsPortrait] = useState(false);
+  const [showRotateOverlay, setShowRotateOverlay] = useState(false);
+
+  // Set up global control
+  useEffect(() => {
+    setShowRotateOverlayGlobal = setShowRotateOverlay;
+    // Register the overlay control with WaveformEditor
+    registerOverlayControl((zoomCallback) => triggerRotateOverlay(zoomCallback));
+    return () => {
+      setShowRotateOverlayGlobal = null;
+    };
+  }, []);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const checkDeviceAndOrientation = () => {
+      // Use react-device-detect for device detection
+      const mobileOrTablet = isMobile || isTablet;
+      setIsMobileDevice(mobileOrTablet);
+      
+      // Check orientation using screen orientation API and window dimensions
+      const isPortraitMode = window.innerHeight > window.innerWidth;
+      setIsPortrait(isPortraitMode);
+      
+      // Hide overlay when device rotates to landscape and trigger zoom modal if pending
+      if (mobileOrTablet && !isPortraitMode && showRotateOverlay) {
+        setShowRotateOverlay(false);
+        // If there's a pending zoom callback, execute it
+        if (pendingZoomCallback) {
+          setTimeout(() => {
+            pendingZoomCallback?.();
+            pendingZoomCallback = null;
+          }, 100); // Small delay to ensure overlay is hidden
+        }
+      }
     };
     
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+    checkDeviceAndOrientation();
+    
+    // Listen for orientation changes
+    const handleOrientationChange = () => {
+      setTimeout(checkDeviceAndOrientation, 100); // Small delay to ensure orientation has changed
+    };
+    
+    const handleResize = () => {
+      checkDeviceAndOrientation();
+    };
+    
+    window.addEventListener('orientationchange', handleOrientationChange);
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('orientationchange', handleOrientationChange);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [showRotateOverlay]);
 
   const handleDismissNotification = (id: string) => {
     dispatch({ type: 'REMOVE_NOTIFICATION', payload: id });
   };
 
   return (
-    <Theme theme="white" className="opxy-theme">
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-surface-tertiary)' }}>
-        <Content style={{ 
-          padding: isMobile ? '0.5rem' : '2rem',
-                      backgroundColor: 'var(--color-surface-tertiary)',
-          maxWidth: '1400px',
-          margin: '0 auto'
-        }}>
-          <AppHeader />
-          <MainTabs />
-          
-          <NotificationSystem 
-            notifications={state.notifications}
-            onDismiss={handleDismissNotification}
-          />
+    <>
+      <Theme theme="white" className="opxy-theme">
+        <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-surface-tertiary)' }}>
+          <Content style={{ 
+            padding: isMobileDevice ? '0.5rem' : '2rem',
+            backgroundColor: 'var(--color-surface-tertiary)',
+            maxWidth: '1400px',
+            margin: '0 auto'
+          }}>
+            <AppHeader />
+            <MainTabs />
+            
+            <NotificationSystem 
+              notifications={state.notifications}
+              onDismiss={handleDismissNotification}
+            />
             
             {/* Footer - matching legacy */}
             <footer style={{ 
@@ -112,7 +181,42 @@ function AppContent() {
           </Content>
         </div>
       </Theme>
-    );
+      <div 
+        className="app-block-overlay" 
+        style={{ 
+          background: 'rgba(102,102,102,0.7)', 
+          fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif', 
+          flexDirection: 'column',
+          opacity: showRotateOverlay ? 1 : 0,
+          visibility: showRotateOverlay ? 'visible' : 'hidden',
+          transition: 'opacity 0.3s ease-in-out, visibility 0.3s ease-in-out'
+        }}
+      >
+        <div style={{ position: 'relative', width: '4em', height: '4em', marginBottom: '2.5rem', marginTop: '-6em', display: 'inline-block' }}>
+          {/* Upright phone */}
+          <i className="fas fa-mobile-alt" style={{ position: 'absolute', right: 0, bottom: 0, fontSize: '4em', color: 'var(--color-interactive-primary, #1a1a1a)', opacity: 0.6 }}></i>
+          {/* Rotated phone, shifted left/up by 50% of icon size */}
+          <i className="fas fa-mobile-alt" style={{ position: 'absolute', right: 0, bottom: 0, fontSize: '4em', color: 'var(--color-interactive-primary, #1a1a1a)', transform: 'rotate(-90deg) translate(20%, -50%)', transformOrigin: 'bottom right' }}></i>
+          {/* Reply arrow centered */}
+          <i className="fas fa-reply" style={{ position: 'absolute', left: '10%', top: '40%', fontSize: '2em', color: 'var(--color-interactive-primary, #1a1a1a)', transform: 'translate(-60%, -10%) rotate(-90deg)' }}></i>
+        </div>
+        <div
+          style={{
+            fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif',
+            fontWeight: 300,
+            fontSize: '2.1rem',
+            color: 'var(--color-text-primary)',
+            textAlign: 'center',
+            letterSpacing: '-0.05em',
+            lineHeight: 1.1,
+            padding: '0 2rem'
+          }}
+        >
+          please rotate your device to landscape mode
+        </div>
+      </div>
+    </>
+  );
 }
 
 function App() {

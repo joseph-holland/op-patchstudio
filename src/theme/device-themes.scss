@@ -304,3 +304,14 @@ $opxy-carbon-theme: (
   // ... more OP-1 Field theme overrides
 }
 */
+
+/* Global app overlay for blocking UI (OP-XY ash, semi-transparent) */
+.app-block-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(102, 102, 102, 0.85); /* op-xy-ash with transparency */
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

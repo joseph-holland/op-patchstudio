@@ -26,6 +26,7 @@ export function WaveformZoomModal({
   const [dragging, setDragging] = useState<'in' | 'out' | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const [showTooltip, setShowTooltip] = useState(false);
+
   // Helper functions for percentage display
   const frameToPercentage = (frame: number): number => {
     if (!audioBuffer) return 0;
@@ -399,24 +400,14 @@ export function WaveformZoomModal({
                   backgroundColor: c.bgAlt,
                   border: `1px solid ${c.border}`,
                   borderRadius: '3px',
-                  fontSize: '0.75rem',
-                  color: c.text,
-                  minWidth: '60px',
-                  textAlign: 'center'
+                  width: '70px',
+                  textAlign: 'center',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
                 }}>
-                  {audioBuffer ? `${Math.round(frameToPercentage(inFrame))}%` : '0%'}
+                  {frameToPercentage(inFrame).toFixed(1)}%
                 </span>
-                <span style={{
-                  padding: '0.15rem 0.3rem',
-                  backgroundColor: Math.abs(inValue) < 0.01 ? c.text : c.textSecondary,
-                  color: '#ffffff',
-                  borderRadius: '3px',
-                  fontSize: '0.65rem',
-                  minWidth: '35px',
-                  textAlign: 'center'
-                }}>
-                  {inValue.toFixed(2)}
-                </span>
+                <span style={{ fontSize: '0.7rem' }}>val: {inValue.toFixed(4)}</span>
               </div>
             </div>
             <div>
@@ -429,117 +420,48 @@ export function WaveformZoomModal({
                   backgroundColor: c.bgAlt,
                   border: `1px solid ${c.border}`,
                   borderRadius: '3px',
-                  fontSize: '0.75rem',
-                  color: c.text,
-                  minWidth: '60px',
-                  textAlign: 'center'
+                  width: '70px',
+                  textAlign: 'center',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
                 }}>
-                  {audioBuffer ? `${Math.round(frameToPercentage(outFrame))}%` : '100%'}
+                  {frameToPercentage(outFrame).toFixed(1)}%
                 </span>
-                <span style={{
-                  padding: '0.15rem 0.3rem',
-                  backgroundColor: Math.abs(outValue) < 0.01 ? c.text : c.textSecondary,
-                  color: '#ffffff',
-                  borderRadius: '3px',
-                  fontSize: '0.65rem',
-                  minWidth: '35px',
-                  textAlign: 'center'
-                }}>
-                  {outValue.toFixed(2)}
-                </span>
+                <span style={{ fontSize: '0.7rem' }}>val: {outValue.toFixed(4)}</span>
               </div>
             </div>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-            <button
-              onClick={playSelection}
-              style={{
-                padding: '0.5rem 1rem',
-                border: 'none',
-                borderRadius: '3px',
-                backgroundColor: c.text,
-                color: '#ffffff',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                transition: 'all 0.2s ease',
-                fontFamily: 'inherit'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = c.textSecondary;
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = c.text;
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <i className="fas fa-play" style={{ fontSize: '0.8rem' }}></i>
-              play selection (P)
-            </button>
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              color: c.text,
-              cursor: 'pointer'
-            }}>
+          
+          <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: '1rem', marginTop: '1rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem' }}>
               <input
                 type="checkbox"
                 checked={snapToZero}
                 onChange={(e) => setSnapToZero(e.target.checked)}
-                style={{
-                  width: '16px',
-                  height: '16px',
-                  accentColor: c.text
-                }}
               />
-              <span style={{ marginLeft: '8px', cursor: 'pointer', userSelect: 'none' }}>
-                snap to zero crossings
-              </span>
+              snap to nearest zero-crossing
             </label>
           </div>
         </div>
-
-        {/* Actions */}
+        
+        {/* Footer */}
         <div style={{
-          padding: '1rem 1.5rem 1.5rem 1.5rem',
+          padding: '1rem 1.5rem',
+          background: c.bgAlt,
+          borderTop: `1px solid ${c.border}`,
           display: 'flex',
-          gap: '0.75rem',
-          justifyContent: 'flex-end'
+          justifyContent: 'flex-end',
+          gap: '1rem'
         }}>
           <button
             onClick={onClose}
             style={{
-              padding: '0.625rem 1.25rem',
+              padding: '0.65rem 1rem',
               border: `1px solid ${c.border}`,
               borderRadius: '3px',
-              backgroundColor: c.bg,
+              background: 'transparent',
               color: c.textSecondary,
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              fontFamily: 'inherit',
-              minWidth: '80px'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = c.bgAlt;
-              e.currentTarget.style.borderColor = c.border;
-              e.currentTarget.style.color = c.text;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = c.bg;
-              e.currentTarget.style.borderColor = c.border;
-              e.currentTarget.style.color = c.textSecondary;
+              cursor: 'pointer'
             }}
           >
             cancel
@@ -547,30 +469,15 @@ export function WaveformZoomModal({
           <button
             onClick={handleSave}
             style={{
-              padding: '0.625rem 1.25rem',
+              padding: '0.65rem 1rem',
               border: 'none',
               borderRadius: '3px',
-              backgroundColor: c.text,
-              color: '#ffffff',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              fontFamily: 'inherit',
-              minWidth: '80px'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = c.textSecondary;
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = c.text;
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
+              background: c.action,
+              color: '#fff',
+              cursor: 'pointer'
             }}
           >
-            save
+            save markers
           </button>
         </div>
       </div>

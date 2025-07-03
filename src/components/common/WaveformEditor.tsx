@@ -1,4 +1,14 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { isMobile, isTablet } from 'react-device-detect';
+
+// Import the overlay control functions from App.tsx
+// We'll need to create a way to access these functions
+let showRotateOverlayGlobal: ((zoomCallback?: () => void) => void) | null = null;
+
+// Function to register the overlay control
+export const registerOverlayControl = (showOverlay: (zoomCallback?: () => void) => void) => {
+  showRotateOverlayGlobal = showOverlay;
+};
 
 interface WaveformEditorProps {
   audioBuffer: AudioBuffer | null;
@@ -32,6 +42,13 @@ export function WaveformEditor({
   }>({ type: null, startX: 0 });
 
   const finalOutPoint = outPoint ?? (audioBuffer ? audioBuffer.length - 1 : 0);
+
+  // Check if device is mobile/tablet in portrait mode
+  const isMobilePortrait = () => {
+    const mobileOrTablet = isMobile || isTablet;
+    const isPortraitMode = window.innerHeight > window.innerWidth;
+    return mobileOrTablet && isPortraitMode;
+  };
 
   const drawWaveformPath = (ctx: CanvasRenderingContext2D, width: number, height: number, data: Float32Array) => {
     const step = Math.ceil(data.length / width);
@@ -288,6 +305,16 @@ export function WaveformEditor({
   const handleCanvasClick = (_e: React.MouseEvent) => {
     // If onZoomEdit is provided, the entire waveform is clickable for zooming
     if (onZoomEdit) {
+      // Check if we're on mobile in portrait mode
+      if (isMobilePortrait()) {
+        // Show rotate overlay instead of zoom modal, but store the zoom callback
+        if (showRotateOverlayGlobal) {
+          showRotateOverlayGlobal(onZoomEdit);
+        }
+        return;
+      }
+      
+      // Otherwise, proceed with normal zoom functionality
       onZoomEdit();
       return;
     }
