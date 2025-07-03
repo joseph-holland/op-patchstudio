@@ -229,7 +229,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
 
         {/* Keyboard */}
         <div style={{ 
-          padding: '1rem 0.5rem',
+          padding: '0.5rem 0.5rem',
           backgroundColor: 'var(--color-bg-primary)',
           overflow: 'visible'
         }}>
