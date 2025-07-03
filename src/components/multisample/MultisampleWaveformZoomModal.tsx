@@ -141,7 +141,7 @@ export function MultisampleWaveformZoomModal({
 
     // In/Out markers (dark grey) - solid lines
     ctx.strokeStyle = '#222';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(inPos, 0);
     ctx.lineTo(inPos, height);
@@ -151,7 +151,7 @@ export function MultisampleWaveformZoomModal({
 
     // In/Out marker handles - triangles pointing up from bottom
     ctx.fillStyle = '#222';
-    const sampleTriangleSize = 15;
+    const sampleTriangleSize = 20;
     const bottomY = height;
     
     // Sample start triangle (pointing up)
@@ -171,10 +171,10 @@ export function MultisampleWaveformZoomModal({
     ctx.fill();
 
     // Loop markers (medium grey)
-    const triangleSize = 15;
+    const triangleSize = 20;
     ctx.fillStyle = '#666';
     ctx.strokeStyle = '#666';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
 
     // Loop start - vertical line and triangle at top
     ctx.beginPath();
@@ -213,11 +213,44 @@ export function MultisampleWaveformZoomModal({
     if (isOpen && audioBuffer) {
       const canvas = canvasRef.current;
       if (canvas) {
-        canvas.width = 800;
-        canvas.height = 200;
+        // Calculate responsive dimensions
+        const container = canvas.parentElement;
+        const containerWidth = container?.clientWidth || 800;
+        const containerHeight = container?.clientHeight || 300;
+        
+        // Account for padding and make responsive
+        const canvasWidth = Math.max(300, containerWidth - 32); // 32px for padding
+        const canvasHeight = Math.min(250, Math.max(150, containerHeight * 0.6)); // Responsive height with min/max
+        
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
         updateDisplay();
       }
     }
+  }, [isOpen, audioBuffer, updateDisplay]);
+
+  // Handle window resize for responsive canvas
+  useEffect(() => {
+    if (!isOpen || !audioBuffer) return;
+
+    const handleResize = () => {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const container = canvas.parentElement;
+        const containerWidth = container?.clientWidth || 800;
+        const containerHeight = container?.clientHeight || 300;
+        
+        const canvasWidth = Math.max(300, containerWidth - 32);
+        const canvasHeight = Math.min(250, Math.max(150, containerHeight * 0.6));
+        
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        updateDisplay();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [isOpen, audioBuffer, updateDisplay]);
 
   // Redraw when markers change
@@ -421,11 +454,10 @@ export function MultisampleWaveformZoomModal({
             ref={canvasRef}
             style={{
               width: '100%',
-              maxWidth: '800px',
-              height: '200px',
               border: `1px solid ${c.border}`,
               borderRadius: '3px',
-              cursor: dragging ? 'grabbing' : 'pointer'
+              cursor: dragging ? 'grabbing' : 'pointer',
+              display: 'block'
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}

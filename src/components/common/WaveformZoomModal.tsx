@@ -104,7 +104,7 @@ export function WaveformZoomModal({
 
     // Draw markers
     ctx.strokeStyle = '#333';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 4;
 
     // In marker vertical line
     ctx.beginPath();
@@ -120,7 +120,7 @@ export function WaveformZoomModal({
 
     // Draw triangular markers at bottom
     ctx.fillStyle = '#333';
-    const triangleSize = 10;
+    const triangleSize = 15;
 
     // In marker triangle (pointing up)
     ctx.beginPath();
@@ -144,19 +144,57 @@ export function WaveformZoomModal({
     drawMarkers();
   }, [drawWaveform, drawMarkers]);
 
-  // Handle canvas initialization and updates
+  // Handle canvas initialization and sizing ONLY when modal opens
   useEffect(() => {
     if (isOpen && audioBuffer) {
       const canvas = canvasRef.current;
       if (canvas) {
-        // Set canvas size
-        const parentWidth = (canvas.parentElement?.clientWidth || 300) - 32;
-        canvas.width = parentWidth;
-        canvas.height = 200;
+        // Set canvas size - make both width and height responsive
+        const container = canvas.parentElement;
+        const containerWidth = container?.clientWidth || 300;
+        const containerHeight = container?.clientHeight || 300;
         
+        const canvasWidth = Math.max(300, containerWidth - 32); // Account for padding
+        const canvasHeight = Math.min(250, Math.max(150, containerHeight * 0.5)); // Responsive height with min/max
+        
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        
+        // Initial draw
         updateWaveform();
       }
     }
+  }, [isOpen, audioBuffer]); // Remove updateWaveform from dependencies to prevent resize during dragging
+
+  // Handle redrawing when markers change (without resizing canvas)
+  useEffect(() => {
+    if (isOpen && audioBuffer) {
+      updateWaveform();
+    }
+  }, [isOpen, audioBuffer, inPoint, outPoint, updateWaveform]);
+
+  // Handle window resize for responsive canvas
+  useEffect(() => {
+    if (!isOpen || !audioBuffer) return;
+
+    const handleResize = () => {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const container = canvas.parentElement;
+        const containerWidth = container?.clientWidth || 300;
+        const containerHeight = container?.clientHeight || 300;
+        
+        const canvasWidth = Math.max(300, containerWidth - 32);
+        const canvasHeight = Math.min(250, Math.max(150, containerHeight * 0.5));
+        
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        updateWaveform();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [isOpen, audioBuffer, updateWaveform]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -266,6 +304,51 @@ export function WaveformZoomModal({
     }
   };
 
+  const playSelection = () => {
+    if (!audioBuffer) return;
+
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const source = audioContext.createBufferSource();
+      
+      const selectionLength = outPoint - inPoint;
+      const selectionBuffer = audioContext.createBuffer(
+        audioBuffer.numberOfChannels,
+        selectionLength,
+        audioBuffer.sampleRate
+      );
+      
+      for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+        const srcData = audioBuffer.getChannelData(ch);
+        const dstData = selectionBuffer.getChannelData(ch);
+        for (let i = 0; i < selectionLength; i++) {
+          dstData[i] = srcData[inPoint + i];
+        }
+      }
+      
+      source.buffer = selectionBuffer;
+      source.connect(audioContext.destination);
+      source.start(0);
+    } catch (error) {
+      console.error('Error playing selection:', error);
+    }
+  };
+
+  // Keyboard event handler for 'p' key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'p' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        playSelection();
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [isOpen, audioBuffer, inPoint, outPoint]);
+
   if (!audioBuffer || !isOpen) return null;
 
   return (
@@ -338,12 +421,12 @@ export function WaveformZoomModal({
             ref={canvasRef}
             style={{
               width: '100%',
-              height: '200px',
               border: '1px solid #e0e0e0',
               borderRadius: '3px',
               cursor: dragging ? 'grabbing' : 'pointer',
               backgroundColor: '#ececec',
-              marginBottom: '1rem'
+              marginBottom: '1rem',
+              display: 'block'
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -352,30 +435,59 @@ export function WaveformZoomModal({
           />
 
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ 
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              color: '#333',
-              cursor: 'pointer'
-            }}>
-              <input
-                type="checkbox"
-                id="snap-to-zero"
-                checked={snapToZero}
-                onChange={handleSnapToZeroChange}
-                style={{
-                  width: '16px',
-                  height: '16px',
-                  accentColor: '#333'
-                }}
-              />
-              <label htmlFor="snap-to-zero" style={{ marginLeft: '8px', cursor: 'pointer', userSelect: 'none' }}>
-                snap to zero crossings
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <label style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                color: '#333',
+                cursor: 'pointer'
+              }}>
+                <input
+                  type="checkbox"
+                  id="snap-to-zero"
+                  checked={snapToZero}
+                  onChange={handleSnapToZeroChange}
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    accentColor: '#333'
+                  }}
+                />
+                <label htmlFor="snap-to-zero" style={{ marginLeft: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                  snap to zero crossings
+                </label>
               </label>
-            </label>
+              <button
+                onClick={playSelection}
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '3px',
+                  backgroundColor: '#fff',
+                  color: '#333',
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                  e.currentTarget.style.borderColor = '#9ca3af';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fff';
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                }}
+              >
+                <i className="fas fa-play" style={{ fontSize: '0.8rem' }}></i>
+                play selection (P)
+              </button>
+            </div>
           </div>
 
           <div style={{ 
@@ -411,14 +523,14 @@ export function WaveformZoomModal({
                 />
                 <span style={{
                   padding: '0.25rem 0.5rem',
-                  backgroundColor: Math.abs(inValue) < 0.01 ? '#28a745' : '#6c757d',
+                  backgroundColor: Math.abs(inValue) < 0.01 ? '#000000' : '#6c757d',
                   color: 'white',
                   borderRadius: '3px',
                   fontSize: '0.75rem',
                   minWidth: '60px',
                   textAlign: 'center'
                 }}>
-                  {inValue.toFixed(3)}
+                  {inValue.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -451,14 +563,14 @@ export function WaveformZoomModal({
                 />
                 <span style={{
                   padding: '0.25rem 0.5rem',
-                  backgroundColor: Math.abs(outValue) < 0.01 ? '#28a745' : '#6c757d',
+                  backgroundColor: Math.abs(outValue) < 0.01 ? '#000000' : '#6c757d',
                   color: 'white',
                   borderRadius: '3px',
                   fontSize: '0.75rem',
                   minWidth: '60px',
                   textAlign: 'center'
                 }}>
-                  {outValue.toFixed(3)}
+                  {outValue.toFixed(2)}
                 </span>
               </div>
             </div>

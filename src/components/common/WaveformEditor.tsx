@@ -247,23 +247,42 @@ export function WaveformEditor({
     if (!canvas) return;
 
     const resizeCanvas = () => {
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * window.devicePixelRatio;
-      canvas.height = height * window.devicePixelRatio;
-      canvas.style.width = rect.width + 'px';
-      canvas.style.height = height + 'px';
+      const container = canvas.parentElement;
+      if (!container) return;
       
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      const rect = container.getBoundingClientRect();
+      if (rect.width > 0) {
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = height * window.devicePixelRatio;
+        canvas.style.width = `${rect.width}px`;
+        canvas.style.height = `${height}px`;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        
+        drawWaveform();
       }
-      
-      drawWaveform();
     };
 
-    resizeCanvas();
+    const resizeObserver = new ResizeObserver(resizeCanvas);
+    
+    const container = canvas.parentElement;
+    if (container) {
+      resizeObserver.observe(container);
+    }
+    
     window.addEventListener('resize', resizeCanvas);
-    return () => window.removeEventListener('resize', resizeCanvas);
+    
+    // Initial resize
+    resizeCanvas();
+    
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      resizeObserver.disconnect();
+    };
   }, [height, drawWaveform]);
 
   const handleCanvasClick = (_e: React.MouseEvent) => {

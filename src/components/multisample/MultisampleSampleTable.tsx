@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { WaveformEditor } from '../common/WaveformEditor';
+import { Tooltip } from '../common/Tooltip';
 import { MultisampleWaveformZoomModal } from './MultisampleWaveformZoomModal';
 
 
@@ -64,6 +65,7 @@ export function MultisampleSampleTable({
   const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   const browseFileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isKeyHelpTooltipVisible, setIsKeyHelpTooltipVisible] = useState(false);
 
   // Detect mobile screen size
   React.useEffect(() => {
@@ -421,7 +423,11 @@ export function MultisampleSampleTable({
             flexDirection: 'column',
             gap: '0.75rem'
           }}>
-            {state.multisampleFiles.map((sample, index) => (
+            {[...state.multisampleFiles].reverse().map((sample, reversedIndex) => {
+              // Convert reversed index back to original index
+              const index = state.multisampleFiles.length - 1 - reversedIndex;
+              
+              return (
               <div key={index}>
                 <input
                   type="file"
@@ -448,13 +454,50 @@ export function MultisampleSampleTable({
                     alignItems: 'center',
                     marginBottom: '0.75rem'
                   }}>
-                    <div style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '600',
-                      color: c.text
-                    }}>
-                      {sample.isLoaded ? midiNoteToString(sample.rootNote || 60) : 'empty slot'}
-                    </div>
+                    {sample.isLoaded ? (
+                      <div style={{ textAlign: 'left' }}>
+                        <input
+                          type="text"
+                          value={editingNotes[index] ?? midiNoteToString(sample.rootNote || 60)}
+                          onChange={(e) => handleNoteChange(index, e.target.value)}
+                          onBlur={() => handleNoteBlur(index)}
+                          onKeyDown={(e) => handleNoteKeyDown(index, e)}
+                          onFocus={(e) => (e.target as HTMLInputElement).select()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            (e.target as HTMLInputElement).select();
+                          }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          placeholder="C4 or 60"
+                          style={{
+                            width: '80px',
+                            padding: '0.25rem 0.375rem',
+                            border: `1px solid ${c.border}`,
+                            borderRadius: '3px',
+                            fontSize: '0.875rem',
+                            fontFamily: 'monospace',
+                            textAlign: 'center',
+                            marginBottom: '0.125rem',
+                            fontWeight: '600'
+                          }}
+                        />
+                        <div style={{ 
+                          fontSize: '0.7rem', 
+                          color: c.textSecondary,
+                          textAlign: 'center'
+                        }}>
+                          midi {sample.rootNote || 60}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{
+                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                        color: c.textSecondary
+                      }}>
+                        empty slot
+                      </div>
+                    )}
                     
                     <div style={{
                       display: 'flex',
@@ -581,7 +624,8 @@ export function MultisampleSampleTable({
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -605,7 +649,7 @@ export function MultisampleSampleTable({
       {/* Header */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '140px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
+        gridTemplateColumns: '100px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
         gap: '0.5rem',
         padding: '0.75rem',
         background: c.bgAlt,
@@ -616,7 +660,39 @@ export function MultisampleSampleTable({
         fontWeight: 'bold',
         color: c.textSecondary
       }}>
-        <div>key</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          key
+          <Tooltip
+            isVisible={isKeyHelpTooltipVisible}
+            content={
+              <>
+                <strong>click to edit note:</strong><br />
+                • musical notes: <strong>C5</strong>, <strong>A#2</strong>, <strong>Bb3</strong><br />
+                • midi numbers: <strong>60</strong>, <strong>72</strong>, <strong>48</strong><br />
+                • press <strong>enter</strong> or click away to save
+              </>
+            }
+          >
+            <span
+              style={{ display: 'flex' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsKeyHelpTooltipVisible(!isKeyHelpTooltipVisible);
+              }}
+              onMouseEnter={() => setIsKeyHelpTooltipVisible(true)}
+              onMouseLeave={() => setIsKeyHelpTooltipVisible(false)}
+            >
+              <i 
+                className="fas fa-question-circle" 
+                style={{ 
+                  fontSize: '14px', 
+                  color: c.textSecondary,
+                  cursor: 'help'
+                }}
+              />
+            </span>
+          </Tooltip>
+        </div>
         <div>file details</div>
         <div>waveform</div>
         <div>actions</div>
@@ -695,11 +771,11 @@ export function MultisampleSampleTable({
                   onDragEnd={handleDragEnd}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '140px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
+                    gridTemplateColumns: '100px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
                     gap: '0.5rem',
                     padding: '0.75rem',
                     background: isDraggedOver ? c.bgAlt : c.bg,
-                    borderBottom: index < state.multisampleFiles.length - 1 ? `1px solid ${c.border}` : 'none',
+                    borderBottom: reversedIndex < state.multisampleFiles.length - 1 ? `1px solid ${c.border}` : 'none',
                     transition: 'background 0.2s ease',
                     alignItems: 'center',
                     minHeight: '54px',
@@ -725,17 +801,18 @@ export function MultisampleSampleTable({
                           onMouseDown={(e) => e.stopPropagation()}
                           placeholder="C4 or 60"
                           style={{
-                            width: '100px',
-                            padding: '0.375rem 0.5rem',
+                            width: '80px',
+                            padding: '0.25rem 0.375rem',
                             border: `1px solid ${c.border}`,
                             borderRadius: '3px',
                             fontSize: '0.875rem',
                             fontFamily: 'monospace',
                             textAlign: 'center',
-                            marginBottom: '0.25rem'
+                            marginBottom: '0.125rem',
+                            fontWeight: '600'
                           }}
                         />
-                        <div style={{ fontSize: '0.75rem', color: c.textSecondary }}>
+                        <div style={{ fontSize: '0.7rem', color: c.textSecondary }}>
                           midi {sample.rootNote || 60}
                         </div>
                       </div>

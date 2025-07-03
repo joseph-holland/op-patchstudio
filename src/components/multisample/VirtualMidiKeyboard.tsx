@@ -87,17 +87,18 @@ export function VirtualMidiKeyboard({
 
   // Keyboard event handlers
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Check if user is typing in an input field
+    const isUserTyping = () => {
       const activeElement = document.activeElement;
-      const isTyping = activeElement && (
+      return activeElement && (
         activeElement.tagName === 'INPUT' ||
         activeElement.tagName === 'TEXTAREA' ||
         activeElement.hasAttribute('contenteditable')
       );
-      
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
       // If user is typing, don't process keyboard shortcuts
-      if (isTyping) {
+      if (isUserTyping()) {
         return;
       }
       
@@ -136,16 +137,8 @@ export function VirtualMidiKeyboard({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      // Check if user is typing in an input field
-      const activeElement = document.activeElement;
-      const isTyping = activeElement && (
-        activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.hasAttribute('contenteditable')
-      );
-      
       // If user is typing, don't process keyboard shortcuts
-      if (isTyping) {
+      if (isUserTyping()) {
         return;
       }
       
@@ -554,15 +547,17 @@ export function VirtualMidiKeyboard({
             fontSize: '0.875rem',
             color: 'var(--color-text-secondary)'
           }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.5rem',
-              fontWeight: 500
-            }}>
-              <i className="fas fa-check-circle" style={{ color: 'var(--color-text-secondary)', fontSize: iconSize }}></i>
-              {loadedSamplesCount} / 24 loaded
-            </div>
+            {!isMobile && (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                fontWeight: 500
+              }}>
+                <i className="fas fa-check-circle" style={{ color: 'var(--color-text-secondary)', fontSize: iconSize }}></i>
+                {loadedSamplesCount} / 24 loaded
+              </div>
+            )}
             <button
               onClick={onTogglePin}
               className="pin-button"

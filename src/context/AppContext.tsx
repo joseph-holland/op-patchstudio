@@ -491,6 +491,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...updatedMultisampleFiles[action.payload.index],
         ...action.payload.updates
       };
+      
+      // If rootNote was updated, sort the array to maintain proper order
+      if ('rootNote' in action.payload.updates) {
+        updatedMultisampleFiles.sort((a, b) => b.rootNote - a.rootNote);
+      }
+      
       return { ...state, multisampleFiles: updatedMultisampleFiles };
       
     case 'REORDER_MULTISAMPLE_FILES':

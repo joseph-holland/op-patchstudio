@@ -191,17 +191,19 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
               color: 'var(--color-text-secondary)',
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontWeight: 500,
-              }}
-            >
-              <i className="fas fa-check-circle" style={{ color: 'var(--color-text-secondary)', fontSize: iconSize }}></i>
-              {loadedSamplesCount} / 24 loaded
-            </div>
+            {!isMobile && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontWeight: 500,
+                }}
+              >
+                <i className="fas fa-check-circle" style={{ color: 'var(--color-text-secondary)', fontSize: iconSize }}></i>
+                {loadedSamplesCount} / 24 loaded
+              </div>
+            )}
             <button
               onClick={togglePin}
               className="pin-button"
