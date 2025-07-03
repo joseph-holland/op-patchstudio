@@ -142,18 +142,14 @@ export function MultisampleSampleTable({
     
     const files: File[] = [];
     
-    console.log('Drop event - files:', e.dataTransfer.files?.length, 'items:', e.dataTransfer.items?.length);
-    
     // Use the .items property for robust folder and file handling
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       const items = Array.from(e.dataTransfer.items);
-      console.log('Processing items:', items.length);
       
       // Process all dropped items in parallel
       const processingPromises = items.map(item => {
         const entry = item.webkitGetAsEntry();
         if (entry) {
-          console.log('Found entry:', entry.name, entry.isDirectory ? '(directory)' : '(file)');
           return processEntry(entry, files);
         }
         return Promise.resolve();
@@ -164,27 +160,18 @@ export function MultisampleSampleTable({
     } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       // Fallback for browsers that don't support .items
       files.push(...Array.from(e.dataTransfer.files));
-      console.log('Using fallback to .files, found:', files.length);
     }
-    
-    console.log('Total files collected:', files.length);
     
     const wavFiles = files.filter(file => 
       file.type === 'audio/wav' || file.name.toLowerCase().endsWith('.wav')
     );
     
-    console.log('WAV files found:', wavFiles.length);
-    
     const remainingSlots = 24 - state.multisampleFiles.length;
     const filesToProcess = wavFiles.slice(0, remainingSlots);
     
     if (filesToProcess.length > 0) {
-      console.log(`Processing ${filesToProcess.length} WAV files for multisample (${remainingSlots} slots available)`);
-      
       // Show user feedback about file limit
       if (wavFiles.length > remainingSlots) {
-        console.log(`Note: ${wavFiles.length - remainingSlots} files were skipped due to 24-file limit`);
-        
         // Show notification about file limit
         dispatch({
           type: 'ADD_NOTIFICATION',
@@ -199,9 +186,9 @@ export function MultisampleSampleTable({
       
       onFilesSelected(filesToProcess);
     } else if (files.length > 0) {
-      console.log('No WAV files found in dropped items');
+      // No WAV files found in dropped items - can provide user feedback if desired
     } else {
-      console.log('No files found in drop event');
+      // No files found in drop event
     }
   };
 
@@ -217,10 +204,8 @@ export function MultisampleSampleTable({
             }
           });
         });
-        console.log('Added file:', file.name);
         files.push(file);
       } else if (entry.isDirectory) {
-        console.log('Processing directory:', entry.name);
         const reader = entry.createReader();
         
         // Read all entries from the directory
@@ -252,8 +237,6 @@ export function MultisampleSampleTable({
           }
         }
         
-        console.log(`Found ${allEntries.length} entries in directory:`, entry.name);
-        
         // Process all entries in parallel for better performance
         await Promise.all(allEntries.map(childEntry => processEntry(childEntry, files)));
       }
@@ -280,12 +263,8 @@ export function MultisampleSampleTable({
       const filesToProcess = wavFiles.slice(0, remainingSlots);
       
       if (filesToProcess.length > 0) {
-        console.log(`Processing ${filesToProcess.length} WAV files from browse (${remainingSlots} slots available)`);
-        
         // Show user feedback about file limit
         if (wavFiles.length > remainingSlots) {
-          console.log(`Note: ${wavFiles.length - remainingSlots} files were skipped due to 24-file limit`);
-          
           // Show notification about file limit
           dispatch({
             type: 'ADD_NOTIFICATION',
