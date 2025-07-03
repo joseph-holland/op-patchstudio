@@ -140,45 +140,125 @@ export function MultisampleSampleTable({
     e.stopPropagation();
     setIsDragOver(false);
     
-    const items = Array.from(e.dataTransfer.items);
     const files: File[] = [];
     
-    for (const item of items) {
-      if (item.kind === 'file') {
+    console.log('Drop event - files:', e.dataTransfer.files?.length, 'items:', e.dataTransfer.items?.length);
+    
+    // Use the .items property for robust folder and file handling
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      const items = Array.from(e.dataTransfer.items);
+      console.log('Processing items:', items.length);
+      
+      // Process all dropped items in parallel
+      const processingPromises = items.map(item => {
         const entry = item.webkitGetAsEntry();
         if (entry) {
-          await processEntry(entry, files);
+          console.log('Found entry:', entry.name, entry.isDirectory ? '(directory)' : '(file)');
+          return processEntry(entry, files);
         }
-      }
+        return Promise.resolve();
+      });
+      
+      await Promise.all(processingPromises);
+      
+    } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      // Fallback for browsers that don't support .items
+      files.push(...Array.from(e.dataTransfer.files));
+      console.log('Using fallback to .files, found:', files.length);
     }
+    
+    console.log('Total files collected:', files.length);
     
     const wavFiles = files.filter(file => 
       file.type === 'audio/wav' || file.name.toLowerCase().endsWith('.wav')
     );
     
+    console.log('WAV files found:', wavFiles.length);
+    
     const remainingSlots = 24 - state.multisampleFiles.length;
     const filesToProcess = wavFiles.slice(0, remainingSlots);
     
     if (filesToProcess.length > 0) {
+      console.log(`Processing ${filesToProcess.length} WAV files for multisample (${remainingSlots} slots available)`);
+      
+      // Show user feedback about file limit
+      if (wavFiles.length > remainingSlots) {
+        console.log(`Note: ${wavFiles.length - remainingSlots} files were skipped due to 24-file limit`);
+        
+        // Show notification about file limit
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: {
+            id: Date.now().toString(),
+            type: 'info',
+            title: 'file limit reached',
+            message: `loaded ${filesToProcess.length} files (${wavFiles.length - remainingSlots} additional files skipped)`
+          }
+        });
+      }
+      
       onFilesSelected(filesToProcess);
+    } else if (files.length > 0) {
+      console.log('No WAV files found in dropped items');
+    } else {
+      console.log('No files found in drop event');
     }
   };
 
   const processEntry = async (entry: any, files: File[]): Promise<void> => {
-    if (entry.isFile) {
-      const file = await new Promise<File>((resolve) => {
-        entry.file((file: File) => resolve(file));
-      });
-      files.push(file);
-    } else if (entry.isDirectory) {
-      const reader = entry.createReader();
-      const entries = await new Promise<any[]>((resolve) => {
-        reader.readEntries((entries: any[]) => resolve(entries));
-      });
-      
-      for (const childEntry of entries) {
-        await processEntry(childEntry, files);
+    try {
+      if (entry.isFile) {
+        const file = await new Promise<File>((resolve, reject) => {
+          entry.file((file: File) => {
+            if (file) {
+              resolve(file);
+            } else {
+              reject(new Error('Failed to get file from entry'));
+            }
+          });
+        });
+        console.log('Added file:', file.name);
+        files.push(file);
+      } else if (entry.isDirectory) {
+        console.log('Processing directory:', entry.name);
+        const reader = entry.createReader();
+        
+        // Read all entries from the directory
+        const readEntries = (): Promise<any[]> => {
+          return new Promise((resolve, reject) => {
+            reader.readEntries((entries: any[]) => {
+              if (entries && entries.length > 0) {
+                resolve(entries);
+              } else {
+                resolve([]);
+              }
+            }, (error: any) => {
+              console.error('Error reading directory entries:', error);
+              reject(error);
+            });
+          });
+        };
+        
+        // Read all entries recursively (handle large directories)
+        let allEntries: any[] = [];
+        let hasMore = true;
+        
+        while (hasMore) {
+          const entries = await readEntries();
+          if (entries.length === 0) {
+            hasMore = false;
+          } else {
+            allEntries = allEntries.concat(entries);
+          }
+        }
+        
+        console.log(`Found ${allEntries.length} entries in directory:`, entry.name);
+        
+        // Process all entries in parallel for better performance
+        await Promise.all(allEntries.map(childEntry => processEntry(childEntry, files)));
       }
+    } catch (error) {
+      console.error('Error processing entry:', entry?.name, error);
     }
   };
 
@@ -200,7 +280,27 @@ export function MultisampleSampleTable({
       const filesToProcess = wavFiles.slice(0, remainingSlots);
       
       if (filesToProcess.length > 0) {
+        console.log(`Processing ${filesToProcess.length} WAV files from browse (${remainingSlots} slots available)`);
+        
+        // Show user feedback about file limit
+        if (wavFiles.length > remainingSlots) {
+          console.log(`Note: ${wavFiles.length - remainingSlots} files were skipped due to 24-file limit`);
+          
+          // Show notification about file limit
+          dispatch({
+            type: 'ADD_NOTIFICATION',
+            payload: {
+              id: Date.now().toString(),
+              type: 'info',
+              title: 'file limit reached',
+              message: `loaded ${filesToProcess.length} files (${wavFiles.length - remainingSlots} additional files skipped)`
+            }
+          });
+        }
+        
         onFilesSelected(filesToProcess);
+      } else {
+        console.log('No WAV files found in selected files');
       }
     }
     e.target.value = '';
@@ -413,9 +513,9 @@ export function MultisampleSampleTable({
             <p style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: '500' }}>
               no samples loaded
             </p>
-            <p style={{ margin: '0', fontSize: '0.9rem' }}>
-              drag and drop audio files or folders here, or click to browse
-            </p>
+                          <p style={{ margin: '0', fontSize: '0.9rem' }}>
+                drag and drop audio files or folders here, or click to browse
+              </p>
           </div>
         ) : (
           <div style={{
