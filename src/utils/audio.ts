@@ -38,12 +38,12 @@ export async function readWavMetadata(file: File): Promise<WavMetadata> {
   // Parse WAV header
   const header = parseWavHeader(dataView);
   
-  // Parse SMPL chunk for loop data and MIDI note
-  const smplData = parseSmplChunk(dataView);
-  
-  // Decode audio data
+  // Decode audio data first to get duration
   const audioContext = await audioContextManager.getAudioContext();
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+  
+  // Parse SMPL chunk for loop data and MIDI note with proper fallbacks
+  const smplData = parseSmplChunk(dataView, header.sampleRate, audioBuffer.duration, file.name);
   
   return {
     ...header,
@@ -113,44 +113,66 @@ function parseWavHeader(dataView: DataView): WavHeader {
 }
 
 // Parse SMPL chunk for loop data and MIDI note information
-function parseSmplChunk(dataView: DataView): SmplChunk {
+function parseSmplChunk(dataView: DataView, sampleRate: number, duration: number, filename: string): SmplChunk {
   let offset = 12;
   
-  // Default values
+  // Default values - use duration-based defaults like legacy code
   let midiNote = -1;
-  let loopStart = 0;
-  let loopEnd = 0;
+  let loopStart = duration * 0.1; // 10% into the sample
+  let loopEnd = duration * 0.9;   // 90% into the sample
   let hasLoopData = false;
 
   // Search for SMPL chunk
   while (offset < dataView.byteLength - 8) {
-    const chunkId = String.fromCharCode(...Array.from(new Uint8Array(dataView.buffer, offset, 4)));
+    const chunkId = String.fromCharCode(
+      dataView.getUint8(offset),
+      dataView.getUint8(offset + 1),
+      dataView.getUint8(offset + 2),
+      dataView.getUint8(offset + 3)
+    );
     const chunkSize = dataView.getUint32(offset + 4, true);
     
     if (chunkId === 'smpl') {
       // Parse SMPL chunk
       const smplOffset = offset + 8;
       
-      // MIDI unity note (offset 20)
-      if (smplOffset + 20 < dataView.byteLength) {
-        midiNote = dataView.getUint32(smplOffset + 20, true);
+      // MIDI unity note (offset 12) - according to WAV file specification
+      if (smplOffset + 12 < dataView.byteLength) {
+        midiNote = dataView.getUint32(smplOffset + 12, true);
       }
       
-      // Number of loops (offset 36)
-      if (smplOffset + 36 < dataView.byteLength) {
-        const numLoops = dataView.getUint32(smplOffset + 36, true);
+      // Number of loops (offset 28)
+      if (smplOffset + 28 < dataView.byteLength) {
+        const numLoops = dataView.getUint32(smplOffset + 28, true);
         
-        if (numLoops > 0 && smplOffset + 44 < dataView.byteLength) {
-          // First loop start and end (offset 44 and 48)
-          loopStart = dataView.getUint32(smplOffset + 44, true);
-          loopEnd = dataView.getUint32(smplOffset + 48, true);
+        if (numLoops > 0 && smplOffset + 36 + 24 <= dataView.byteLength) {
+          // First loop descriptor starts at offset 36
+          const loopOffset = smplOffset + 36;
+          const loopStartFrames = dataView.getUint32(loopOffset + 8, true);
+          const loopEndFrames = dataView.getUint32(loopOffset + 12, true);
+          
+          // Convert frames to seconds
+          loopStart = loopStartFrames / sampleRate;
+          loopEnd = loopEndFrames / sampleRate;
           hasLoopData = true;
         }
       }
       break;
     }
     
-    offset += 8 + chunkSize;
+    offset += 8 + chunkSize + (chunkSize % 2); // Account for padding to even boundary
+  }
+
+  // Fallback: parse root note from filename if not found in SMPL chunk
+  if (midiNote < 0) {
+    try {
+      const parsed = parseFilename(filename);
+      if (parsed && parsed.length > 1) {
+        midiNote = parsed[1];
+      }
+    } catch (_) {
+      // ignore filename parsing errors
+    }
   }
 
   return {
@@ -432,9 +454,10 @@ export const NOTE_NAMES = [
 ];
 
 export function midiNoteToString(value: number): string {
+  if (value < 0 || value > 127) return '';
   const octave = Math.floor(value / 12);
   const noteNumber = value % 12;
-  return `${NOTE_NAMES[noteNumber]}${octave - 1}`;
+  return `${NOTE_NAMES[noteNumber]}${octave - 2}`;
 }
 
 export function noteStringToMidiValue(note: string): number {

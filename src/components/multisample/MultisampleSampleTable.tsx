@@ -4,6 +4,7 @@ import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { WaveformEditor } from '../common/WaveformEditor';
 import { Tooltip } from '../common/Tooltip';
 import { MultisampleWaveformZoomModal } from './MultisampleWaveformZoomModal';
+import { midiNoteToString, noteStringToMidiValue } from '../../utils/audio';
 
 
 interface MultisampleSampleTableProps {
@@ -79,32 +80,6 @@ export function MultisampleSampleTable({
   }, []);
 
   // MIDI note conversion helpers
-  const midiNoteToString = (midiNote: number): string => {
-    if (midiNote < 0 || midiNote > 127) return '';
-    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const octave = Math.floor(midiNote / 12) - 1;
-    const note = noteNames[midiNote % 12];
-    return `${note}${octave}`;
-  };
-
-  const noteStringToMidi = (noteStr: string): number => {
-    const match = noteStr.match(/^([A-G])(#|b)?(\d+)$/i);
-    if (!match) return -1;
-    
-    const noteMap: { [key: string]: number } = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
-    const [, note, accidental, octaveStr] = match;
-    const baseNote = noteMap[note.toUpperCase()];
-    if (baseNote === undefined) return -1;
-    
-    const octave = parseInt(octaveStr);
-    let midiNote = (octave + 1) * 12 + baseNote;
-    
-    if (accidental === '#') midiNote += 1;
-    else if (accidental === 'b') midiNote -= 1;
-    
-    return (midiNote >= 0 && midiNote <= 127) ? midiNote : -1;
-  };
-
   const parseNoteInput = (input: string): number => {
     const trimmed = input.trim().toUpperCase();
     
@@ -115,7 +90,7 @@ export function MultisampleSampleTable({
     }
     
     // Try to parse as note name
-    return noteStringToMidi(trimmed);
+    return noteStringToMidiValue(trimmed);
   };
 
   // File drag and drop handlers for the entire table

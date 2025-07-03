@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
 import type { WavMetadata } from '../utils/audio';
-import { midiNoteToString } from '../utils/audio';
+import { midiNoteToString, parseFilename } from '../utils/audio';
 import type { Notification } from '../components/common/NotificationSystem';
 import { cookieUtils, COOKIE_KEYS } from '../utils/cookies';
 
@@ -401,25 +401,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         return state;
       }
       
-      // Helper function to convert note name to MIDI number (corrected)
-      const noteNameToMidi = (noteName: string): number => {
-        const match = noteName.match(/^([A-G])(#|b)?(\d+)$/i);
-        if (!match) return -1;
-        
-        const noteMap: { [key: string]: number } = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
-        const [, note, accidental, octaveStr] = match;
-        const baseNote = noteMap[note.toUpperCase()];
-        if (baseNote === undefined) return -1;
-        
-        const octave = parseInt(octaveStr);
-        let midiNote = (octave + 1) * 12 + baseNote;
-        
-        if (accidental === '#') midiNote += 1;
-        else if (accidental === 'b') midiNote -= 1;
-        
-        return (midiNote >= 0 && midiNote <= 127) ? midiNote : -1;
-      };
-
+      // Fallback will use parseFilename from audio utils for accurate OP-XY mapping
       // Auto-detect MIDI note from WAV metadata or filename
       let detectedMidiNote = 60; // Default to middle C
       let detectedNote = 'C4'; // Default note name
@@ -428,22 +410,17 @@ function appReducer(state: AppState, action: AppAction): AppState {
         // Prioritize the override from user interaction (e.g., clicking a specific key)
         detectedMidiNote = action.payload.rootNoteOverride;
         detectedNote = midiNoteToString(detectedMidiNote);
-      } else if (action.payload.metadata.midiNote !== -1) {
+      } else if (action.payload.metadata.midiNote >= 0) {
         // Use MIDI note from WAV metadata
         detectedMidiNote = action.payload.metadata.midiNote;
         detectedNote = midiNoteToString(action.payload.metadata.midiNote);
       } else {
         // Try to extract from filename - look for note pattern at the end
         try {
-          const nameWithoutExt = action.payload.file.name.replace(/\.[^/.]+$/, "");
-          const match = nameWithoutExt.match(/([A-G](?:#|b)?\d+)$/i);
-          if (match) {
-            const noteStr = match[1];
-            const midiFromNote = noteNameToMidi(noteStr);
-            if (midiFromNote >= 0 && midiFromNote <= 127) {
-              detectedMidiNote = midiFromNote;
-              detectedNote = noteStr.toUpperCase();
-            }
+          const [_, midiFromParse] = parseFilename(action.payload.file.name);
+          if (midiFromParse >= 0 && midiFromParse <= 127) {
+            detectedMidiNote = midiFromParse;
+            detectedNote = midiNoteToString(midiFromParse);
           }
         } catch {
           // Use default if can't detect
@@ -461,8 +438,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
         note: detectedNote,
         inPoint: 0,
         outPoint: action.payload.metadata.duration,
-        loopStart: action.payload.metadata.duration * 0.2,
-        loopEnd: action.payload.metadata.duration * 0.8,
+        // Use loop points from WAV metadata if available, otherwise use defaults
+        loopStart: action.payload.metadata.hasLoopData ? action.payload.metadata.loopStart : action.payload.metadata.duration * 0.2,
+        loopEnd: action.payload.metadata.hasLoopData ? action.payload.metadata.loopEnd : action.payload.metadata.duration * 0.8,
         // Store WAV metadata
         originalBitDepth: action.payload.metadata.bitDepth,
         originalSampleRate: action.payload.metadata.sampleRate,
