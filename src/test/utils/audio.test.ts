@@ -45,31 +45,30 @@ const createMockAudioBuffer = (length: number = 100, sampleRate: number = 44100)
 describe('audio utilities', () => {
   describe('midiNoteToString', () => {
     it('should convert MIDI note numbers to note strings correctly', () => {
-      expect(midiNoteToString(60)).toBe('C4')
-      expect(midiNoteToString(69)).toBe('A4')
-      expect(midiNoteToString(72)).toBe('C5')
+      expect(midiNoteToString(60)).toBe('C3')
+      expect(midiNoteToString(69)).toBe('A3')
+      expect(midiNoteToString(72)).toBe('C4')
     })
 
     it('should handle sharps correctly', () => {
-      expect(midiNoteToString(61)).toBe('C#4')
-      expect(midiNoteToString(70)).toBe('A#4')
+      expect(midiNoteToString(61)).toBe('C#3')
+      expect(midiNoteToString(70)).toBe('A#3')
     })
 
     it('should handle edge cases', () => {
-      expect(midiNoteToString(0)).toBe('C-1')
-      expect(midiNoteToString(127)).toBe('G9')
+      expect(midiNoteToString(0)).toBe('C-2')
+      expect(midiNoteToString(127)).toBe('G8')
     })
 
     it('should handle negative numbers gracefully', () => {
-      expect(midiNoteToString(-1)).toBe('undefined-2')
-      expect(midiNoteToString(-12)).toBe('C-2')
+      expect(midiNoteToString(-1)).toBe('')
+      expect(midiNoteToString(-12)).toBe('')
     })
   })
 
   describe('noteStringToMidiValue', () => {
     it('should convert note strings to MIDI note numbers correctly', () => {
-      // Based on the actual NOTE_OFFSET implementation
-      expect(noteStringToMidiValue('C4')).toBe(72)  // Using OP-XY specific mapping
+      expect(noteStringToMidiValue('C4')).toBe(72)
       expect(noteStringToMidiValue('A4')).toBe(81)
       expect(noteStringToMidiValue('C5')).toBe(84)
     })
@@ -148,7 +147,7 @@ describe('audio utilities', () => {
     it('should parse filename with note', () => {
       const [name, note] = parseFilename('Bass C4.wav')
       expect(name).toBe('Bass')
-      expect(note).toBe(72) // Using OP-XY specific MIDI mapping
+      expect(note).toBe(72)
     })
 
     it('should parse filename with number', () => {

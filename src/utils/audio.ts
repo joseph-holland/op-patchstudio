@@ -38,12 +38,12 @@ export async function readWavMetadata(file: File): Promise<WavMetadata> {
   // Parse WAV header
   const header = parseWavHeader(dataView);
   
-  // Parse SMPL chunk for loop data and MIDI note
-  const smplData = parseSmplChunk(dataView);
-  
-  // Decode audio data
+  // Decode audio data first to get duration
   const audioContext = await audioContextManager.getAudioContext();
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+  
+  // Parse SMPL chunk for loop data and MIDI note with proper fallbacks
+  const smplData = parseSmplChunk(dataView, header.sampleRate, audioBuffer.duration, file.name);
   
   return {
     ...header,
@@ -113,44 +113,66 @@ function parseWavHeader(dataView: DataView): WavHeader {
 }
 
 // Parse SMPL chunk for loop data and MIDI note information
-function parseSmplChunk(dataView: DataView): SmplChunk {
+function parseSmplChunk(dataView: DataView, sampleRate: number, duration: number, filename: string): SmplChunk {
   let offset = 12;
   
-  // Default values
+  // Default values - use duration-based defaults like legacy code
   let midiNote = -1;
-  let loopStart = 0;
-  let loopEnd = 0;
+  let loopStart = duration * 0.1; // 10% into the sample
+  let loopEnd = duration * 0.9;   // 90% into the sample
   let hasLoopData = false;
 
   // Search for SMPL chunk
   while (offset < dataView.byteLength - 8) {
-    const chunkId = String.fromCharCode(...Array.from(new Uint8Array(dataView.buffer, offset, 4)));
+    const chunkId = String.fromCharCode(
+      dataView.getUint8(offset),
+      dataView.getUint8(offset + 1),
+      dataView.getUint8(offset + 2),
+      dataView.getUint8(offset + 3)
+    );
     const chunkSize = dataView.getUint32(offset + 4, true);
     
     if (chunkId === 'smpl') {
       // Parse SMPL chunk
       const smplOffset = offset + 8;
       
-      // MIDI unity note (offset 20)
-      if (smplOffset + 20 < dataView.byteLength) {
-        midiNote = dataView.getUint32(smplOffset + 20, true);
+      // MIDI unity note (offset 12) - according to WAV file specification
+      if (smplOffset + 12 < dataView.byteLength) {
+        midiNote = dataView.getUint32(smplOffset + 12, true);
       }
       
-      // Number of loops (offset 36)
-      if (smplOffset + 36 < dataView.byteLength) {
-        const numLoops = dataView.getUint32(smplOffset + 36, true);
+      // Number of loops (offset 28)
+      if (smplOffset + 28 < dataView.byteLength) {
+        const numLoops = dataView.getUint32(smplOffset + 28, true);
         
-        if (numLoops > 0 && smplOffset + 44 < dataView.byteLength) {
-          // First loop start and end (offset 44 and 48)
-          loopStart = dataView.getUint32(smplOffset + 44, true);
-          loopEnd = dataView.getUint32(smplOffset + 48, true);
+        if (numLoops > 0 && smplOffset + 36 + 24 <= dataView.byteLength) {
+          // First loop descriptor starts at offset 36
+          const loopOffset = smplOffset + 36;
+          const loopStartFrames = dataView.getUint32(loopOffset + 8, true);
+          const loopEndFrames = dataView.getUint32(loopOffset + 12, true);
+          
+          // Convert frames to seconds
+          loopStart = loopStartFrames / sampleRate;
+          loopEnd = loopEndFrames / sampleRate;
           hasLoopData = true;
         }
       }
       break;
     }
     
-    offset += 8 + chunkSize;
+    offset += 8 + chunkSize + (chunkSize % 2); // Account for padding to even boundary
+  }
+
+  // Fallback: parse root note from filename if not found in SMPL chunk
+  if (midiNote < 0) {
+    try {
+      const parsed = parseFilename(filename);
+      if (parsed && parsed.length > 1) {
+        midiNote = parsed[1];
+      }
+    } catch (_) {
+      // ignore filename parsing errors
+    }
   }
 
   return {
@@ -432,33 +454,31 @@ export const NOTE_NAMES = [
 ];
 
 export function midiNoteToString(value: number): string {
-  const octave = Math.floor(value / 12);
+  if (value < 0 || value > 127) return '';
   const noteNumber = value % 12;
-  return `${NOTE_NAMES[noteNumber]}${octave - 1}`;
+  const octave = Math.floor(value / 12) - 2;
+  return `${NOTE_NAMES[noteNumber]}${octave}`;
 }
 
+const NOTE_NAME_TO_SEMITONE: Record<string, number> = {
+  'C': 0, 'C#': 1, 'Db': 1,
+  'D': 2, 'D#': 3, 'Eb': 3,
+  'E': 4,
+  'F': 5, 'F#': 6, 'Gb': 6,
+  'G': 7, 'G#': 8, 'Ab': 8,
+  'A': 9, 'A#': 10, 'Bb': 10,
+  'B': 11
+};
+
 export function noteStringToMidiValue(note: string): number {
-  const string = note.replace(" ", "");
-  if (string.length < 2) {
-    throw new Error("Bad note format");
-  }
-
-  const noteIdx = string[0].toUpperCase().charCodeAt(0) - 65;
-  if (noteIdx < 0 || noteIdx > 6) {
-    throw new Error("Bad note");
-  }
-
-  let sharpen = 0;
-  if (string[1] === "#") {
-    sharpen = 1;
-  } else if (string[1].toLowerCase() === "b") {
-    sharpen = -1;
-  }
-  return (
-    parseInt(string.slice(1 + Math.abs(sharpen)), 10) * 12 +
-    NOTE_OFFSET[noteIdx] +
-    sharpen
-  );
+  const match = note.match(/^([A-Ga-g])([#b]?)(-?\d+)$/);
+  if (!match) throw new Error('Bad note format');
+  const [, letter, accidental, octaveStr] = match;
+  const base = letter.toUpperCase() + (accidental || '');
+  const semitone = NOTE_NAME_TO_SEMITONE[base];
+  if (semitone === undefined) throw new Error('Bad note');
+  const octave = parseInt(octaveStr, 10);
+  return (octave + 2) * 12 + semitone;
 }
 
 // Enhanced base template objects for OP-XY patches

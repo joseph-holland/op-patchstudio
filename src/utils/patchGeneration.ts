@@ -262,10 +262,10 @@ export async function generateMultisamplePatch(
       hikey: sample.hikey || 127,
       lokey: sample.lokey || 0,
       "loop.crossfade": 0,
-      "loop.end": Math.floor((sample.outPoint || duration) / duration * framecount),
+      "loop.end": Math.floor((sample.loopEnd || duration) / duration * framecount),
       "loop.onrelease": false, // TODO: Get from advanced settings
       "loop.enabled": false, // TODO: Get from advanced settings
-      "loop.start": Math.floor((sample.inPoint || 0) / duration * framecount),
+      "loop.start": Math.floor((sample.loopStart || 0) / duration * framecount),
       "pitch.keycenter": sampleNote,
       reverse: false,
       sample: outputName,
