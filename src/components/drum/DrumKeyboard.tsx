@@ -258,7 +258,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
             e.preventDefault();
             e.stopPropagation();
             // Remove visual feedback
-            e.currentTarget.style.background = !isActive ? 'var(--color-key-inactive-white-bg)' : (isPressed ? '#bdbdbd' : 'var(--color-text-primary)');
+            e.currentTarget.style.background = !isActive ? 'var(--color-key-inactive-white-bg)' : (isPressed ? '#bdbdbd' : 'var(--color-keyboard-key-active-bg)');
             e.currentTarget.style.transform = 'scale(1)';
             e.currentTarget.style.boxShadow = isActive ? '0 4px 12px rgba(0, 0, 0, 0.18)' : '0 2px 6px rgba(0, 0, 0, 0.1)';
             e.currentTarget.style.borderColor = !isActive ? 'var(--color-key-inactive-border)' : 'var(--color-black)';
@@ -268,7 +268,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
             e.stopPropagation();
             
             // Remove visual feedback
-            e.currentTarget.style.background = !isActive ? 'var(--color-key-inactive-white-bg)' : (isPressed ? '#bdbdbd' : 'var(--color-text-primary)');
+            e.currentTarget.style.background = !isActive ? 'var(--color-key-inactive-white-bg)' : (isPressed ? '#bdbdbd' : 'var(--color-keyboard-key-active-bg)');
             e.currentTarget.style.transform = 'scale(1)';
             e.currentTarget.style.boxShadow = isActive ? '0 4px 12px rgba(0, 0, 0, 0.18)' : '0 2px 6px rgba(0, 0, 0, 0.1)';
             e.currentTarget.style.borderColor = !isActive ? 'var(--color-key-inactive-border)' : 'var(--color-black)';
@@ -292,7 +292,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
             borderRadius: '3px',
             cursor: 'pointer',
             transition: 'all 0.1s ease',
-            background: !isActive ? 'var(--color-key-inactive-white-bg)' : (isPressed ? '#bdbdbd' : 'var(--color-text-primary)'),
+            background: !isActive ? 'var(--color-key-inactive-white-bg)' : (isPressed ? '#bdbdbd' : 'var(--color-keyboard-key-active-bg)'),
             boxShadow: isActive ? '0 4px 12px rgba(0, 0, 0, 0.18)' : '0 2px 6px rgba(0, 0, 0, 0.1)',
             display: 'flex',
             alignItems: 'center',
@@ -300,11 +300,11 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
           }}
           onMouseEnter={(e) => {
             if (!isActive || isPressed) return;
-            e.currentTarget.style.background = 'var(--color-text-primary)';
+            e.currentTarget.style.background = 'var(--color-keyboard-key-active-bg)';
           }}
           onMouseLeave={(e) => {
             if (!isActive || isPressed) return;
-            e.currentTarget.style.background = 'var(--color-text-primary)';
+            e.currentTarget.style.background = 'var(--color-keyboard-key-active-bg)';
           }}
         >
           {/* Outer ring around black circle */}
@@ -355,7 +355,6 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
             }}>
               <div style={{
                 background: 'var(--color-text-secondary)',
-                border: '1px solid var(--color-border-light)',
                 color: 'var(--color-white)',
                 fontSize: '9px',
                 fontWeight: '600',

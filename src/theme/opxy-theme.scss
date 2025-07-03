@@ -74,7 +74,7 @@ $shadow-strong: rgba(0, 0, 0, 0.15);
 $shadow-overlay: rgba(0, 0, 0, 0.25);
 
 // Keyboard-specific colors (OP-XY hardware inspired)
-$keyboard-key-active-bg: $opxy-charcoal;
+$keyboard-key-active-bg: $opxy-slate;          // Better contrast with black circles
 $keyboard-key-inactive-bg: $opxy-pearl;
 $keyboard-circle-active: $opxy-true-black;
 $keyboard-circle-inactive: $opxy-silver;
