@@ -59,8 +59,8 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
   const [isMobile, setIsMobile] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number>(0);
-  const [zoomModalOpen, setZoomModalOpen] = useState(false);
-  const [zoomSampleIndex, setZoomSampleIndex] = useState<number>(0);
+  const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
+  const [selectedSample, setSelectedSample] = useState<{ index: number; audioBuffer: AudioBuffer; inPoint: number; outPoint: number } | null>(null);
 
   // Detect mobile screen size
   useEffect(() => {
@@ -125,26 +125,38 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
   };
 
   const openZoomModal = (index: number) => {
-    setZoomSampleIndex(index);
-    setZoomModalOpen(true);
+    const sample = state.drumSamples[index];
+    if (sample && sample.audioBuffer) {
+      setSelectedSample({
+        index,
+        audioBuffer: sample.audioBuffer,
+        inPoint: sample.inPoint || 0,
+        outPoint: sample.outPoint || sample.duration || sample.audioBuffer.duration,
+      });
+      setIsZoomModalOpen(true);
+    }
   };
 
   const closeZoomModal = () => {
-    setZoomModalOpen(false);
+    setIsZoomModalOpen(false);
+    setSelectedSample(null);
   };
 
   const handleZoomSave = (inPoint: number, outPoint: number) => {
-    dispatch({
-      type: 'UPDATE_DRUM_SAMPLE',
-      payload: {
-        index: zoomSampleIndex,
-        updates: {
-          inPoint,
-          outPoint,
-          hasBeenEdited: true
-        }
-      }
-    });
+    if (selectedSample) {
+      dispatch({
+        type: 'UPDATE_DRUM_SAMPLE',
+        payload: {
+          index: selectedSample.index,
+          updates: {
+            inPoint,
+            outPoint,
+            hasBeenEdited: true,
+          },
+        },
+      });
+    }
+    closeZoomModal();
   };
 
   const playSelectedSample = () => {
@@ -313,16 +325,17 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                            <WaveformEditor
                              audioBuffer={sample.audioBuffer}
                              height={50}
-                             inPoint={sample.inPoint || 0}
-                             outPoint={sample.outPoint || sample.audioBuffer.length - 1}
+                             inPoint={Math.round((sample.inPoint || 0) * sample.audioBuffer.sampleRate)}
+                             outPoint={Math.round((sample.outPoint || sample.duration || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
                              onMarkersChange={(markers) => {
+                               const toSeconds = (frame: number) => frame / (sample.audioBuffer?.sampleRate || 44100);
                                dispatch({
                                  type: 'UPDATE_DRUM_SAMPLE',
                                  payload: {
                                    index,
                                    updates: {
-                                     inPoint: markers.inPoint,
-                                     outPoint: markers.outPoint
+                                     inPoint: toSeconds(markers.inPoint),
+                                     outPoint: toSeconds(markers.outPoint),
                                    }
                                  }
                                });
@@ -514,16 +527,17 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                         <WaveformEditor
                           audioBuffer={sample.audioBuffer}
                           height={44}
-                          inPoint={sample.inPoint || 0}
-                          outPoint={sample.outPoint || sample.audioBuffer.length - 1}
+                          inPoint={Math.round((sample.inPoint || 0) * sample.audioBuffer.sampleRate)}
+                          outPoint={Math.round((sample.outPoint || sample.duration || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
                           onMarkersChange={(markers) => {
+                            const toSeconds = (frame: number) => frame / (sample.audioBuffer?.sampleRate || 44100);
                             dispatch({
                               type: 'UPDATE_DRUM_SAMPLE',
                               payload: {
                                 index,
                                 updates: {
-                                  inPoint: markers.inPoint,
-                                  outPoint: markers.outPoint
+                                  inPoint: toSeconds(markers.inPoint),
+                                  outPoint: toSeconds(markers.outPoint),
                                 }
                               }
                             });
@@ -647,11 +661,11 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
 
       {/* Waveform Zoom Modal */}
       <WaveformZoomModal
-        isOpen={zoomModalOpen}
+        isOpen={isZoomModalOpen}
         onClose={closeZoomModal}
-        audioBuffer={state.drumSamples[zoomSampleIndex]?.audioBuffer || null}
-        initialInPoint={state.drumSamples[zoomSampleIndex]?.inPoint || 0}
-        initialOutPoint={state.drumSamples[zoomSampleIndex]?.outPoint || state.drumSamples[zoomSampleIndex]?.audioBuffer?.length || 0}
+        audioBuffer={selectedSample?.audioBuffer || null}
+        initialInPoint={selectedSample?.inPoint || 0}
+        initialOutPoint={selectedSample?.outPoint || 0}
         onSave={handleZoomSave}
       />
     </div>

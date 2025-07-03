@@ -70,9 +70,18 @@ export function WaveformEditor({
     const width = canvas.width / window.devicePixelRatio;
     const height = canvas.height / window.devicePixelRatio;
 
-    // Clear canvas with background color
-    ctx.fillStyle = '#ffffff';
+    // Draw background regions
+    const sampleToPixel = (sample: number) => (audioBuffer.length > 1 ? (sample / audioBuffer.length) * width : 0);
+    const inX = sampleToPixel(inPoint);
+    const outX = sampleToPixel(finalOutPoint);
+
+    // Out-of-bounds area (light grey)
+    ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, width, height);
+
+    // In-bounds area (white)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(inX, 0, outX - inX, height);
 
     const data = audioBuffer.getChannelData(0);
 
@@ -136,15 +145,6 @@ export function WaveformEditor({
         ctx.stroke();
         ctx.setLineDash([]);
       }
-    }
-
-    // Highlight active region with subtle overlay
-    if (inPoint > 0 || finalOutPoint < samples - 1) {
-      const startX = sampleToPixel(inPoint);
-      const endX = sampleToPixel(finalOutPoint);
-      
-      ctx.fillStyle = 'rgba(51, 51, 51, 0.1)'; // Subtle dark overlay
-      ctx.fillRect(startX, 0, endX - startX, height);
     }
   };
 

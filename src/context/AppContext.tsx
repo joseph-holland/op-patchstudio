@@ -366,19 +366,19 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'LOAD_DRUM_SAMPLE':
       const newDrumSamples = [...state.drumSamples];
       newDrumSamples[action.payload.index] = {
-        ...newDrumSamples[action.payload.index],
+        ...initialDrumSample,
         file: action.payload.file,
         audioBuffer: action.payload.audioBuffer,
         name: action.payload.file.name,
         isLoaded: true,
         inPoint: 0,
-        outPoint: action.payload.audioBuffer.length - 1,
-        // Store WAV metadata
+        outPoint: action.payload.metadata.duration,
         originalBitDepth: action.payload.metadata.bitDepth,
         originalSampleRate: action.payload.metadata.sampleRate,
         originalChannels: action.payload.metadata.channels,
-        fileSize: action.payload.metadata.fileSize,
-        duration: action.payload.metadata.duration
+        fileSize: action.payload.file.size,
+        duration: action.payload.metadata.duration,
+        hasBeenEdited: false
       };
       return { ...state, drumSamples: newDrumSamples };
       

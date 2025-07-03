@@ -125,12 +125,22 @@ export function MultisampleWaveformZoomModal({
     const height = canvas.height;
     const data = audioBuffer.getChannelData(0);
 
-    // Clear canvas
+    // Clear entire canvas first
     ctx.clearRect(0, 0, width, height);
 
-    // Background
-    ctx.fillStyle = '#ffffff';
+    // --- New background drawing logic ---
+    const sampleToPixel = (frame: number) => (audioBuffer.length > 1 ? (frame / audioBuffer.length) * width : 0);
+    const inX = sampleToPixel(inFrame);
+    const outX = sampleToPixel(outFrame);
+
+    // Out-of-bounds area (light grey)
+    ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, width, height);
+
+    // In-bounds area (white)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(inX, 0, outX - inX, height);
+    // --- End new background drawing logic ---
 
     // Waveform
     ctx.fillStyle = '#333333';
@@ -157,7 +167,7 @@ export function MultisampleWaveformZoomModal({
     ctx.moveTo(0, height / 2);
     ctx.lineTo(width, height / 2);
     ctx.stroke();
-  }, [audioBuffer]);
+  }, [audioBuffer, inFrame, outFrame]);
 
   const drawMarkers = useCallback(() => {
     const canvas = canvasRef.current;
@@ -177,7 +187,7 @@ export function MultisampleWaveformZoomModal({
 
     // In/Out markers (dark grey) - solid lines
     ctx.strokeStyle = '#333333';
-    ctx.lineWidth = 6;
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(inPos, 0);
     ctx.lineTo(inPos, height);
@@ -206,11 +216,12 @@ export function MultisampleWaveformZoomModal({
     ctx.closePath();
     ctx.fill();
 
-    // Loop markers (medium grey)
+    // Loop markers (medium grey) - dashed lines
     const triangleSize = 14;
-    ctx.fillStyle = '#666666';
-    ctx.strokeStyle = '#666666';
-    ctx.lineWidth = 4;
+    ctx.fillStyle = '#555555';
+    ctx.strokeStyle = '#555555';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
 
     // Loop start - vertical line and triangle at top
     ctx.beginPath();
@@ -218,6 +229,7 @@ export function MultisampleWaveformZoomModal({
     ctx.lineTo(loopStartPos, height);
     ctx.stroke();
     
+    ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(loopStartPos - triangleSize / 2, 0);
     ctx.lineTo(loopStartPos + triangleSize / 2, 0);
@@ -226,11 +238,13 @@ export function MultisampleWaveformZoomModal({
     ctx.fill();
 
     // Loop end - vertical line and triangle at top
+    ctx.setLineDash([3, 3]);
     ctx.beginPath();
     ctx.moveTo(loopEndPos, 0);
     ctx.lineTo(loopEndPos, height);
     ctx.stroke();
     
+    ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(loopEndPos - triangleSize / 2, 0);
     ctx.lineTo(loopEndPos + triangleSize / 2, 0);
@@ -239,62 +253,43 @@ export function MultisampleWaveformZoomModal({
     ctx.fill();
   }, [audioBuffer, inFrame, outFrame, loopStartFrame, loopEndFrame]);
 
-  const updateDisplay = useCallback(() => {
-    drawWaveform();
-    drawMarkers();
-  }, [drawWaveform, drawMarkers]);
-
-  // Set up canvas when modal opens
-  useEffect(() => {
-    if (isOpen && audioBuffer) {
-      const canvas = canvasRef.current;
-      if (canvas) {
-        // Calculate responsive dimensions
-        const container = canvas.parentElement;
-        const containerWidth = container?.clientWidth || 800;
-        const containerHeight = container?.clientHeight || 300;
-        
-        // Account for padding and make responsive
-        const canvasWidth = Math.max(300, containerWidth - 32); // 32px for padding
-        const canvasHeight = Math.min(250, Math.max(150, containerHeight * 0.6)); // Responsive height with min/max
-        
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-        updateDisplay();
-      }
-    }
-  }, [isOpen, audioBuffer, updateDisplay]);
-
-  // Handle window resize for responsive canvas
+  // Combined effect for initialization and resizing
   useEffect(() => {
     if (!isOpen || !audioBuffer) return;
 
-    const handleResize = () => {
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const container = canvas.parentElement;
-        const containerWidth = container?.clientWidth || 800;
-        const containerHeight = container?.clientHeight || 300;
-        
-        const canvasWidth = Math.max(300, containerWidth - 32);
-        const canvasHeight = Math.min(250, Math.max(150, containerHeight * 0.6));
-        
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-        updateDisplay();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const resizeAndDraw = () => {
+      const parent = canvas.parentElement;
+      if (parent) {
+        canvas.width = parent.clientWidth;
+        canvas.height = 200; // Fixed height
+        drawWaveform();
+        drawMarkers();
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isOpen, audioBuffer, updateDisplay]);
+    resizeAndDraw(); // Initial setup
 
-  // Redraw when markers change
+    window.addEventListener('resize', resizeAndDraw);
+    return () => window.removeEventListener('resize', resizeAndDraw);
+  }, [isOpen, audioBuffer, drawWaveform, drawMarkers]);
+
+  // Effect for redrawing markers only, without resizing canvas
   useEffect(() => {
     if (isOpen && audioBuffer) {
-      updateDisplay();
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          // No need to clear the whole canvas, just redraw
+          drawWaveform();
+          drawMarkers();
+        }
+      }
     }
-  }, [isOpen, audioBuffer, inFrame, outFrame, loopStartFrame, loopEndFrame, updateDisplay]);
+  }, [inFrame, outFrame, loopStartFrame, loopEndFrame, isOpen, audioBuffer, drawWaveform, drawMarkers]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!audioBuffer) return;

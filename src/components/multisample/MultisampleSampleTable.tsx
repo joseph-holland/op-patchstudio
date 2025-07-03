@@ -571,20 +571,28 @@ export function MultisampleSampleTable({
                           <WaveformEditor
                             audioBuffer={sample.audioBuffer}
                             height={44}
-                            inPoint={sample.inPoint || 0}
-                            outPoint={sample.outPoint || sample.audioBuffer.length - 1}
+                            inPoint={Math.floor(((sample.inPoint || 0) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            outPoint={Math.floor(((sample.outPoint || sample.duration || 1) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            loopStart={Math.floor(((sample.loopStart || 0) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            loopEnd={Math.floor(((sample.loopEnd || sample.duration || 1) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            showLoopMarkers={true}
                             onMarkersChange={(markers) => {
+                              if (!sample.audioBuffer) return;
+                              const duration = sample.audioBuffer.duration;
                               dispatch({
                                 type: 'UPDATE_MULTISAMPLE_FILE',
                                 payload: {
                                   index,
                                   updates: {
-                                    inPoint: markers.inPoint,
-                                    outPoint: markers.outPoint
-                                  }
-                                }
+                                    inPoint: (markers.inPoint / sample.audioBuffer.length) * duration,
+                                    outPoint: (markers.outPoint / sample.audioBuffer.length) * duration,
+                                    loopStart: ((markers.loopStart || 0) / sample.audioBuffer.length) * duration,
+                                    loopEnd: ((markers.loopEnd || 0) / sample.audioBuffer.length) * duration,
+                                  },
+                                },
                               });
                             }}
+                            onZoomEdit={() => openZoomModal(index)}
                           />
                         ) : (
                           <div style={{
@@ -858,23 +866,25 @@ export function MultisampleSampleTable({
                           <WaveformEditor
                             audioBuffer={sample.audioBuffer}
                             height={44}
-                            inPoint={sample.inPoint || 0}
-                            outPoint={sample.outPoint || sample.audioBuffer.length - 1}
-                            loopStart={sample.loopStart || 0}
-                            loopEnd={sample.loopEnd || sample.audioBuffer.length - 1}
+                            inPoint={Math.floor(((sample.inPoint || 0) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            outPoint={Math.floor(((sample.outPoint || sample.duration || 1) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            loopStart={Math.floor(((sample.loopStart || 0) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            loopEnd={Math.floor(((sample.loopEnd || sample.duration || 1) / (sample.duration || 1)) * sample.audioBuffer.length)}
                             showLoopMarkers={true}
                             onMarkersChange={(markers) => {
+                              if (!sample.audioBuffer) return;
+                              const duration = sample.audioBuffer.duration;
                               dispatch({
                                 type: 'UPDATE_MULTISAMPLE_FILE',
                                 payload: {
                                   index,
                                   updates: {
-                                    inPoint: markers.inPoint,
-                                    outPoint: markers.outPoint,
-                                    loopStart: markers.loopStart,
-                                    loopEnd: markers.loopEnd
-                                  }
-                                }
+                                    inPoint: (markers.inPoint / sample.audioBuffer.length) * duration,
+                                    outPoint: (markers.outPoint / sample.audioBuffer.length) * duration,
+                                    loopStart: ((markers.loopStart || 0) / sample.audioBuffer.length) * duration,
+                                    loopEnd: ((markers.loopEnd || 0) / sample.audioBuffer.length) * duration,
+                                  },
+                                },
                               });
                             }}
                             onZoomEdit={() => openZoomModal(index)}
