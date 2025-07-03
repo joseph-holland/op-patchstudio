@@ -455,33 +455,30 @@ export const NOTE_NAMES = [
 
 export function midiNoteToString(value: number): string {
   if (value < 0 || value > 127) return '';
-  const octave = Math.floor(value / 12);
   const noteNumber = value % 12;
-  return `${NOTE_NAMES[noteNumber]}${octave - 2}`;
+  const octave = Math.floor(value / 12) - 2;
+  return `${NOTE_NAMES[noteNumber]}${octave}`;
 }
 
+const NOTE_NAME_TO_SEMITONE: Record<string, number> = {
+  'C': 0, 'C#': 1, 'Db': 1,
+  'D': 2, 'D#': 3, 'Eb': 3,
+  'E': 4,
+  'F': 5, 'F#': 6, 'Gb': 6,
+  'G': 7, 'G#': 8, 'Ab': 8,
+  'A': 9, 'A#': 10, 'Bb': 10,
+  'B': 11
+};
+
 export function noteStringToMidiValue(note: string): number {
-  const string = note.replace(" ", "");
-  if (string.length < 2) {
-    throw new Error("Bad note format");
-  }
-
-  const noteIdx = string[0].toUpperCase().charCodeAt(0) - 65;
-  if (noteIdx < 0 || noteIdx > 6) {
-    throw new Error("Bad note");
-  }
-
-  let sharpen = 0;
-  if (string[1] === "#") {
-    sharpen = 1;
-  } else if (string[1].toLowerCase() === "b") {
-    sharpen = -1;
-  }
-  return (
-    parseInt(string.slice(1 + Math.abs(sharpen)), 10) * 12 +
-    NOTE_OFFSET[noteIdx] +
-    sharpen
-  );
+  const match = note.match(/^([A-Ga-g])([#b]?)(-?\d+)$/);
+  if (!match) throw new Error('Bad note format');
+  const [, letter, accidental, octaveStr] = match;
+  const base = letter.toUpperCase() + (accidental || '');
+  const semitone = NOTE_NAME_TO_SEMITONE[base];
+  if (semitone === undefined) throw new Error('Bad note');
+  const octave = parseInt(octaveStr, 10);
+  return (octave + 2) * 12 + semitone;
 }
 
 // Enhanced base template objects for OP-XY patches

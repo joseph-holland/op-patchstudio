@@ -122,7 +122,8 @@ export function VirtualMidiKeyboard({
       // Handle note playing - only respond if there's a sample loaded
       if (key in keyboardMapping && !pressedKeys.has(key)) {
         const noteOffset = keyboardMapping[key as keyof typeof keyboardMapping];
-        const midiNote = activeOctave * 12 + 12 + noteOffset; // +12 because C0 is MIDI note 12
+        // Fix: Use C3 = 60 convention. C3 is octave 3, so C0 = 60 - (3 * 12) = 24
+        const midiNote = activeOctave * 12 + 24 + noteOffset;
         
         if (midiNote >= 0 && midiNote <= 127) {
           // Only trigger actions AND visual feedback if there's a sample assigned to this MIDI note
@@ -248,10 +249,11 @@ export function VirtualMidiKeyboard({
 
   // Helper function to get computer key for a MIDI note in the active octave
   const getComputerKeyForNote = (midiNote: number): string | null => {
-    const noteOctave = Math.floor((midiNote - 12) / 12); // -12 because C0 is MIDI note 12
+    // Fix: Use C3 = 60 convention. C3 is octave 3, so C0 = 60 - (3 * 12) = 24
+    const noteOctave = Math.floor((midiNote - 24) / 12);
     if (noteOctave !== activeOctave) return null;
     
-    const noteInOctave = (midiNote - 12) % 12;
+    const noteInOctave = (midiNote - 24) % 12;
     
     // Find the computer key that maps to this note
     for (const [key, offset] of Object.entries(keyboardMapping)) {
@@ -314,7 +316,7 @@ export function VirtualMidiKeyboard({
     const keys = [];
     
     // Group keys by octave for better layout
-    for (let octave = -1; octave <= 9; octave++) {
+    for (let octave = -2; octave <= 8; octave++) {
       const octaveKeys = [];
       
       // White keys for this octave
@@ -322,7 +324,8 @@ export function VirtualMidiKeyboard({
       
       for (let i = 0; i < whiteKeyOrder.length; i++) {
         const noteInOctave = whiteKeyOrder[i];
-        const midiNote = (octave + 1) * 12 + noteInOctave;
+        // Fix: Use C3 = 60 convention. C3 is octave 3, so C0 = 60 - (3 * 12) = 24
+        const midiNote = octave * 12 + 24 + noteInOctave;
         
         if (midiNote < 0 || midiNote > 127) continue;
         
@@ -395,7 +398,8 @@ export function VirtualMidiKeyboard({
       ];
       
       for (const { noteInOctave, position } of blackKeyPositions) {
-        const midiNote = (octave + 1) * 12 + noteInOctave;
+        // Fix: Use C3 = 60 convention. C3 is octave 3, so C0 = 60 - (3 * 12) = 24
+        const midiNote = octave * 12 + 24 + noteInOctave;
         
         if (midiNote < 0 || midiNote > 127) continue;
         
