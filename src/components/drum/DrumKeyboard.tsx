@@ -405,7 +405,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               position: 'relative'
             }}>
               {/* Computer key label - always visible when active octave */}
-              {showKeyboardLabels && (
+              {showKeyboardLabels && !isMobile && (
                 <div style={{
                   ...letterStyle,
                   color: !isActive ? 'var(--color-text-secondary)' : '#fff'
