@@ -37,6 +37,12 @@ $op1field-accent-blue: #4a90c2;      // Secondary blue accent (function buttons)
 $op1field-accent-green: #7cb342;     // Tertiary green accent (positive states)
 $op1field-accent-yellow: #ffc107;    // Warning/attention states
 
+// OP-1 Field knob colors (more vibrant than OP-XY)
+$op1field-knob-black: $op1field-true-black;      // Knob 1 - Black
+$op1field-knob-dark: $op1field-steel;            // Knob 2 - Steel
+$op1field-knob-light: $op1field-silver;          // Knob 3 - Silver
+$op1field-knob-white: $op1field-pure-white;      // Knob 4 - White
+
 // =============================================================================
 // Semantic Color System (Device Agnostic)
 // =============================================================================
@@ -80,6 +86,12 @@ $keyboard-circle-active: $opxy-true-black;
 $keyboard-circle-inactive: $opxy-silver;
 $keyboard-border-active: $opxy-true-black;
 $keyboard-border-inactive: $opxy-silver;
+
+// Knob colors (OP-XY hardware inspired - 4 knob colors)
+$knob-color-black: $opxy-true-black;           // Knob 1 - Black
+$knob-color-dark: $opxy-ash;                   // Knob 2 - Dark gray
+$knob-color-light: $opxy-silver;               // Knob 3 - Light gray  
+$knob-color-white: $opxy-pure-white;           // Knob 4 - White
 
 // =============================================================================
 // CSS Custom Properties (Runtime Theme Variables)
@@ -129,6 +141,12 @@ $keyboard-border-inactive: $opxy-silver;
   --color-keyboard-circle-inactive: #{$keyboard-circle-inactive};
   --color-keyboard-border-active: #{$keyboard-border-active};
   --color-keyboard-border-inactive: #{$keyboard-border-inactive};
+
+  // Knob colors
+  --color-knob-black: #{$knob-color-black};
+  --color-knob-dark: #{$knob-color-dark};
+  --color-knob-light: #{$knob-color-light};
+  --color-knob-white: #{$knob-color-white};
 
   // Legacy compatibility (to be deprecated)
   --color-bg-primary: #{$color-surface-primary};
@@ -276,6 +294,13 @@ $opxy-carbon-theme: (
   --color-surface-secondary: #{$op1field-cream};
   --color-text-primary: #{$op1field-charcoal};
   --color-text-secondary: #{$op1field-steel};
+  
+  // OP-1 Field knob colors
+  --color-knob-black: #{$op1field-knob-black};
+  --color-knob-dark: #{$op1field-knob-dark};
+  --color-knob-light: #{$op1field-knob-light};
+  --color-knob-white: #{$op1field-knob-white};
+  
   // ... more OP-1 Field theme overrides
 }
 */

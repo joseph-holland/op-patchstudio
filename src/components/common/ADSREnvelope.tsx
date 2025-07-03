@@ -664,10 +664,10 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
       {/* ADSR Control Knobs */}
       <FourKnobControl
         knobs={[
-          { label: 'attack', value: valueToPercent(currentEnvelope.attack), color: '#000' },
-          { label: 'decay', value: valueToPercent(currentEnvelope.decay), color: '#666' },
-          { label: 'sustain', value: valueToPercent(currentEnvelope.sustain), color: '#bbb' },
-          { label: 'release', value: valueToPercent(currentEnvelope.release), color: '#fff' }
+          { label: 'attack', value: valueToPercent(currentEnvelope.attack), color: 'black' },
+          { label: 'decay', value: valueToPercent(currentEnvelope.decay), color: 'dark' },
+          { label: 'sustain', value: valueToPercent(currentEnvelope.sustain), color: 'light' },
+          { label: 'release', value: valueToPercent(currentEnvelope.release), color: 'white' }
         ]}
         onValueChange={handleKnobValueChange}
       />

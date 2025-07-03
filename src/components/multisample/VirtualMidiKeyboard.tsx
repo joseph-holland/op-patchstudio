@@ -335,8 +335,8 @@ export function VirtualMidiKeyboard({
         // Define key colors based on state
         const whiteKeyColors = {
           base: isAssigned ? 'var(--color-bg-primary)' : 'var(--color-key-inactive-white-bg)',
-          hover: '#e0e0e0',
-          pressed: '#c9c9c9',
+          hover: 'var(--color-surface-secondary)',
+          pressed: 'var(--color-interactive-secondary)',
           dragOver: 'var(--color-interactive-focus-ring)',
         };
         
@@ -466,7 +466,7 @@ export function VirtualMidiKeyboard({
         style={{
           display: isStuck ? 'block' : 'none',
           height: `${placeholderHeight}px`,
-          background: '#fff'
+          background: 'var(--color-surface-primary)'
         }}
       />
       <div
@@ -510,7 +510,7 @@ export function VirtualMidiKeyboard({
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
             <h3 style={{
               margin: 0,
-              color: '#222',
+              color: 'var(--color-text-primary)',
               fontSize: '1.25rem',
               fontWeight: 300,
             }}>

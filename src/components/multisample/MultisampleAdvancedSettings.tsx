@@ -168,9 +168,9 @@ export function MultisampleAdvancedSettings({ isOpen, onClose }: MultisampleAdva
           <section>
             <h4 style={{ 
               marginBottom: '1rem', 
-              color: '#222',
+              color: 'var(--color-text-primary)',
               fontWeight: '500',
-              borderBottom: '1px solid #e0e0e0',
+              borderBottom: '1px solid var(--color-border-subtle)',
               paddingBottom: '0.5rem'
             }}>
               Playback
@@ -201,20 +201,20 @@ export function MultisampleAdvancedSettings({ isOpen, onClose }: MultisampleAdva
                 />
                 <style>{`
                   #advanced-loop-enabled .cds--toggle-input__appearance {
-                    background-color: #e5e7eb !important;
+                    background-color: var(--color-surface-secondary) !important;
                   }
                   #advanced-loop-enabled .cds--toggle-input__appearance:before {
-                    background-color: #6b7280 !important;
+                    background-color: var(--color-text-secondary) !important;
                   }
                   #advanced-loop-enabled .cds--toggle-input:checked + .cds--toggle-input__appearance {
-                    background-color: #374151 !important;
+                    background-color: var(--color-interactive-primary) !important;
                   }
                   #advanced-loop-enabled .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
-                    background-color: #fff !important;
+                    background-color: var(--color-surface-primary) !important;
                   }
                   #advanced-loop-enabled .cds--toggle__text--off,
                   #advanced-loop-enabled .cds--toggle__text--on {
-                    color: #6b7280 !important;
+                    color: var(--color-text-secondary) !important;
                   }
                 `}</style>
               </div>
@@ -238,7 +238,7 @@ export function MultisampleAdvancedSettings({ isOpen, onClose }: MultisampleAdva
                 <div style={{
                   fontSize: '0.9rem',
                   fontWeight: '500',
-                  color: '#222',
+                  color: 'var(--color-text-primary)',
                   marginBottom: '0.5rem'
                 }}>
                   transpose: {settings.transpose > 0 ? '+' : ''}{settings.transpose}
@@ -435,7 +435,7 @@ export function MultisampleAdvancedSettings({ isOpen, onClose }: MultisampleAdva
         #advanced-width .cds--slider__track,
         #advanced-highpass .cds--slider__track,
         #advanced-portamento-amount .cds--slider__track {
-          background: linear-gradient(to right, #e5e7eb 0%, #6b7280 100%) !important;
+          background: linear-gradient(to right, var(--color-surface-secondary) 0%, var(--color-text-secondary) 100%) !important;
         }
         #advanced-transpose .cds--slider__filled-track,
         #advanced-velocity-sensitivity .cds--slider__filled-track,
@@ -443,7 +443,7 @@ export function MultisampleAdvancedSettings({ isOpen, onClose }: MultisampleAdva
         #advanced-width .cds--slider__filled-track,
         #advanced-highpass .cds--slider__filled-track,
         #advanced-portamento-amount .cds--slider__filled-track {
-          background: #374151 !important;
+          background: var(--color-interactive-primary) !important;
         }
         #advanced-transpose .cds--slider__thumb,
         #advanced-velocity-sensitivity .cds--slider__thumb,
@@ -451,8 +451,8 @@ export function MultisampleAdvancedSettings({ isOpen, onClose }: MultisampleAdva
         #advanced-width .cds--slider__thumb,
         #advanced-highpass .cds--slider__thumb,
         #advanced-portamento-amount .cds--slider__thumb {
-          background: #374151 !important;
-          border: 2px solid #374151 !important;
+          background: var(--color-interactive-primary) !important;
+          border: 2px solid var(--color-interactive-primary) !important;
         }
         #advanced-transpose .cds--slider__thumb:hover,
         #advanced-velocity-sensitivity .cds--slider__thumb:hover,
@@ -460,8 +460,8 @@ export function MultisampleAdvancedSettings({ isOpen, onClose }: MultisampleAdva
         #advanced-width .cds--slider__thumb:hover,
         #advanced-highpass .cds--slider__thumb:hover,
         #advanced-portamento-amount .cds--slider__thumb:hover {
-          background: #222 !important;
-          border-color: #222 !important;
+          background: var(--color-interactive-hover) !important;
+          border-color: var(--color-interactive-hover) !important;
         }
       `}</style>
     </>

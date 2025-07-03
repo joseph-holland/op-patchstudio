@@ -3,7 +3,7 @@ import { AppHeader } from './components/common/AppHeader';
 import { MainTabs } from './components/common/MainTabs';
 import { NotificationSystem } from './components/common/NotificationSystem';
 import { AppContextProvider, useAppContext } from './context/AppContext';
-import './theme/opxy-theme.scss';
+import './theme/device-themes.scss';
 import { useState, useEffect } from 'react';
 
 function AppContent() {
@@ -26,10 +26,10 @@ function AppContent() {
 
   return (
     <Theme theme="white" className="opxy-theme">
-      <div style={{ minHeight: '100vh', backgroundColor: '#ececec' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-surface-tertiary)' }}>
         <Content style={{ 
           padding: isMobile ? '0.5rem' : '2rem',
-          backgroundColor: '#ececec',
+                      backgroundColor: 'var(--color-surface-tertiary)',
           maxWidth: '1400px',
           margin: '0 auto'
         }}>
@@ -47,9 +47,9 @@ function AppContent() {
               marginTop: '3rem', 
               padding: '20px',
               fontSize: '0.9rem',
-              color: '#aaa'
+              color: 'var(--color-text-tertiary)'
             }}>
-              <div style={{ marginBottom: '1rem', color: '#999', fontSize: '0.85rem' }}>
+              <div style={{ marginBottom: '1rem', color: 'var(--color-text-tertiary)', fontSize: '0.85rem' }}>
                 OP-PatchStudio is an unofficial tool not affiliated with or endorsed by teenage engineering.<br />
                 this software is provided "as is" without warranty of any kind. use at your own risk. for educational and personal use only.<br />
                 OP-XY, OP-1 are a registered trademarks of teenage engineering.<br />
@@ -62,15 +62,15 @@ function AppContent() {
                 gap: '0.5em',
                 fontSize: '0.98em'
               }}>
-                <span style={{ color: '#999' }}>v{__APP_VERSION__}</span>
-                <span style={{ color: '#999' }}>|</span>
-                <span style={{ color: '#999' }}>proudly open source</span>
-                <span style={{ color: '#999' }}>|</span>
+                <span style={{ color: 'var(--color-text-tertiary)' }}>v{__APP_VERSION__}</span>
+                <span style={{ color: 'var(--color-text-tertiary)' }}>|</span>
+                <span style={{ color: 'var(--color-text-tertiary)' }}>proudly open source</span>
+                <span style={{ color: 'var(--color-text-tertiary)' }}>|</span>
                 <a 
                   href="https://github.com/joseph-holland/op-patchstudio" 
                   target="_blank" 
                   rel="noopener"
-                  style={{ color: '#666' }}
+                  style={{ color: 'var(--color-text-secondary)' }}
                 >
                   github repo
                 </a>
