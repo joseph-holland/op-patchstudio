@@ -24,7 +24,6 @@ export function WaveformZoomModal({
   const [outFrame, setOutFrame] = useState(0);
   const [snapToZero, setSnapToZero] = useState(true);
   const [dragging, setDragging] = useState<'in' | 'out' | null>(null);
-  const [dragOffset, setDragOffset] = useState(0);
   const [showTooltip, setShowTooltip] = useState(false);
 
   // Helper functions for percentage display

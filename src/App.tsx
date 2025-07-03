@@ -9,7 +9,6 @@ import { isMobile, isTablet } from 'react-device-detect';
 import { registerOverlayControl } from './components/common/WaveformEditor';
 
 // Global state for overlay control
-let showRotateOverlayGlobal = false;
 let setShowRotateOverlayGlobal: ((show: boolean) => void) | null = null;
 let pendingZoomCallback: (() => void) | null = null;
 
@@ -32,7 +31,6 @@ export const hideRotateOverlay = () => {
 function AppContent() {
   const { state, dispatch } = useAppContext();
   const [isMobileDevice, setIsMobileDevice] = useState(false);
-  const [isPortrait, setIsPortrait] = useState(false);
   const [showRotateOverlay, setShowRotateOverlay] = useState(false);
 
   // Set up global control
@@ -53,7 +51,6 @@ function AppContent() {
       
       // Check orientation using screen orientation API and window dimensions
       const isPortraitMode = window.innerHeight > window.innerWidth;
-      setIsPortrait(isPortraitMode);
       
       // Hide overlay when device rotates to landscape and trigger zoom modal if pending
       if (mobileOrTablet && !isPortraitMode && showRotateOverlay) {

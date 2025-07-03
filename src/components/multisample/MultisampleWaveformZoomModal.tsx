@@ -40,11 +40,6 @@ export function MultisampleWaveformZoomModal({
     if (!audioBuffer) return 0;
     return (frame / audioBuffer.length) * 100;
   };
-  
-  const percentageToFrame = (percentage: number) => {
-    if (!audioBuffer) return 0;
-    return Math.floor((percentage / 100) * audioBuffer.length);
-  };
 
   // Theme colors
   const c = {
