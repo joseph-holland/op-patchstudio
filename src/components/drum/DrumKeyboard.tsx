@@ -50,6 +50,47 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingUploadIndex, setPendingUploadIndex] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  
+  // Touch/swipe handling for mobile
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 50;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && currentOctave === 0) {
+      // Swipe left: go to octave 1
+      setCurrentOctave(1);
+    } else if (isRightSwipe && currentOctave === 1) {
+      // Swipe right: go back to octave 0
+      setCurrentOctave(0);
+    }
+
+    // Reset touch positions
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
+
+  // Detect mobile screen size changes
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const playSample = async (index: number) => {
     const sample = state.drumSamples[index];
@@ -146,7 +187,8 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
     isLarge = false,
     circleOffset = 'center', // 'left', 'right', or 'center'
     isActiveOctave = true,
-    showKeyboardLabels = true
+    showKeyboardLabels = true,
+    isMobile = false
   }: { 
     keyChar: string; 
     mapping?: { label: string; idx: number }; 
@@ -155,18 +197,22 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
     circleOffset?: 'left' | 'right' | 'center';
     isActiveOctave?: boolean;
     showKeyboardLabels?: boolean;
+    isMobile?: boolean;
   }) => {
     const hasContent = mapping && state.drumSamples[mapping.idx]?.isLoaded;
     const isActive = hasContent; // Key is only active when it has content
     
-    // Key dimensions - using desktop size for all devices
-    const baseSize = 56; // Desktop size
+    // Proportional scaling - keyboard auto-scales to fit container width
+    const scaleFactor = isMobile ? 0.75 : 1.0; // Even smaller scale to fit all keys
+    const baseSize = Math.round(56 * scaleFactor);
     const keyWidth = isLarge ? `${Math.round(baseSize * 1.5) + (keyChar === 'W' || keyChar === 'U' ? 1 : 0)}px` : `${baseSize}px`;
     const keyHeight = `${baseSize}px`;
     
-    // Circle positioning based on offset
-    const circleSize = 35; // Desktop size
-    const fontSize = 21; // Desktop size
+    // All elements scale proportionally
+    const circleSize = Math.round(35 * scaleFactor);
+    const fontSize = Math.round(21 * scaleFactor);
+    const outerRingSize = Math.round(52 * scaleFactor); // Scale outer ring too
+    
     let circleStyle: React.CSSProperties = {
       position: 'absolute',
       width: `${circleSize}px`,
@@ -310,11 +356,11 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
           {/* Outer ring around black circle */}
           <div style={{
             ...circleStyle,
-            width: '52px',
-            height: '52px',
+            width: `${outerRingSize}px`,
+            height: `${outerRingSize}px`,
             background: 'transparent',
             border: !isActive ? '1px solid var(--color-key-inactive-border)' : '1px solid var(--color-black)',
-            marginLeft: circleStyle.marginLeft === '0' ? '0' : '-26px' // Conditional centering
+            marginLeft: circleStyle.marginLeft === '0' ? '0' : `-${outerRingSize / 2}px` // Conditional centering
           }}>
             {/* Inner black circle */}
             <div style={{
@@ -354,11 +400,11 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               zIndex: 2
             }}>
               <div style={{
-                background: 'var(--color-text-secondary)',
-                color: 'var(--color-white)',
-                fontSize: '9px',
+                backgroundColor: 'var(--color-key-inactive-black-bg)',
+                color: 'var(--color-text-primary)',
+                fontSize: `${Math.round(9 * scaleFactor)}px`,
                 fontWeight: '600',
-                padding: '2px 4px',
+                padding: `${Math.round(2 * scaleFactor)}px ${Math.round(4 * scaleFactor)}px`,
                 borderRadius: '2px',
                 lineHeight: '1',
                 letterSpacing: '0.5px'
@@ -385,181 +431,282 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
         style={{ display: 'none' }}
         onChange={handleFileSelect}
       />
-      {/* OP-XY Keyboard Layout - Always Side by Side */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        margin: '0 auto 0.5rem'
-      }}>
-        <div style={{
-          display: 'inline-flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: '1px',
-          padding: '3px',
-          background: '#f8f9fa',
-          border: '1px solid #ddd',
-          borderRadius: '6px'
-        }}>
-        {/* Octave 1 (Lower) */}
+      
+      {/* Mobile Layout - Single Octave with Swipe */}
+      {isMobile ? (
+        <div 
+          style={{
+            padding: '3px',
+            background: '#f8f9fa',
+            border: '1px solid #ddd',
+            borderRadius: '6px',
+            boxSizing: 'border-box'
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Viewport for clipping */}
+          <div style={{
+            position: 'relative',
+            overflow: 'hidden',
+            width: '100%'
+          }}>
+            {/* Sliding track */}
+            <div style={{
+              display: 'flex',
+              width: '200%',
+              transform: `translateX(${currentOctave === 0 ? '0' : '-50%'})`,
+              transition: 'transform 0.3s ease-out'
+            }}>
+              {/* Octave 0 Panel */}
+              <div style={{ width: '50%', flexShrink: 0 }}>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '1px'
+                }}>
+                  {/* Top row */}
+                  <div style={{ display: 'flex', gap: '1px' }}>
+                    <OPXYKey keyChar="W" mapping={drumKeyMap[0].W} isPressed={currentOctave === 0 && pressedKeys.has('W')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true}/>
+                    <OPXYKey keyChar="E" mapping={drumKeyMap[0].E} isPressed={currentOctave === 0 && pressedKeys.has('E')} isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true}/>
+                    <OPXYKey keyChar="R" mapping={drumKeyMap[0].R} isPressed={currentOctave === 0 && pressedKeys.has('R')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true}/>
+                    <OPXYKey keyChar="Y" mapping={drumKeyMap[0].Y} isPressed={currentOctave === 0 && pressedKeys.has('Y')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true}/>
+                    <OPXYKey keyChar="U" mapping={drumKeyMap[0].U} isPressed={currentOctave === 0 && pressedKeys.has('U')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true}/>
+                  </div>
+                  {/* Bottom row */}
+                  <div style={{ display: 'flex', gap: '1px' }}>
+                    {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
+                      <OPXYKey key={`octave0-mobile-${key}`} keyChar={key} mapping={drumKeyMap[0][key as keyof typeof drumKeyMap[0]]} isPressed={currentOctave === 0 && pressedKeys.has(key)} isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true}/>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Octave 1 Panel */}
+              <div style={{ width: '50%', flexShrink: 0 }}>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '1px'
+                }}>
+                  {/* Top row */}
+                  <div style={{ display: 'flex', gap: '1px' }}>
+                    <OPXYKey keyChar="W" mapping={drumKeyMap[1].W} isPressed={currentOctave === 1 && pressedKeys.has('W')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true}/>
+                    <OPXYKey keyChar="E" mapping={drumKeyMap[1].E} isPressed={currentOctave === 1 && pressedKeys.has('E')} isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true}/>
+                    <OPXYKey keyChar="R" mapping={drumKeyMap[1].R} isPressed={currentOctave === 1 && pressedKeys.has('R')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true}/>
+                    <OPXYKey keyChar="Y" mapping={drumKeyMap[1].Y} isPressed={currentOctave === 1 && pressedKeys.has('Y')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true}/>
+                    <OPXYKey keyChar="U" mapping={drumKeyMap[1].U} isPressed={currentOctave === 1 && pressedKeys.has('U')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true}/>
+                  </div>
+                  {/* Bottom row */}
+                  <div style={{ display: 'flex', gap: '1px' }}>
+                    {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
+                      <OPXYKey key={`octave1-mobile-${key}`} keyChar={key} mapping={drumKeyMap[1][key as keyof typeof drumKeyMap[1]]} isPressed={currentOctave === 1 && pressedKeys.has(key)} isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true}/>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Desktop Layout - Both Octaves Side by Side */
         <div style={{
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '1px',
-          position: 'relative'
+          justifyContent: 'center',
+          margin: '1px',
+          width: 'calc(100% - 2px)'
         }}>
-          
-          {/* Top row */}
-          <div style={{ 
-            display: 'flex', 
-            gap: '1px', 
-            alignItems: 'flex-end'
-          }}>
-            <OPXYKey
-              keyChar="W"
-              mapping={drumKeyMap[0].W}
-              isPressed={currentOctave === 0 && pressedKeys.has('W')}
-              isLarge={true}
-              circleOffset="right"
-              isActiveOctave={currentOctave === 0}
-              showKeyboardLabels={currentOctave === 0}
-            />
-            <OPXYKey
-              keyChar="E"
-              mapping={drumKeyMap[0].E}
-              isPressed={currentOctave === 0 && pressedKeys.has('E')}
-              isActiveOctave={currentOctave === 0}
-              showKeyboardLabels={currentOctave === 0}
-            />
-            <OPXYKey
-              keyChar="R"
-              mapping={drumKeyMap[0].R}
-              isPressed={currentOctave === 0 && pressedKeys.has('R')}
-              isLarge={true}
-              circleOffset="left"
-              isActiveOctave={currentOctave === 0}
-              showKeyboardLabels={currentOctave === 0}
-            />
-            <OPXYKey
-              keyChar="Y"
-              mapping={drumKeyMap[0].Y}
-              isPressed={currentOctave === 0 && pressedKeys.has('Y')}
-              isLarge={true}
-              circleOffset="left"
-              isActiveOctave={currentOctave === 0}
-              showKeyboardLabels={currentOctave === 0}
-            />
-            <OPXYKey
-              keyChar="U"
-              mapping={drumKeyMap[0].U}
-              isPressed={currentOctave === 0 && pressedKeys.has('U')}
-              isLarge={true}
-              circleOffset="right"
-              isActiveOctave={currentOctave === 0}
-              showKeyboardLabels={currentOctave === 0}
-            />
-          </div>
-
-          {/* Bottom row */}
-          <div style={{ 
-            display: 'flex', 
+          <div style={{
+            display: 'inline-flex',
+            flexDirection: 'row',
+            alignItems: 'center',
             gap: '1px',
-            alignItems: 'flex-start'
+            padding: '3px',
+            background: '#f8f9fa',
+            border: '1px solid #ddd',
+            borderRadius: '6px',
+            overflow: 'hidden',
+            boxSizing: 'border-box'
           }}>
-            {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
+          {/* Octave 1 (Lower) */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1px',
+            position: 'relative'
+          }}>
+            
+            {/* Top row */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '1px', 
+              alignItems: 'flex-end',
+              width: '100%',
+              maxWidth: '100%',
+              justifyContent: 'center',
+              overflow: 'hidden'
+            }}>
               <OPXYKey
-                key={`octave0-${key}`}
-                keyChar={key}
-                mapping={drumKeyMap[0][key as keyof typeof drumKeyMap[0]]}
-                isPressed={currentOctave === 0 && pressedKeys.has(key)}
+                keyChar="W"
+                mapping={drumKeyMap[0].W}
+                isPressed={currentOctave === 0 && pressedKeys.has('W')}
+                isLarge={true}
+                circleOffset="right"
                 isActiveOctave={currentOctave === 0}
                 showKeyboardLabels={currentOctave === 0}
               />
-            ))}
-          </div>
-        </div>
-
-        {/* Octave 2 (Upper) */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '1px',
-          position: 'relative'
-        }}>
-          
-          {/* Top row */}
-          <div style={{ 
-            display: 'flex', 
-            gap: '1px', 
-            alignItems: 'flex-end'
-          }}>
-            <OPXYKey
-              keyChar="W"
-              mapping={drumKeyMap[1].W}
-              isPressed={currentOctave === 1 && pressedKeys.has('W')}
-              isLarge={true}
-              circleOffset="right"
-              isActiveOctave={currentOctave === 1}
-              showKeyboardLabels={currentOctave === 1}
-            />
-            <OPXYKey
-              keyChar="E"
-              mapping={drumKeyMap[1].E}
-              isPressed={currentOctave === 1 && pressedKeys.has('E')}
-              isActiveOctave={currentOctave === 1}
-              showKeyboardLabels={currentOctave === 1}
-            />
-            <OPXYKey
-              keyChar="R"
-              mapping={drumKeyMap[1].R}
-              isPressed={currentOctave === 1 && pressedKeys.has('R')}
-              isLarge={true}
-              circleOffset="left"
-              isActiveOctave={currentOctave === 1}
-              showKeyboardLabels={currentOctave === 1}
-            />
-            <OPXYKey
-              keyChar="Y"
-              mapping={drumKeyMap[1].Y}
-              isPressed={currentOctave === 1 && pressedKeys.has('Y')}
-              isLarge={true}
-              circleOffset="left"
-              isActiveOctave={currentOctave === 1}
-              showKeyboardLabels={currentOctave === 1}
-            />
-            <OPXYKey
-              keyChar="U"
-              mapping={drumKeyMap[1].U}
-              isPressed={currentOctave === 1 && pressedKeys.has('U')}
-              isLarge={true}
-              circleOffset="right"
-              isActiveOctave={currentOctave === 1}
-              showKeyboardLabels={currentOctave === 1}
-            />
-          </div>
-
-          {/* Bottom row */}
-          <div style={{ 
-            display: 'flex', 
-            gap: '1px',
-            alignItems: 'flex-start'
-          }}>
-            {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
               <OPXYKey
-                key={`octave1-${key}`}
-                keyChar={key}
-                mapping={drumKeyMap[1][key as keyof typeof drumKeyMap[1]]}
-                isPressed={currentOctave === 1 && pressedKeys.has(key)}
+                keyChar="E"
+                mapping={drumKeyMap[0].E}
+                isPressed={currentOctave === 0 && pressedKeys.has('E')}
+                isActiveOctave={currentOctave === 0}
+                showKeyboardLabels={currentOctave === 0}
+              />
+              <OPXYKey
+                keyChar="R"
+                mapping={drumKeyMap[0].R}
+                isPressed={currentOctave === 0 && pressedKeys.has('R')}
+                isLarge={true}
+                circleOffset="left"
+                isActiveOctave={currentOctave === 0}
+                showKeyboardLabels={currentOctave === 0}
+              />
+              <OPXYKey
+                keyChar="Y"
+                mapping={drumKeyMap[0].Y}
+                isPressed={currentOctave === 0 && pressedKeys.has('Y')}
+                isLarge={true}
+                circleOffset="left"
+                isActiveOctave={currentOctave === 0}
+                showKeyboardLabels={currentOctave === 0}
+              />
+              <OPXYKey
+                keyChar="U"
+                mapping={drumKeyMap[0].U}
+                isPressed={currentOctave === 0 && pressedKeys.has('U')}
+                isLarge={true}
+                circleOffset="right"
+                isActiveOctave={currentOctave === 0}
+                showKeyboardLabels={currentOctave === 0}
+              />
+            </div>
+
+            {/* Bottom row */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '1px',
+              alignItems: 'flex-start',
+              width: '100%',
+              maxWidth: '100%',
+              justifyContent: 'center',
+              overflow: 'hidden'
+            }}>
+              {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
+                <OPXYKey
+                  key={`octave0-${key}`}
+                  keyChar={key}
+                  mapping={drumKeyMap[0][key as keyof typeof drumKeyMap[0]]}
+                  isPressed={currentOctave === 0 && pressedKeys.has(key)}
+                  isActiveOctave={currentOctave === 0}
+                  showKeyboardLabels={currentOctave === 0}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Octave 2 (Upper) */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1px',
+            position: 'relative'
+          }}>
+            
+            {/* Top row */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '1px', 
+              alignItems: 'flex-end',
+              width: '100%',
+              maxWidth: '100%',
+              justifyContent: 'center',
+              overflow: 'hidden'
+            }}>
+              <OPXYKey
+                keyChar="W"
+                mapping={drumKeyMap[1].W}
+                isPressed={currentOctave === 1 && pressedKeys.has('W')}
+                isLarge={true}
+                circleOffset="right"
                 isActiveOctave={currentOctave === 1}
                 showKeyboardLabels={currentOctave === 1}
               />
-            ))}
+              <OPXYKey
+                keyChar="E"
+                mapping={drumKeyMap[1].E}
+                isPressed={currentOctave === 1 && pressedKeys.has('E')}
+                isActiveOctave={currentOctave === 1}
+                showKeyboardLabels={currentOctave === 1}
+              />
+              <OPXYKey
+                keyChar="R"
+                mapping={drumKeyMap[1].R}
+                isPressed={currentOctave === 1 && pressedKeys.has('R')}
+                isLarge={true}
+                circleOffset="left"
+                isActiveOctave={currentOctave === 1}
+                showKeyboardLabels={currentOctave === 1}
+              />
+              <OPXYKey
+                keyChar="Y"
+                mapping={drumKeyMap[1].Y}
+                isPressed={currentOctave === 1 && pressedKeys.has('Y')}
+                isLarge={true}
+                circleOffset="left"
+                isActiveOctave={currentOctave === 1}
+                showKeyboardLabels={currentOctave === 1}
+              />
+              <OPXYKey
+                keyChar="U"
+                mapping={drumKeyMap[1].U}
+                isPressed={currentOctave === 1 && pressedKeys.has('U')}
+                isLarge={true}
+                circleOffset="right"
+                isActiveOctave={currentOctave === 1}
+                showKeyboardLabels={currentOctave === 1}
+              />
+            </div>
+
+            {/* Bottom row */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '1px',
+              alignItems: 'flex-start',
+              width: '100%',
+              maxWidth: '100%',
+              justifyContent: 'center',
+              overflow: 'hidden'
+            }}>
+              {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
+                <OPXYKey
+                  key={`octave1-${key}`}
+                  keyChar={key}
+                  mapping={drumKeyMap[1][key as keyof typeof drumKeyMap[1]]}
+                  isPressed={currentOctave === 1 && pressedKeys.has(key)}
+                  isActiveOctave={currentOctave === 1}
+                  showKeyboardLabels={currentOctave === 1}
+                />
+              ))}
+            </div>
+          </div>
           </div>
         </div>
-      </div>
-      </div>
+      )}
     </div>
   );
 } 

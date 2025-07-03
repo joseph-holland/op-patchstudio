@@ -136,30 +136,6 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
         className={`virtual-midi-keyboard ${isDrumKeyboardPinned ? 'pinned' : ''}`}
         style={combinedStyles}
       >
-        {/* Left fade overlay */}
-        <div style={{
-          position: 'absolute',
-          left: 0,
-          top: '60px', // Start below the header section
-          bottom: 0,
-          width: '30px',
-          background: 'linear-gradient(to right, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0))',
-          zIndex: 10,
-          pointerEvents: 'none'
-        }} />
-
-        {/* Right fade overlay */}
-        <div style={{
-          position: 'absolute',
-          right: 0,
-          top: '60px', // Start below the header section
-          bottom: 0,
-          width: '30px',
-          background: 'linear-gradient(to left, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0))',
-          zIndex: 10,
-          pointerEvents: 'none'
-        }} />
-
         {/* Header */}
         <div
           style={{
@@ -253,7 +229,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
 
         {/* Keyboard */}
         <div style={{ 
-          padding: '1rem',
+          padding: '1rem 0.5rem',
           backgroundColor: 'var(--color-bg-primary)',
           overflow: 'visible'
         }}>
