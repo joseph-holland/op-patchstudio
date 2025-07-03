@@ -50,7 +50,6 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingUploadIndex, setPendingUploadIndex] = useState<number | null>(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   const playSample = async (index: number) => {
     const sample = state.drumSamples[index];
@@ -90,18 +89,6 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
   };
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    // Skip keyboard event handling on mobile devices
-    if (isMobile) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check if user is typing in an input field
       const activeElement = document.activeElement;
@@ -149,7 +136,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
     };
-  }, [currentOctave, state.drumSamples, isMobile]);
+  }, [currentOctave, state.drumSamples]);
 
   // OP-XY key component with exact 1:1 and 1:1.5 ratios
   const OPXYKey = ({ 
@@ -172,14 +159,14 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
     const hasContent = mapping && state.drumSamples[mapping.idx]?.isLoaded;
     const isActive = hasContent; // Key is only active when it has content
     
-    // Key dimensions - scaled for mobile to fit all screen sizes
-    const baseSize = isMobile ? 40 : 56; // 40px on mobile to fit smaller screens
-    const keyWidth = isLarge ? `${Math.round(baseSize * 1.5) + (keyChar === 'W' || keyChar === 'U' ? 1 : 0)}px` : `${baseSize}px`; // Mobile: 61px for W/U, 60px for R/Y, 40px for others
-    const keyHeight = `${baseSize}px`; // Mobile: 40px, Desktop: 56px
+    // Key dimensions - using desktop size for all devices
+    const baseSize = 56; // Desktop size
+    const keyWidth = isLarge ? `${Math.round(baseSize * 1.5) + (keyChar === 'W' || keyChar === 'U' ? 1 : 0)}px` : `${baseSize}px`;
+    const keyHeight = `${baseSize}px`;
     
     // Circle positioning based on offset
-    const circleSize = isMobile ? 25 : 35; // Smaller circles on mobile
-    const fontSize = isMobile ? 15 : 21; // Smaller font on mobile
+    const circleSize = 35; // Desktop size
+    const fontSize = 21; // Desktop size
     let circleStyle: React.CSSProperties = {
       position: 'absolute',
       width: `${circleSize}px`,
@@ -291,31 +278,29 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
             );
             
-            if (audioFile && onFileUpload && mapping) {
+            if (audioFile && mapping && onFileUpload) {
               onFileUpload(mapping.idx, audioFile);
             }
           }}
           style={{
+            position: 'relative',
             width: keyWidth,
             height: keyHeight,
-            border: !isActive ? '1px solid #666' : '1px solid #000',
-            borderRadius: '3px', // Reduced corner radius
+            margin: '0',
+            padding: '0',
+            border: 'none',
+            borderRadius: '3px',
+            cursor: 'pointer',
+            transition: 'all 0.1s ease',
             background: !isActive ? '#999' : (isPressed ? '#bdbdbd' : '#444444'),
-            cursor: 'pointer', // Always show pointer cursor since empty keys can be clicked to browse files
+            boxShadow: isActive ? '0 4px 12px rgba(0, 0, 0, 0.18)' : '0 2px 6px rgba(0, 0, 0, 0.1)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: isLarge && circleOffset === 'left' ? 'flex-start' : 
-                           isLarge && circleOffset === 'right' ? 'flex-end' : 'center',
-            transition: 'all 0.1s ease',
-            position: 'relative',
-            fontFamily: '"Montserrat", "Arial", sans-serif',
-            boxShadow: isActive ? '0 4px 12px rgba(0, 0, 0, 0.18)' : '0 2px 6px rgba(0, 0, 0, 0.1)',
-            opacity: isActive ? 1 : 0.6,
-            padding: '0'
+            justifyContent: 'center'
           }}
           onMouseEnter={(e) => {
             if (!isActive || isPressed) return;
-            e.currentTarget.style.background = '#555';
+            e.currentTarget.style.background = '#444444';
           }}
           onMouseLeave={(e) => {
             if (!isActive || isPressed) return;
@@ -325,11 +310,11 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
           {/* Outer ring around black circle */}
           <div style={{
             ...circleStyle,
-            width: `${isMobile ? 37 : 52}px`, // Smaller outer ring on mobile
-            height: `${isMobile ? 37 : 52}px`,
+            width: '52px',
+            height: '52px',
             background: 'transparent',
             border: !isActive ? '1px solid #666' : '1px solid #000',
-            marginLeft: circleStyle.marginLeft === '0' ? '0' : `-${isMobile ? 18.5 : 26}px` // Conditional centering
+            marginLeft: circleStyle.marginLeft === '0' ? '0' : '-26px' // Conditional centering
           }}>
             {/* Inner black circle */}
             <div style={{
@@ -342,7 +327,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               justifyContent: 'center',
               position: 'relative'
             }}>
-              {/* Computer key label - only on desktop active octave */}
+              {/* Computer key label - always visible when active octave */}
               {showKeyboardLabels && (
                 <div style={{
                   ...letterStyle,
@@ -400,7 +385,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
         style={{ display: 'none' }}
         onChange={handleFileSelect}
       />
-      {/* OP-XY Keyboard Layout - Side by Side on Desktop, Stacked on Mobile */}
+      {/* OP-XY Keyboard Layout - Always Side by Side */}
       <div style={{
         display: 'flex',
         justifyContent: 'center',
@@ -408,18 +393,13 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
       }}>
         <div style={{
           display: 'inline-flex',
-          flexDirection: isMobile ? 'column' : 'row',
+          flexDirection: 'row',
           alignItems: 'center',
-          gap: isMobile ? '1.5rem' : '1px',
+          gap: '1px',
           padding: '3px',
           background: '#f8f9fa',
           border: '1px solid #ddd',
-          borderRadius: '6px',
-          ...(isMobile && {
-            maxWidth: 'calc(100vw - 2rem)',
-            width: 'fit-content',
-            overflow: 'hidden'
-          })
+          borderRadius: '6px'
         }}>
         {/* Octave 1 (Lower) */}
         <div style={{
@@ -443,14 +423,14 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               isLarge={true}
               circleOffset="right"
               isActiveOctave={currentOctave === 0}
-              showKeyboardLabels={!isMobile && currentOctave === 0}
+              showKeyboardLabels={currentOctave === 0}
             />
             <OPXYKey
               keyChar="E"
               mapping={drumKeyMap[0].E}
               isPressed={currentOctave === 0 && pressedKeys.has('E')}
               isActiveOctave={currentOctave === 0}
-              showKeyboardLabels={!isMobile && currentOctave === 0}
+              showKeyboardLabels={currentOctave === 0}
             />
             <OPXYKey
               keyChar="R"
@@ -459,7 +439,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               isLarge={true}
               circleOffset="left"
               isActiveOctave={currentOctave === 0}
-              showKeyboardLabels={!isMobile && currentOctave === 0}
+              showKeyboardLabels={currentOctave === 0}
             />
             <OPXYKey
               keyChar="Y"
@@ -468,7 +448,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               isLarge={true}
               circleOffset="left"
               isActiveOctave={currentOctave === 0}
-              showKeyboardLabels={!isMobile && currentOctave === 0}
+              showKeyboardLabels={currentOctave === 0}
             />
             <OPXYKey
               keyChar="U"
@@ -477,7 +457,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               isLarge={true}
               circleOffset="right"
               isActiveOctave={currentOctave === 0}
-              showKeyboardLabels={!isMobile && currentOctave === 0}
+              showKeyboardLabels={currentOctave === 0}
             />
           </div>
 
@@ -494,7 +474,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
                 mapping={drumKeyMap[0][key as keyof typeof drumKeyMap[0]]}
                 isPressed={currentOctave === 0 && pressedKeys.has(key)}
                 isActiveOctave={currentOctave === 0}
-                showKeyboardLabels={!isMobile && currentOctave === 0}
+                showKeyboardLabels={currentOctave === 0}
               />
             ))}
           </div>
@@ -522,14 +502,14 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               isLarge={true}
               circleOffset="right"
               isActiveOctave={currentOctave === 1}
-              showKeyboardLabels={!isMobile && currentOctave === 1}
+              showKeyboardLabels={currentOctave === 1}
             />
             <OPXYKey
               keyChar="E"
               mapping={drumKeyMap[1].E}
               isPressed={currentOctave === 1 && pressedKeys.has('E')}
               isActiveOctave={currentOctave === 1}
-              showKeyboardLabels={!isMobile && currentOctave === 1}
+              showKeyboardLabels={currentOctave === 1}
             />
             <OPXYKey
               keyChar="R"
@@ -538,7 +518,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               isLarge={true}
               circleOffset="left"
               isActiveOctave={currentOctave === 1}
-              showKeyboardLabels={!isMobile && currentOctave === 1}
+              showKeyboardLabels={currentOctave === 1}
             />
             <OPXYKey
               keyChar="Y"
@@ -547,7 +527,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               isLarge={true}
               circleOffset="left"
               isActiveOctave={currentOctave === 1}
-              showKeyboardLabels={!isMobile && currentOctave === 1}
+              showKeyboardLabels={currentOctave === 1}
             />
             <OPXYKey
               keyChar="U"
@@ -556,7 +536,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               isLarge={true}
               circleOffset="right"
               isActiveOctave={currentOctave === 1}
-              showKeyboardLabels={!isMobile && currentOctave === 1}
+              showKeyboardLabels={currentOctave === 1}
             />
           </div>
 
@@ -573,7 +553,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
                 mapping={drumKeyMap[1][key as keyof typeof drumKeyMap[1]]}
                 isPressed={currentOctave === 1 && pressedKeys.has(key)}
                 isActiveOctave={currentOctave === 1}
-                showKeyboardLabels={!isMobile && currentOctave === 1}
+                showKeyboardLabels={currentOctave === 1}
               />
             ))}
           </div>
