@@ -460,9 +460,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
         rootNote: detectedMidiNote, // Set the actual MIDI note number
         note: detectedNote,
         inPoint: 0,
-        outPoint: action.payload.audioBuffer.length - 1,
-        loopStart: 0,
-        loopEnd: action.payload.audioBuffer.length - 1,
+        outPoint: action.payload.metadata.duration,
+        loopStart: action.payload.metadata.duration * 0.2,
+        loopEnd: action.payload.metadata.duration * 0.8,
         // Store WAV metadata
         originalBitDepth: action.payload.metadata.bitDepth,
         originalSampleRate: action.payload.metadata.sampleRate,
