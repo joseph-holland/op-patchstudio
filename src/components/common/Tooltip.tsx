@@ -10,28 +10,43 @@ interface TooltipProps {
 const TooltipContent: React.FC<{
   content: React.ReactNode;
   parentRef: React.RefObject<HTMLElement | null>;
-}> = ({ content, parentRef }) => {
+  isVisible: boolean;
+}> = ({ content, parentRef, isVisible }) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [position, setPosition] = useState({ top: -9999, left: -9999 }); // Start off-screen
+  const [isPositioned, setIsPositioned] = useState(false);
 
   useEffect(() => {
+    if (!isVisible) {
+      setIsPositioned(false);
+      return;
+    }
+
     const parent = parentRef.current;
     const tooltip = tooltipRef.current;
     if (!parent || !tooltip) return;
 
-    const parentRect = parent.getBoundingClientRect();
-    const tooltipRect = tooltip.getBoundingClientRect();
+    // Give tooltip a moment to render before positioning
+    requestAnimationFrame(() => {
+      const parentRect = parent.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
 
-    // Position tooltip centered above the parent
-    let top = parentRect.top - tooltipRect.height - 10; // 10px gap
-    let left = parentRect.left + (parentRect.width / 2) - (tooltipRect.width / 2);
-    
-    // Adjust if tooltip goes off-screen
-    if (left < 10) left = 10;
-    if (top < 10) top = parentRect.bottom + 10;
+      // Position tooltip centered above the parent
+      let top = parentRect.top - tooltipRect.height - 10; // 10px gap
+      let left = parentRect.left + (parentRect.width / 2) - (tooltipRect.width / 2);
+      
+      // Adjust if tooltip goes off-screen
+      if (left < 10) left = 10;
+      if (top < 10) top = parentRect.bottom + 10;
 
-    setPosition({ top, left });
-  }, [content, parentRef]);
+      setPosition({ top, left });
+      
+      // Delay the visibility to allow position to be set first
+      requestAnimationFrame(() => {
+        setIsPositioned(true);
+      });
+    });
+  }, [content, parentRef, isVisible]);
 
   return createPortal(
     <div 
@@ -42,8 +57,9 @@ const TooltipContent: React.FC<{
         left: `${position.left}px`,
         pointerEvents: 'none',
         zIndex: 10000,
-        opacity: position.top === 0 ? 0 : 1, // Hide until positioned
-        transition: 'opacity 0.2s ease, top 0.2s ease',
+        opacity: isPositioned && isVisible ? 1 : 0,
+        transition: isPositioned ? 'opacity 0.3s ease, transform 0.3s ease' : 'none',
+        transform: isPositioned && isVisible ? 'translateY(0)' : 'translateY(-5px)',
       }}
       className="custom-tooltip-wrapper"
     >
@@ -62,7 +78,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ content, children, isVisible }
   return (
     <div ref={childRef} style={{ display: 'inline-block' }}>
       {children}
-      {isVisible && <TooltipContent content={content} parentRef={childRef} />}
+      <TooltipContent content={content} parentRef={childRef} isVisible={isVisible} />
     </div>
   );
 }; 

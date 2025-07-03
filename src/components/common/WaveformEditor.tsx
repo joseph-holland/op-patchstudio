@@ -336,7 +336,7 @@ export function WaveformEditor({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#333333',
+            color: 'var(--color-text-secondary)',
             fontSize: '14px',
             zIndex: 10,
             padding: 0

@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { findNearestZeroCrossing } from '../../utils/audio';
+import { Tooltip } from './Tooltip';
 
 interface WaveformZoomModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export function WaveformZoomModal({
   const [dragging, setDragging] = useState<'in' | 'out' | null>(null);
   const [inValue, setInValue] = useState(0);
   const [outValue, setOutValue] = useState(0);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   // Update state when props change
   useEffect(() => {
@@ -395,10 +397,26 @@ export function WaveformZoomModal({
             gap: '0.5rem'
           }}>
             <i className="fas fa-search-plus" style={{
-              color: '#222',
+              color: 'var(--color-text-secondary)',
               fontSize: '1.25rem'
             }}></i>
             zoom and edit markers
+            <Tooltip 
+              content="drag markers to adjust positions. press 'P' to preview."
+              isVisible={showTooltip}
+            >
+              <i 
+                className="fas fa-question-circle" 
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  fontSize: '1rem',
+                  cursor: 'help',
+                  marginLeft: '0.25rem'
+                }}
+                onMouseEnter={() => setShowTooltip(true)}
+                onMouseLeave={() => setShowTooltip(false)}
+              />
+            </Tooltip>
           </h3>
         </div>
 
@@ -409,14 +427,6 @@ export function WaveformZoomModal({
           fontSize: '0.95rem',
           lineHeight: '1.5'
         }}>
-          <p style={{ 
-            fontSize: '0.875rem', 
-            color: '#666',
-            margin: '0 0 1rem 0'
-          }}>
-            tip: drag markers to adjust positions. press 'p' to preview the sample.
-          </p>
-          
           <canvas
             ref={canvasRef}
             style={{
@@ -436,6 +446,37 @@ export function WaveformZoomModal({
 
           <div style={{ marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={playSelection}
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: 'none',
+                  borderRadius: '3px',
+                  backgroundColor: '#333',
+                  color: '#fff',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'inherit'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#555';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#333';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <i className="fas fa-play" style={{ fontSize: '0.8rem' }}></i>
+                play selection (P)
+              </button>
               <label style={{ 
                 display: 'flex',
                 alignItems: 'center',
@@ -460,33 +501,6 @@ export function WaveformZoomModal({
                   snap to zero crossings
                 </label>
               </label>
-              <button
-                onClick={playSelection}
-                style={{
-                  padding: '0.5rem 1rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '3px',
-                  backgroundColor: '#fff',
-                  color: '#333',
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f9fafb';
-                  e.currentTarget.style.borderColor = '#9ca3af';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#fff';
-                  e.currentTarget.style.borderColor = '#d1d5db';
-                }}
-              >
-                <i className="fas fa-play" style={{ fontSize: '0.8rem' }}></i>
-                play selection (P)
-              </button>
             </div>
           </div>
 
