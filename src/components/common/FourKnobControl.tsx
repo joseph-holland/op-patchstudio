@@ -3,7 +3,7 @@ import React, { useState, useCallback, useRef } from 'react';
 interface KnobConfig {
   label: string;
   value: number; // 0-100
-  color: string; // knob color: '#000', '#666', '#bbb', '#fff'
+  color: 'black' | 'dark' | 'light' | 'white'; // knob color semantic names
 }
 
 interface FourKnobControlProps {
@@ -62,6 +62,20 @@ export const FourKnobControl: React.FC<FourKnobControlProps> = ({
   const renderKnob = useCallback((knob: KnobConfig, index: number) => {
     const isBeingDragged = isDragging === index;
     
+    // Map semantic color names to CSS variables
+    const getKnobColor = (colorName: KnobConfig['color']): string => {
+      switch (colorName) {
+        case 'black': return 'var(--color-knob-black)';
+        case 'dark': return 'var(--color-knob-dark)';
+        case 'light': return 'var(--color-knob-light)';
+        case 'white': return 'var(--color-knob-white)';
+        default: return 'var(--color-knob-black)';
+      }
+    };
+
+    const knobColor = getKnobColor(knob.color);
+    const needsBorder = knob.color === 'white'; // White knobs need a border for visibility
+    
     return (
       <div 
         key={index}
@@ -72,8 +86,8 @@ export const FourKnobControl: React.FC<FourKnobControlProps> = ({
             width: '50px',
             height: '50px',
             borderRadius: '50%',
-            border: '1px solid var(--color-text-primary)',
-            backgroundColor: 'var(--color-bg-primary)',
+            border: '1px solid var(--color-border-primary)',
+            backgroundColor: 'var(--color-surface-primary)',
             cursor: isBeingDragged ? 'grabbing' : 'grab',
             position: 'relative',
             display: 'flex',
@@ -91,7 +105,7 @@ export const FourKnobControl: React.FC<FourKnobControlProps> = ({
               width: '28px',
               height: '28px',
               borderRadius: '50%',
-              border: '1px solid var(--color-text-primary)',
+              border: '1px solid var(--color-border-primary)',
               backgroundColor: 'transparent',
               position: 'absolute',
               display: 'flex',
@@ -105,8 +119,8 @@ export const FourKnobControl: React.FC<FourKnobControlProps> = ({
                 width: '22px',
                 height: '22px',
                 borderRadius: '50%',
-                backgroundColor: knob.color,
-                border: knob.color === '#fff' ? '1px solid #000' : 'none'
+                backgroundColor: knobColor,
+                border: needsBorder ? '1px solid var(--color-border-primary)' : 'none'
               }}
             />
           </div>
@@ -117,7 +131,7 @@ export const FourKnobControl: React.FC<FourKnobControlProps> = ({
         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', userSelect: 'none' }}>
           {knob.label}
         </span>
-        <span style={{ fontSize: '0.7rem', color: 'var(--color-text-subtle)', userSelect: 'none' }}>
+        <span style={{ fontSize: '0.7rem', color: 'var(--color-text-tertiary)', userSelect: 'none' }}>
           {Math.round(knob.value)}%
         </span>
       </div>

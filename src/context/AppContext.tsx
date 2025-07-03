@@ -366,19 +366,19 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'LOAD_DRUM_SAMPLE':
       const newDrumSamples = [...state.drumSamples];
       newDrumSamples[action.payload.index] = {
-        ...newDrumSamples[action.payload.index],
+        ...initialDrumSample,
         file: action.payload.file,
         audioBuffer: action.payload.audioBuffer,
         name: action.payload.file.name,
         isLoaded: true,
         inPoint: 0,
-        outPoint: action.payload.audioBuffer.length - 1,
-        // Store WAV metadata
+        outPoint: action.payload.metadata.duration,
         originalBitDepth: action.payload.metadata.bitDepth,
         originalSampleRate: action.payload.metadata.sampleRate,
         originalChannels: action.payload.metadata.channels,
-        fileSize: action.payload.metadata.fileSize,
-        duration: action.payload.metadata.duration
+        fileSize: action.payload.file.size,
+        duration: action.payload.metadata.duration,
+        hasBeenEdited: false
       };
       return { ...state, drumSamples: newDrumSamples };
       
@@ -460,9 +460,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
         rootNote: detectedMidiNote, // Set the actual MIDI note number
         note: detectedNote,
         inPoint: 0,
-        outPoint: action.payload.audioBuffer.length - 1,
-        loopStart: 0,
-        loopEnd: action.payload.audioBuffer.length - 1,
+        outPoint: action.payload.metadata.duration,
+        loopStart: action.payload.metadata.duration * 0.2,
+        loopEnd: action.payload.metadata.duration * 0.8,
         // Store WAV metadata
         originalBitDepth: action.payload.metadata.bitDepth,
         originalSampleRate: action.payload.metadata.sampleRate,
@@ -491,6 +491,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...updatedMultisampleFiles[action.payload.index],
         ...action.payload.updates
       };
+      
+      // If rootNote was updated, sort the array to maintain proper order
+      if ('rootNote' in action.payload.updates) {
+        updatedMultisampleFiles.sort((a, b) => b.rootNote - a.rootNote);
+      }
+      
       return { ...state, multisampleFiles: updatedMultisampleFiles };
       
     case 'REORDER_MULTISAMPLE_FILES':

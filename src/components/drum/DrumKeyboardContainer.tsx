@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { DrumKeyboard } from './DrumKeyboard';
-import { cookieUtils, COOKIE_KEYS } from '../../utils/cookies';
 import { Tooltip } from '../common/Tooltip';
+import { cookieUtils, COOKIE_KEYS } from '../../utils/cookies';
 
 interface DrumKeyboardContainerProps {
   onFileUpload?: (index: number, file: File) => void;
@@ -14,28 +14,31 @@ interface DrumKeyboardContainerProps {
  * DrumKeyboard component unchanged.
  */
 export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ onFileUpload }) => {
-  const { state, dispatch } = useAppContext();
-  const { isDrumKeyboardPinned } = state;
-
+  const { state } = useAppContext();
   const containerRef = useRef<HTMLDivElement>(null);
   const placeholderRef = useRef<HTMLDivElement>(null);
-
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const [isStuck, setIsStuck] = useState(false);
-  const [dynamicStyles, setDynamicStyles] = useState<React.CSSProperties>({});
+  const [dynamicStyles, setDynamicStyles] = useState({});
   const [placeholderHeight, setPlaceholderHeight] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
 
-  const loadedSamplesCount = state.drumSamples.filter(s => s.isLoaded).length;
+  // Pin state with cookie persistence
+  const [isDrumKeyboardPinned, setIsDrumKeyboardPinned] = useState(() => {
+    const saved = cookieUtils.getCookie(COOKIE_KEYS.DRUM_KEYBOARD_PINNED);
+    return saved === 'true';
+  });
 
-  const togglePin = useCallback(() => {
-    dispatch({ type: 'TOGGLE_DRUM_KEYBOARD_PIN' });
-  }, [dispatch]);
+  const loadedSamplesCount = state.drumSamples.filter(sample => sample.isLoaded).length;
 
-  // Effect to save pin state to cookies
+  const togglePin = () => {
+    setIsDrumKeyboardPinned(!isDrumKeyboardPinned);
+  };
+
+  // Save pin state to cookie
   useEffect(() => {
     try {
-      cookieUtils.setCookie(COOKIE_KEYS.DRUM_KEYBOARD_PINNED, String(isDrumKeyboardPinned));
+      cookieUtils.setCookie(COOKIE_KEYS.DRUM_KEYBOARD_PINNED, isDrumKeyboardPinned.toString(), 365);
     } catch (error) {
       console.warn('Failed to save drum keyboard pin state to cookie:', error);
     }
@@ -59,10 +62,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
 
   // Add resize listener for mobile detection
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -191,17 +191,19 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
               color: 'var(--color-text-secondary)',
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontWeight: 500,
-              }}
-            >
-              <i className="fas fa-check-circle" style={{ color: 'var(--color-text-secondary)', fontSize: iconSize }}></i>
-              {loadedSamplesCount} / 24 loaded
-            </div>
+            {!isMobile && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontWeight: 500,
+                }}
+              >
+                <i className="fas fa-check-circle" style={{ color: 'var(--color-text-secondary)', fontSize: iconSize }}></i>
+                {loadedSamplesCount} / 24 loaded
+              </div>
+            )}
             <button
               onClick={togglePin}
               className="pin-button"
@@ -218,13 +220,19 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
               }}
               title={isDrumKeyboardPinned ? 'Unpin keyboard' : 'Pin keyboard to top'}
             >
-              <i className="fas fa-thumbtack" style={{ fontSize: iconSize }}></i>
+              <i className="fas fa-thumbtack" style={{ 
+                fontSize: iconSize,
+              }}></i>
             </button>
           </div>
         </div>
 
-        {/* Drum Keyboard */}
-        <div style={{ padding: '1rem' }}>
+        {/* Keyboard */}
+        <div style={{ 
+          padding: '0.5rem 0.5rem',
+          backgroundColor: 'var(--color-bg-primary)',
+          overflow: 'visible'
+        }}>
           <DrumKeyboard onFileUpload={onFileUpload} />
         </div>
       </div>

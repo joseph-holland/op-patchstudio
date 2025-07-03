@@ -1366,11 +1366,13 @@ for (let i = 1; i <= NUM_DRUMS; i++) {
               element.textContent = value.toFixed(3);
               
               if (Math.abs(value) < 0.01) {
-                element.classList.add('bg-success');
                 element.classList.remove('bg-secondary');
+                element.style.backgroundColor = '#000000';
+                element.style.color = 'white';
               } else {
-                element.classList.remove('bg-success');
                 element.classList.add('bg-secondary');
+                element.style.backgroundColor = '';
+                element.style.color = '';
               }
             }
           }

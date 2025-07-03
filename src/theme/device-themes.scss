@@ -1,0 +1,317 @@
+// OP-PatchStudio Theme System
+// Structured for scalability and multiple device themes
+
+@use '@carbon/styles/scss/colors' as *;
+@use '@carbon/styles/scss/theme' as *;
+
+// =============================================================================
+// OP-XY Device Color Palette
+// =============================================================================
+
+// Core Device Colors
+$opxy-true-black: #000000;        // Device body, deepest elements
+$opxy-charcoal: #1a1a1a;          // Dark gray buttons, secondary black
+$opxy-slate: #333333;             // Medium dark elements
+$opxy-ash: #666666;               // Standard gray, icons, secondary text
+$opxy-silver: #999999;            // Light gray, inactive elements
+$opxy-pearl: #cccccc;             // Very light gray, subtle borders
+$opxy-snow: #f8f9fa;              // Off-white backgrounds
+$opxy-pure-white: #ffffff;        // Pure white, primary backgrounds
+$opxy-accent-red: #ff4444;        // Record button, alerts, danger states
+
+// =============================================================================
+// OP-1 Field Device Color Palette
+// =============================================================================
+
+// Core Device Colors
+$op1field-true-black: #000000;       // Device body, deepest elements
+$op1field-dark-gray: #2c2c2c;        // Dark button backgrounds
+$op1field-charcoal: #3a3a3a;         // Medium dark elements
+$op1field-steel: #5a5a5a;            // Standard gray elements
+$op1field-silver: #8a8a8a;           // Light gray, inactive elements
+$op1field-platinum: #b5b5b5;         // Very light gray, subtle borders
+$op1field-cream: #f5f5f5;            // Off-white backgrounds
+$op1field-pure-white: #ffffff;       // Pure white, displays and text
+$op1field-accent-orange: #ff6b35;    // Primary orange accent (record, active states)
+$op1field-accent-blue: #4a90c2;      // Secondary blue accent (function buttons)
+$op1field-accent-green: #7cb342;     // Tertiary green accent (positive states)
+$op1field-accent-yellow: #ffc107;    // Warning/attention states
+
+// OP-1 Field knob colors (more vibrant than OP-XY)
+$op1field-knob-black: $op1field-true-black;      // Knob 1 - Black
+$op1field-knob-dark: $op1field-steel;            // Knob 2 - Steel
+$op1field-knob-light: $op1field-silver;          // Knob 3 - Silver
+$op1field-knob-white: $op1field-pure-white;      // Knob 4 - White
+
+// =============================================================================
+// Semantic Color System (Device Agnostic)
+// =============================================================================
+
+// Base semantic colors that map to device-specific palettes
+$color-surface-primary: $opxy-pure-white;
+$color-surface-secondary: $opxy-snow;
+$color-surface-tertiary: #ececec;
+$color-surface-overlay: rgba(0, 0, 0, 0.05);
+
+$color-text-primary: $opxy-charcoal;
+$color-text-secondary: $opxy-ash;
+$color-text-tertiary: $opxy-silver;
+$color-text-inverse: $opxy-pure-white;
+
+$color-border-primary: $opxy-ash;
+$color-border-secondary: $opxy-silver;
+$color-border-subtle: $opxy-pearl;
+$color-border-focus: $opxy-charcoal;
+
+$color-interactive-primary: $opxy-charcoal;
+$color-interactive-secondary: $opxy-slate;
+$color-interactive-tertiary: $opxy-ash;
+$color-interactive-hover: $opxy-slate;
+$color-interactive-active: $opxy-true-black;
+$color-interactive-disabled: $opxy-silver;
+
+$color-accent-primary: $opxy-accent-red;
+$color-accent-secondary: $opxy-charcoal;
+
+// Shadow system
+$shadow-subtle: rgba(0, 0, 0, 0.05);
+$shadow-medium: rgba(0, 0, 0, 0.1);
+$shadow-strong: rgba(0, 0, 0, 0.15);
+$shadow-overlay: rgba(0, 0, 0, 0.25);
+
+// Keyboard-specific colors (OP-XY hardware inspired)
+$keyboard-key-active-bg: $opxy-slate;          // Better contrast with black circles
+$keyboard-key-inactive-bg: $opxy-pearl;
+$keyboard-circle-active: $opxy-true-black;
+$keyboard-circle-inactive: $opxy-silver;
+$keyboard-border-active: $opxy-true-black;
+$keyboard-border-inactive: $opxy-silver;
+
+// Knob colors (OP-XY hardware inspired - 4 knob colors)
+$knob-color-black: $opxy-true-black;           // Knob 1 - Black
+$knob-color-dark: $opxy-ash;                   // Knob 2 - Dark gray
+$knob-color-light: $opxy-silver;               // Knob 3 - Light gray  
+$knob-color-white: $opxy-pure-white;           // Knob 4 - White
+
+// =============================================================================
+// CSS Custom Properties (Runtime Theme Variables)
+// =============================================================================
+
+:root {
+  // Surface colors
+  --color-surface-primary: #{$color-surface-primary};
+  --color-surface-secondary: #{$color-surface-secondary};
+  --color-surface-tertiary: #{$color-surface-tertiary};
+  --color-surface-overlay: #{$color-surface-overlay};
+
+  // Text colors
+  --color-text-primary: #{$color-text-primary};
+  --color-text-secondary: #{$color-text-secondary};
+  --color-text-tertiary: #{$color-text-tertiary};
+  --color-text-inverse: #{$color-text-inverse};
+
+  // Border colors
+  --color-border-primary: #{$color-border-primary};
+  --color-border-secondary: #{$color-border-secondary};
+  --color-border-subtle: #{$color-border-subtle};
+  --color-border-focus: #{$color-border-focus};
+
+  // Interactive colors
+  --color-interactive-primary: #{$color-interactive-primary};
+  --color-interactive-secondary: #{$color-interactive-secondary};
+  --color-interactive-tertiary: #{$color-interactive-tertiary};
+  --color-interactive-hover: #{$color-interactive-hover};
+  --color-interactive-active: #{$color-interactive-active};
+  --color-interactive-disabled: #{$color-interactive-disabled};
+
+  // Accent colors
+  --color-accent-primary: #{$color-accent-primary};
+  --color-accent-secondary: #{$color-accent-secondary};
+
+  // Shadow system
+  --shadow-subtle: #{$shadow-subtle};
+  --shadow-medium: #{$shadow-medium};
+  --shadow-strong: #{$shadow-strong};
+  --shadow-overlay: #{$shadow-overlay};
+
+  // Keyboard colors
+  --color-keyboard-key-active-bg: #{$keyboard-key-active-bg};
+  --color-keyboard-key-inactive-bg: #{$keyboard-key-inactive-bg};
+  --color-keyboard-circle-active: #{$keyboard-circle-active};
+  --color-keyboard-circle-inactive: #{$keyboard-circle-inactive};
+  --color-keyboard-border-active: #{$keyboard-border-active};
+  --color-keyboard-border-inactive: #{$keyboard-border-inactive};
+
+  // Knob colors
+  --color-knob-black: #{$knob-color-black};
+  --color-knob-dark: #{$knob-color-dark};
+  --color-knob-light: #{$knob-color-light};
+  --color-knob-white: #{$knob-color-white};
+
+  // Legacy compatibility (to be deprecated)
+  --color-bg-primary: #{$color-surface-primary};
+  --color-bg-secondary: #{$color-surface-secondary};
+  --color-bg-body: #{$color-surface-tertiary};
+  --color-white: #{$opxy-pure-white};
+  --color-black: #{$opxy-true-black};
+  
+  // Legacy keyboard colors (to be updated gradually)
+  --color-key-inactive-white-bg: #{$keyboard-key-inactive-bg};
+  --color-key-inactive-black-bg: #{$keyboard-circle-inactive};
+  --color-key-inactive-border: #{$keyboard-border-inactive};
+  
+  // Legacy interactive colors (to be updated gradually)
+  --color-interactive-dark: #{$color-interactive-secondary};
+  --color-interactive-focus: #{$color-interactive-active};
+  --color-interactive-focus-ring: #{$color-border-subtle};
+  --color-bg-slider-track: #{$color-surface-secondary};
+  --color-bg-panel: #{$color-surface-secondary};
+  --color-border-light: #{$color-border-subtle};
+  --color-border-medium: #{$color-border-secondary};
+  --color-progress-track: #{$color-border-subtle};
+  --color-text-info: #{$color-text-tertiary};
+  --color-bg-notification: #{$color-surface-secondary};
+  --color-border-notification: #{$color-border-subtle};
+  --color-shadow-primary: #{$shadow-medium};
+  --color-shadow-elevated: #{$shadow-strong};
+}
+
+// =============================================================================
+// Carbon Design System Theme Override
+// =============================================================================
+
+$opxy-carbon-theme: (
+  // Core tokens
+  background: $color-surface-primary,
+  layer: $color-surface-primary,
+  text-primary: $color-text-primary,
+  text-secondary: $color-text-secondary,
+  interactive: $color-interactive-primary,
+  
+  // Override system colors to maintain monochrome aesthetic
+  support-success: $color-interactive-primary,
+  focus: $color-interactive-primary,
+
+  // UI elements
+  background-hover: $color-surface-secondary,
+  text-placeholder: $color-text-tertiary,
+  text-inverse: $color-text-inverse,
+  text-on-color: $color-text-inverse,
+  border-subtle: $color-border-subtle,
+  border-strong: $color-border-secondary,
+  border-inverse: $color-text-inverse,
+  border-interactive: $color-border-focus,
+  
+  // Buttons
+  button-primary: $color-interactive-primary,
+  button-primary-hover: $color-interactive-hover,
+  button-primary-active: $color-interactive-active,
+  button-secondary: $color-surface-primary,
+  button-secondary-hover: $color-surface-secondary,
+  button-secondary-active: $color-border-subtle,
+  
+  // Form fields
+  field: $color-surface-primary,
+  field-hover: $color-surface-secondary,
+);
+
+// =============================================================================
+// Component Styles
+// =============================================================================
+
+.opxy-theme {
+  @include theme($opxy-carbon-theme);
+  font-family: "Montserrat", "Arial", sans-serif;
+
+  // Carbon component overrides
+  .cds--tabs__nav-link {
+    &[aria-selected="true"] {
+      border-bottom-color: $color-interactive-primary;
+    }
+  }
+
+  // Slider components (force monochrome)
+  .cds--slider__track {
+    background: var(--color-surface-secondary) !important;
+  }
+  .cds--slider__filled-track {
+    background: var(--color-interactive-primary) !important;
+  }
+  .cds--slider__thumb {
+    background: var(--color-interactive-primary) !important;
+    border-color: var(--color-interactive-primary) !important;
+  }
+  .cds--slider__thumb:hover {
+    background: var(--color-interactive-hover) !important;
+    border-color: var(--color-interactive-hover) !important;
+  }
+}
+
+// =============================================================================
+// Utility Classes
+// =============================================================================
+
+.pin-button {
+  color: var(--color-text-secondary);
+  
+  .fa-thumbtack {
+    transition: transform 0.2s ease-in-out;
+    transform: rotate(45deg); // Unpinned state
+  }
+}
+
+.virtual-midi-keyboard.pinned {
+  .pin-button {
+    color: var(--color-interactive-active);
+    
+    .fa-thumbtack {
+      transform: rotate(0deg); // Pinned state
+    }
+  }
+}
+
+// =============================================================================
+// Future Theme Hooks (Ready for Dark Mode / OP-1 / OP-1 Field)
+// =============================================================================
+
+// Example: Dark mode theme (commented out for now)
+/*
+[data-theme="dark"] {
+  --color-surface-primary: #{$opxy-charcoal};
+  --color-surface-secondary: #{$opxy-slate};
+  --color-text-primary: #{$opxy-pure-white};
+  --color-text-secondary: #{$opxy-silver};
+  // ... more dark theme overrides
+}
+*/
+
+// Example: OP-1 Field theme (commented out for now)
+/*
+[data-theme="op1field"] {
+  --color-accent-primary: #{$op1field-accent-orange};
+  --color-accent-secondary: #{$op1field-accent-blue};
+  --color-surface-primary: #{$op1field-pure-white};
+  --color-surface-secondary: #{$op1field-cream};
+  --color-text-primary: #{$op1field-charcoal};
+  --color-text-secondary: #{$op1field-steel};
+  
+  // OP-1 Field knob colors
+  --color-knob-black: #{$op1field-knob-black};
+  --color-knob-dark: #{$op1field-knob-dark};
+  --color-knob-light: #{$op1field-knob-light};
+  --color-knob-white: #{$op1field-knob-white};
+  
+  // ... more OP-1 Field theme overrides
+}
+*/
+
+/* Global app overlay for blocking UI (OP-XY ash, semi-transparent) */
+.app-block-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(102, 102, 102, 0.85); /* op-xy-ash with transparency */
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

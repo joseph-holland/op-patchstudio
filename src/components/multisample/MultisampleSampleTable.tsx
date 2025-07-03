@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { WaveformEditor } from '../common/WaveformEditor';
+import { Tooltip } from '../common/Tooltip';
 import { MultisampleWaveformZoomModal } from './MultisampleWaveformZoomModal';
 
 
@@ -64,6 +65,7 @@ export function MultisampleSampleTable({
   const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   const browseFileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isKeyHelpTooltipVisible, setIsKeyHelpTooltipVisible] = useState(false);
 
   // Detect mobile screen size
   React.useEffect(() => {
@@ -138,16 +140,26 @@ export function MultisampleSampleTable({
     e.stopPropagation();
     setIsDragOver(false);
     
-    const items = Array.from(e.dataTransfer.items);
     const files: File[] = [];
     
-    for (const item of items) {
-      if (item.kind === 'file') {
+    // Use the .items property for robust folder and file handling
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      const items = Array.from(e.dataTransfer.items);
+      
+      // Process all dropped items in parallel
+      const processingPromises = items.map(item => {
         const entry = item.webkitGetAsEntry();
         if (entry) {
-          await processEntry(entry, files);
+          return processEntry(entry, files);
         }
-      }
+        return Promise.resolve();
+      });
+      
+      await Promise.all(processingPromises);
+      
+    } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      // Fallback for browsers that don't support .items
+      files.push(...Array.from(e.dataTransfer.files));
     }
     
     const wavFiles = files.filter(file => 
@@ -158,25 +170,78 @@ export function MultisampleSampleTable({
     const filesToProcess = wavFiles.slice(0, remainingSlots);
     
     if (filesToProcess.length > 0) {
+      // Show user feedback about file limit
+      if (wavFiles.length > remainingSlots) {
+        // Show notification about file limit
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: {
+            id: Date.now().toString(),
+            type: 'info',
+            title: 'file limit reached',
+            message: `loaded ${filesToProcess.length} files (${wavFiles.length - remainingSlots} additional files skipped)`
+          }
+        });
+      }
+      
       onFilesSelected(filesToProcess);
+    } else if (files.length > 0) {
+      // No WAV files found in dropped items - can provide user feedback if desired
+    } else {
+      // No files found in drop event
     }
   };
 
   const processEntry = async (entry: any, files: File[]): Promise<void> => {
-    if (entry.isFile) {
-      const file = await new Promise<File>((resolve) => {
-        entry.file((file: File) => resolve(file));
-      });
-      files.push(file);
-    } else if (entry.isDirectory) {
-      const reader = entry.createReader();
-      const entries = await new Promise<any[]>((resolve) => {
-        reader.readEntries((entries: any[]) => resolve(entries));
-      });
-      
-      for (const childEntry of entries) {
-        await processEntry(childEntry, files);
+    try {
+      if (entry.isFile) {
+        const file = await new Promise<File>((resolve, reject) => {
+          entry.file((file: File) => {
+            if (file) {
+              resolve(file);
+            } else {
+              reject(new Error('Failed to get file from entry'));
+            }
+          });
+        });
+        files.push(file);
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader();
+        
+        // Read all entries from the directory
+        const readEntries = (): Promise<any[]> => {
+          return new Promise((resolve, reject) => {
+            reader.readEntries((entries: any[]) => {
+              if (entries && entries.length > 0) {
+                resolve(entries);
+              } else {
+                resolve([]);
+              }
+            }, (error: any) => {
+              console.error('Error reading directory entries:', error);
+              reject(error);
+            });
+          });
+        };
+        
+        // Read all entries recursively (handle large directories)
+        let allEntries: any[] = [];
+        let hasMore = true;
+        
+        while (hasMore) {
+          const entries = await readEntries();
+          if (entries.length === 0) {
+            hasMore = false;
+          } else {
+            allEntries = allEntries.concat(entries);
+          }
+        }
+        
+        // Process all entries in parallel for better performance
+        await Promise.all(allEntries.map(childEntry => processEntry(childEntry, files)));
       }
+    } catch (error) {
+      console.error('Error processing entry:', entry?.name, error);
     }
   };
 
@@ -198,7 +263,23 @@ export function MultisampleSampleTable({
       const filesToProcess = wavFiles.slice(0, remainingSlots);
       
       if (filesToProcess.length > 0) {
+        // Show user feedback about file limit
+        if (wavFiles.length > remainingSlots) {
+          // Show notification about file limit
+          dispatch({
+            type: 'ADD_NOTIFICATION',
+            payload: {
+              id: Date.now().toString(),
+              type: 'info',
+              title: 'file limit reached',
+              message: `loaded ${filesToProcess.length} files (${wavFiles.length - remainingSlots} additional files skipped)`
+            }
+          });
+        }
+        
         onFilesSelected(filesToProcess);
+      } else {
+        console.log('No WAV files found in selected files');
       }
     }
     e.target.value = '';
@@ -411,9 +492,9 @@ export function MultisampleSampleTable({
             <p style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: '500' }}>
               no samples loaded
             </p>
-            <p style={{ margin: '0', fontSize: '0.9rem' }}>
-              drag and drop audio files or folders here, or click to browse
-            </p>
+                          <p style={{ margin: '0', fontSize: '0.9rem' }}>
+                drag and drop audio files or folders here, or click to browse
+              </p>
           </div>
         ) : (
           <div style={{
@@ -421,7 +502,11 @@ export function MultisampleSampleTable({
             flexDirection: 'column',
             gap: '0.75rem'
           }}>
-            {state.multisampleFiles.map((sample, index) => (
+            {[...state.multisampleFiles].reverse().map((sample, reversedIndex) => {
+              // Convert reversed index back to original index
+              const index = state.multisampleFiles.length - 1 - reversedIndex;
+              
+              return (
               <div key={index}>
                 <input
                   type="file"
@@ -448,13 +533,50 @@ export function MultisampleSampleTable({
                     alignItems: 'center',
                     marginBottom: '0.75rem'
                   }}>
-                    <div style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '600',
-                      color: c.text
-                    }}>
-                      {sample.isLoaded ? midiNoteToString(sample.rootNote || 60) : 'empty slot'}
-                    </div>
+                    {sample.isLoaded ? (
+                      <div style={{ textAlign: 'left' }}>
+                        <input
+                          type="text"
+                          value={editingNotes[index] ?? midiNoteToString(sample.rootNote || 60)}
+                          onChange={(e) => handleNoteChange(index, e.target.value)}
+                          onBlur={() => handleNoteBlur(index)}
+                          onKeyDown={(e) => handleNoteKeyDown(index, e)}
+                          onFocus={(e) => (e.target as HTMLInputElement).select()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            (e.target as HTMLInputElement).select();
+                          }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          placeholder="C4 or 60"
+                          style={{
+                            width: '80px',
+                            padding: '0.25rem 0.375rem',
+                            border: `1px solid ${c.border}`,
+                            borderRadius: '3px',
+                            fontSize: '0.875rem',
+                            fontFamily: 'monospace',
+                            textAlign: 'center',
+                            marginBottom: '0.125rem',
+                            fontWeight: '600'
+                          }}
+                        />
+                        <div style={{ 
+                          fontSize: '0.7rem', 
+                          color: c.textSecondary,
+                          textAlign: 'center'
+                        }}>
+                          midi {sample.rootNote || 60}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{
+                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                        color: c.textSecondary
+                      }}>
+                        empty slot
+                      </div>
+                    )}
                     
                     <div style={{
                       display: 'flex',
@@ -528,20 +650,28 @@ export function MultisampleSampleTable({
                           <WaveformEditor
                             audioBuffer={sample.audioBuffer}
                             height={44}
-                            inPoint={sample.inPoint || 0}
-                            outPoint={sample.outPoint || sample.audioBuffer.length - 1}
+                            inPoint={Math.floor(((sample.inPoint || 0) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            outPoint={Math.floor(((sample.outPoint || sample.duration || 1) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            loopStart={Math.floor(((sample.loopStart || 0) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            loopEnd={Math.floor(((sample.loopEnd || sample.duration || 1) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            showLoopMarkers={true}
                             onMarkersChange={(markers) => {
+                              if (!sample.audioBuffer) return;
+                              const duration = sample.audioBuffer.duration;
                               dispatch({
                                 type: 'UPDATE_MULTISAMPLE_FILE',
                                 payload: {
                                   index,
                                   updates: {
-                                    inPoint: markers.inPoint,
-                                    outPoint: markers.outPoint
-                                  }
-                                }
+                                    inPoint: (markers.inPoint / sample.audioBuffer.length) * duration,
+                                    outPoint: (markers.outPoint / sample.audioBuffer.length) * duration,
+                                    loopStart: ((markers.loopStart || 0) / sample.audioBuffer.length) * duration,
+                                    loopEnd: ((markers.loopEnd || 0) / sample.audioBuffer.length) * duration,
+                                  },
+                                },
                               });
                             }}
+                            onZoomEdit={() => openZoomModal(index)}
                           />
                         ) : (
                           <div style={{
@@ -581,7 +711,8 @@ export function MultisampleSampleTable({
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -605,7 +736,7 @@ export function MultisampleSampleTable({
       {/* Header */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '140px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
+        gridTemplateColumns: '100px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
         gap: '0.5rem',
         padding: '0.75rem',
         background: c.bgAlt,
@@ -616,7 +747,39 @@ export function MultisampleSampleTable({
         fontWeight: 'bold',
         color: c.textSecondary
       }}>
-        <div>key</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          key
+          <Tooltip
+            isVisible={isKeyHelpTooltipVisible}
+            content={
+              <>
+                <strong>click to edit note:</strong><br />
+                • musical notes: <strong>C5</strong>, <strong>A#2</strong>, <strong>Bb3</strong><br />
+                • midi numbers: <strong>60</strong>, <strong>72</strong>, <strong>48</strong><br />
+                • press <strong>enter</strong> or click away to save
+              </>
+            }
+          >
+            <span
+              style={{ display: 'flex' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsKeyHelpTooltipVisible(!isKeyHelpTooltipVisible);
+              }}
+              onMouseEnter={() => setIsKeyHelpTooltipVisible(true)}
+              onMouseLeave={() => setIsKeyHelpTooltipVisible(false)}
+            >
+              <i 
+                className="fas fa-question-circle" 
+                style={{ 
+                  fontSize: '14px', 
+                  color: c.textSecondary,
+                  cursor: 'help'
+                }}
+              />
+            </span>
+          </Tooltip>
+        </div>
         <div>file details</div>
         <div>waveform</div>
         <div>actions</div>
@@ -695,11 +858,11 @@ export function MultisampleSampleTable({
                   onDragEnd={handleDragEnd}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '140px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
+                    gridTemplateColumns: '100px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
                     gap: '0.5rem',
                     padding: '0.75rem',
                     background: isDraggedOver ? c.bgAlt : c.bg,
-                    borderBottom: index < state.multisampleFiles.length - 1 ? `1px solid ${c.border}` : 'none',
+                    borderBottom: reversedIndex < state.multisampleFiles.length - 1 ? `1px solid ${c.border}` : 'none',
                     transition: 'background 0.2s ease',
                     alignItems: 'center',
                     minHeight: '54px',
@@ -725,17 +888,18 @@ export function MultisampleSampleTable({
                           onMouseDown={(e) => e.stopPropagation()}
                           placeholder="C4 or 60"
                           style={{
-                            width: '100px',
-                            padding: '0.375rem 0.5rem',
+                            width: '80px',
+                            padding: '0.25rem 0.375rem',
                             border: `1px solid ${c.border}`,
                             borderRadius: '3px',
                             fontSize: '0.875rem',
                             fontFamily: 'monospace',
                             textAlign: 'center',
-                            marginBottom: '0.25rem'
+                            marginBottom: '0.125rem',
+                            fontWeight: '600'
                           }}
                         />
-                        <div style={{ fontSize: '0.75rem', color: c.textSecondary }}>
+                        <div style={{ fontSize: '0.7rem', color: c.textSecondary }}>
                           midi {sample.rootNote || 60}
                         </div>
                       </div>
@@ -781,23 +945,25 @@ export function MultisampleSampleTable({
                           <WaveformEditor
                             audioBuffer={sample.audioBuffer}
                             height={44}
-                            inPoint={sample.inPoint || 0}
-                            outPoint={sample.outPoint || sample.audioBuffer.length - 1}
-                            loopStart={sample.loopStart || 0}
-                            loopEnd={sample.loopEnd || sample.audioBuffer.length - 1}
+                            inPoint={Math.floor(((sample.inPoint || 0) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            outPoint={Math.floor(((sample.outPoint || sample.duration || 1) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            loopStart={Math.floor(((sample.loopStart || 0) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            loopEnd={Math.floor(((sample.loopEnd || sample.duration || 1) / (sample.duration || 1)) * sample.audioBuffer.length)}
                             showLoopMarkers={true}
                             onMarkersChange={(markers) => {
+                              if (!sample.audioBuffer) return;
+                              const duration = sample.audioBuffer.duration;
                               dispatch({
                                 type: 'UPDATE_MULTISAMPLE_FILE',
                                 payload: {
                                   index,
                                   updates: {
-                                    inPoint: markers.inPoint,
-                                    outPoint: markers.outPoint,
-                                    loopStart: markers.loopStart,
-                                    loopEnd: markers.loopEnd
-                                  }
-                                }
+                                    inPoint: (markers.inPoint / sample.audioBuffer.length) * duration,
+                                    outPoint: (markers.outPoint / sample.audioBuffer.length) * duration,
+                                    loopStart: ((markers.loopStart || 0) / sample.audioBuffer.length) * duration,
+                                    loopEnd: ((markers.loopEnd || 0) / sample.audioBuffer.length) * duration,
+                                  },
+                                },
                               });
                             }}
                             onZoomEdit={() => openZoomModal(index)}

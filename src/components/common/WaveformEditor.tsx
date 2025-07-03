@@ -1,4 +1,14 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { isMobile, isTablet } from 'react-device-detect';
+
+// Import the overlay control functions from App.tsx
+// We'll need to create a way to access these functions
+let showRotateOverlayGlobal: ((zoomCallback?: () => void) => void) | null = null;
+
+// Function to register the overlay control
+export const registerOverlayControl = (showOverlay: (zoomCallback?: () => void) => void) => {
+  showRotateOverlayGlobal = showOverlay;
+};
 
 interface WaveformEditorProps {
   audioBuffer: AudioBuffer | null;
@@ -32,6 +42,13 @@ export function WaveformEditor({
   }>({ type: null, startX: 0 });
 
   const finalOutPoint = outPoint ?? (audioBuffer ? audioBuffer.length - 1 : 0);
+
+  // Check if device is mobile/tablet in portrait mode
+  const isMobilePortrait = () => {
+    const mobileOrTablet = isMobile || isTablet;
+    const isPortraitMode = window.innerHeight > window.innerWidth;
+    return mobileOrTablet && isPortraitMode;
+  };
 
   const drawWaveformPath = (ctx: CanvasRenderingContext2D, width: number, height: number, data: Float32Array) => {
     const step = Math.ceil(data.length / width);
@@ -70,9 +87,18 @@ export function WaveformEditor({
     const width = canvas.width / window.devicePixelRatio;
     const height = canvas.height / window.devicePixelRatio;
 
-    // Clear canvas with background color
-    ctx.fillStyle = '#ffffff';
+    // Draw background regions
+    const sampleToPixel = (sample: number) => (audioBuffer.length > 1 ? (sample / audioBuffer.length) * width : 0);
+    const inX = sampleToPixel(inPoint);
+    const outX = sampleToPixel(finalOutPoint);
+
+    // Out-of-bounds area (light grey)
+    ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, width, height);
+
+    // In-bounds area (white)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(inX, 0, outX - inX, height);
 
     const data = audioBuffer.getChannelData(0);
 
@@ -136,15 +162,6 @@ export function WaveformEditor({
         ctx.stroke();
         ctx.setLineDash([]);
       }
-    }
-
-    // Highlight active region with subtle overlay
-    if (inPoint > 0 || finalOutPoint < samples - 1) {
-      const startX = sampleToPixel(inPoint);
-      const endX = sampleToPixel(finalOutPoint);
-      
-      ctx.fillStyle = 'rgba(51, 51, 51, 0.1)'; // Subtle dark overlay
-      ctx.fillRect(startX, 0, endX - startX, height);
     }
   };
 
@@ -247,28 +264,57 @@ export function WaveformEditor({
     if (!canvas) return;
 
     const resizeCanvas = () => {
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * window.devicePixelRatio;
-      canvas.height = height * window.devicePixelRatio;
-      canvas.style.width = rect.width + 'px';
-      canvas.style.height = height + 'px';
+      const container = canvas.parentElement;
+      if (!container) return;
       
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      const rect = container.getBoundingClientRect();
+      if (rect.width > 0) {
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = height * window.devicePixelRatio;
+        canvas.style.width = `${rect.width}px`;
+        canvas.style.height = `${height}px`;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        
+        drawWaveform();
       }
-      
-      drawWaveform();
     };
 
-    resizeCanvas();
+    const resizeObserver = new ResizeObserver(resizeCanvas);
+    
+    const container = canvas.parentElement;
+    if (container) {
+      resizeObserver.observe(container);
+    }
+    
     window.addEventListener('resize', resizeCanvas);
-    return () => window.removeEventListener('resize', resizeCanvas);
+    
+    // Initial resize
+    resizeCanvas();
+    
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      resizeObserver.disconnect();
+    };
   }, [height, drawWaveform]);
 
   const handleCanvasClick = (_e: React.MouseEvent) => {
     // If onZoomEdit is provided, the entire waveform is clickable for zooming
     if (onZoomEdit) {
+      // Check if we're on mobile in portrait mode
+      if (isMobilePortrait()) {
+        // Show rotate overlay instead of zoom modal, but store the zoom callback
+        if (showRotateOverlayGlobal) {
+          showRotateOverlayGlobal(onZoomEdit);
+        }
+        return;
+      }
+      
+      // Otherwise, proceed with normal zoom functionality
       onZoomEdit();
       return;
     }
@@ -317,7 +363,7 @@ export function WaveformEditor({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#333333',
+            color: 'var(--color-text-secondary)',
             fontSize: '14px',
             zIndex: 10,
             padding: 0
