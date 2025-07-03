@@ -172,7 +172,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
       width: `${circleSize}px`,
       height: `${circleSize}px`,
       borderRadius: '50%',
-      background: !isActive ? '#333' : (isPressed && isActiveOctave ? '#666' : '#111'),
+      background: !isActive ? 'var(--color-key-inactive-black-bg)' : (isPressed && isActiveOctave ? 'var(--color-text-secondary)' : 'var(--color-interactive-dark)'),
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -249,29 +249,29 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
             e.preventDefault();
             e.stopPropagation();
             // Add visual feedback for drag over
-            e.currentTarget.style.background = '#333';
+            e.currentTarget.style.background = 'var(--color-key-inactive-black-bg)';
             e.currentTarget.style.transform = 'scale(1.05)';
             e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
-            e.currentTarget.style.borderColor = '#000';
+            e.currentTarget.style.borderColor = 'var(--color-black)';
           }}
           onDragLeave={(e) => {
             e.preventDefault();
             e.stopPropagation();
             // Remove visual feedback
-            e.currentTarget.style.background = !isActive ? '#999' : (isPressed ? '#bdbdbd' : '#444444');
+            e.currentTarget.style.background = !isActive ? 'var(--color-key-inactive-white-bg)' : (isPressed ? '#bdbdbd' : 'var(--color-text-primary)');
             e.currentTarget.style.transform = 'scale(1)';
             e.currentTarget.style.boxShadow = isActive ? '0 4px 12px rgba(0, 0, 0, 0.18)' : '0 2px 6px rgba(0, 0, 0, 0.1)';
-            e.currentTarget.style.borderColor = !isActive ? '#666' : '#000';
+            e.currentTarget.style.borderColor = !isActive ? 'var(--color-key-inactive-border)' : 'var(--color-black)';
           }}
           onDrop={(e) => {
             e.preventDefault();
             e.stopPropagation();
             
             // Remove visual feedback
-            e.currentTarget.style.background = !isActive ? '#999' : (isPressed ? '#bdbdbd' : '#444444');
+            e.currentTarget.style.background = !isActive ? 'var(--color-key-inactive-white-bg)' : (isPressed ? '#bdbdbd' : 'var(--color-text-primary)');
             e.currentTarget.style.transform = 'scale(1)';
             e.currentTarget.style.boxShadow = isActive ? '0 4px 12px rgba(0, 0, 0, 0.18)' : '0 2px 6px rgba(0, 0, 0, 0.1)';
-            e.currentTarget.style.borderColor = !isActive ? '#666' : '#000';
+            e.currentTarget.style.borderColor = !isActive ? 'var(--color-key-inactive-border)' : 'var(--color-black)';
             
             const files = Array.from(e.dataTransfer.files);
             const audioFile = files.find(file => 
@@ -292,7 +292,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
             borderRadius: '3px',
             cursor: 'pointer',
             transition: 'all 0.1s ease',
-            background: !isActive ? '#999' : (isPressed ? '#bdbdbd' : '#444444'),
+            background: !isActive ? 'var(--color-key-inactive-white-bg)' : (isPressed ? '#bdbdbd' : 'var(--color-text-primary)'),
             boxShadow: isActive ? '0 4px 12px rgba(0, 0, 0, 0.18)' : '0 2px 6px rgba(0, 0, 0, 0.1)',
             display: 'flex',
             alignItems: 'center',
@@ -300,11 +300,11 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
           }}
           onMouseEnter={(e) => {
             if (!isActive || isPressed) return;
-            e.currentTarget.style.background = '#444444';
+            e.currentTarget.style.background = 'var(--color-text-primary)';
           }}
           onMouseLeave={(e) => {
             if (!isActive || isPressed) return;
-            e.currentTarget.style.background = '#444444';
+            e.currentTarget.style.background = 'var(--color-text-primary)';
           }}
         >
           {/* Outer ring around black circle */}
@@ -313,7 +313,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
             width: '52px',
             height: '52px',
             background: 'transparent',
-            border: !isActive ? '1px solid #666' : '1px solid #000',
+            border: !isActive ? '1px solid var(--color-key-inactive-border)' : '1px solid var(--color-black)',
             marginLeft: circleStyle.marginLeft === '0' ? '0' : '-26px' // Conditional centering
           }}>
             {/* Inner black circle */}
@@ -321,7 +321,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               width: `${circleSize}px`,
               height: `${circleSize}px`,
               borderRadius: '50%',
-              background: !isActive ? '#555' : '#222',
+              background: !isActive ? 'var(--color-key-inactive-black-bg)' : 'var(--color-black)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -331,7 +331,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               {showKeyboardLabels && (
                 <div style={{
                   ...letterStyle,
-                  color: !isActive ? '#999' : '#fff'
+                  color: !isActive ? 'var(--color-text-secondary)' : '#fff'
                 }}>
                   {keyChar.toUpperCase()}
                 </div>
@@ -354,8 +354,9 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
               zIndex: 2
             }}>
               <div style={{
-                background: 'rgba(0, 0, 0, 0.8)',
-                color: '#fff',
+                background: 'var(--color-text-secondary)',
+                border: '1px solid var(--color-border-light)',
+                color: 'var(--color-white)',
                 fontSize: '9px',
                 fontWeight: '600',
                 padding: '2px 4px',
