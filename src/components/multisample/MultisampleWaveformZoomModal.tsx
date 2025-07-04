@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { audioContextManager } from '../../utils/audioContext';
 import { Tooltip } from '../common/Tooltip';
 
 interface MultisampleWaveformZoomModalProps {
@@ -440,11 +441,11 @@ export function MultisampleWaveformZoomModal({
     onClose();
   };
 
-  const playSelection = () => {
+  const playSelection = async () => {
     if (!audioBuffer) return;
 
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = await audioContextManager.getAudioContext();
       const source = audioContext.createBufferSource();
       
       const selectionLength = outFrame - inFrame;
@@ -477,7 +478,9 @@ export function MultisampleWaveformZoomModal({
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === 'p') {
         e.preventDefault();
-        playSelection();
+        playSelection().catch(error => {
+          console.error('Error playing selection:', error);
+        });
       }
     };
 
@@ -703,31 +706,22 @@ export function MultisampleWaveformZoomModal({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
           <button
-            onClick={playSelection}
+            onClick={() => playSelection().catch(error => {
+              console.error('Error playing selection:', error);
+            })}
             style={{
-              padding: '0.5rem 1rem',
-              border: 'none',
+              padding: '0.65rem 1rem',
+              border: `1px solid ${c.border}`,
               borderRadius: '3px',
-              backgroundColor: 'var(--color-text-primary)',
-              color: 'var(--color-white)',
-              fontSize: '0.875rem',
-              fontWeight: '500',
+              background: 'transparent',
+              color: c.textSecondary,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              transition: 'all 0.2s ease',
+              fontSize: '0.875rem',
+              fontWeight: '500',
               fontFamily: 'inherit'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--color-text-secondary)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--color-text-primary)';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
             }}
           >
             <i className="fas fa-play" style={{ fontSize: '0.8rem' }}></i>

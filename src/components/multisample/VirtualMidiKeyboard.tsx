@@ -608,7 +608,7 @@ export function VirtualMidiKeyboard({
             {renderKeys()}
 
             {/* Compact Indicator Strip Over Keyboard - hidden on mobile */}
-            {!isMobile && loadedSamplesCount > 0 && (() => {
+            {!isMobile && (() => {
               const octaveWidth = 168;
               const indicatorPadding = 24;
               const firstOctave = -2;
@@ -652,7 +652,7 @@ export function VirtualMidiKeyboard({
                   zIndex: 15,
                   pointerEvents: 'none',
                   opacity: loadedSamplesCount > 0 ? 1 : 0,
-                  transition: 'left 0.3s ease-in-out, width 0.3s ease-in-out, opacity 0.2s ease-in-out'
+                  transition: 'left 0.3s ease-in-out, width 0.3s ease-in-out, opacity 0.75s ease-in-out'
                 }}>
                   {/* Letter keys container */}
                   <div style={{
@@ -673,7 +673,7 @@ export function VirtualMidiKeyboard({
                       letterSpacing: '0.5px',
                       lineHeight: '1',
                       textShadow: pressedKeys.has('a') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                      transition: 'all 0.1s ease'
+                      transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                     }}>
                       A
                     </div>
@@ -690,7 +690,7 @@ export function VirtualMidiKeyboard({
                     letterSpacing: '0.5px',
                     lineHeight: '1',
                     textShadow: pressedKeys.has('w') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                    transition: 'all 0.1s ease'
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     W
                   </div>
@@ -707,7 +707,7 @@ export function VirtualMidiKeyboard({
                     letterSpacing: '0.5px',
                     lineHeight: '1',
                     textShadow: pressedKeys.has('s') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                    transition: 'all 0.1s ease'
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     S
                   </div>
@@ -724,7 +724,7 @@ export function VirtualMidiKeyboard({
                     letterSpacing: '0.5px',
                     lineHeight: '1',
                     textShadow: pressedKeys.has('e') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                    transition: 'all 0.1s ease'
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     E
                   </div>
@@ -741,7 +741,7 @@ export function VirtualMidiKeyboard({
                     letterSpacing: '0.5px',
                     lineHeight: '1',
                     textShadow: pressedKeys.has('d') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                    transition: 'all 0.1s ease'
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     D
                   </div>
@@ -758,7 +758,7 @@ export function VirtualMidiKeyboard({
                     letterSpacing: '0.5px',
                     lineHeight: '1',
                     textShadow: pressedKeys.has('f') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                    transition: 'all 0.1s ease'
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     F
                   </div>
@@ -775,7 +775,7 @@ export function VirtualMidiKeyboard({
                     letterSpacing: '0.5px',
                     lineHeight: '1',
                     textShadow: pressedKeys.has('t') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                    transition: 'all 0.1s ease'
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     T
                   </div>
@@ -792,7 +792,7 @@ export function VirtualMidiKeyboard({
                     letterSpacing: '0.5px',
                     lineHeight: '1',
                     textShadow: pressedKeys.has('g') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                    transition: 'all 0.1s ease'
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     G
                   </div>
@@ -812,7 +812,7 @@ export function VirtualMidiKeyboard({
                         letterSpacing: '0.5px',
                         lineHeight: '1',
                         textShadow: pressedKeys.has('y') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                        transition: 'all 0.1s ease'
+                        transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                       }}>
                         Y
                       </div>
@@ -829,7 +829,7 @@ export function VirtualMidiKeyboard({
                         letterSpacing: '0.5px',
                         lineHeight: '1',
                         textShadow: pressedKeys.has('h') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                        transition: 'all 0.1s ease'
+                        transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                       }}>
                         H
                       </div>
@@ -846,7 +846,7 @@ export function VirtualMidiKeyboard({
                         letterSpacing: '0.5px',
                         lineHeight: '1',
                         textShadow: pressedKeys.has('u') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                        transition: 'all 0.1s ease'
+                        transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                       }}>
                         U
                       </div>
@@ -863,7 +863,7 @@ export function VirtualMidiKeyboard({
                         letterSpacing: '0.5px',
                         lineHeight: '1',
                         textShadow: pressedKeys.has('j') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                        transition: 'all 0.1s ease'
+                        transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                       }}>
                         J
                       </div>
@@ -885,7 +885,7 @@ export function VirtualMidiKeyboard({
                       letterSpacing: '-0.5px',
                       lineHeight: '1',
                       textShadow: pressedKeys.has('z') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                      transition: 'all 0.1s ease'
+                      transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                     }}>
                       Z ◀
                     </div>
@@ -904,7 +904,7 @@ export function VirtualMidiKeyboard({
                       letterSpacing: '-0.5px',
                       lineHeight: '1',
                       textShadow: pressedKeys.has('x') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                      transition: 'all 0.1s ease'
+                      transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                     }}>
                       ▶ X
                     </div>

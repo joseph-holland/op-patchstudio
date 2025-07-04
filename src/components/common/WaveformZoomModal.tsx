@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { findNearestZeroCrossing } from '../../utils/audio';
+import { audioContextManager } from '../../utils/audioContext';
 import { Tooltip } from './Tooltip';
 
 interface WaveformZoomModalProps {
@@ -263,20 +264,24 @@ export function WaveformZoomModal({
     onClose();
   };
 
-  const playSelection = () => {
+  const playSelection = async () => {
     if (!audioBuffer) return;
 
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
+    try {
+      const audioContext = await audioContextManager.getAudioContext();
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
 
-    const startOffset = (inFrame / audioBuffer.length) * audioBuffer.duration;
-    const endOffset = (outFrame / audioBuffer.length) * audioBuffer.duration;
-    const duration = endOffset - startOffset;
+      const startOffset = (inFrame / audioBuffer.length) * audioBuffer.duration;
+      const endOffset = (outFrame / audioBuffer.length) * audioBuffer.duration;
+      const duration = endOffset - startOffset;
 
-    if (duration > 0) {
-      source.connect(audioContext.destination);
-      source.start(0, startOffset, duration);
+      if (duration > 0) {
+        source.connect(audioContext.destination);
+        source.start(0, startOffset, duration);
+      }
+    } catch (error) {
+      console.error('Error playing selection:', error);
     }
   };
 
@@ -285,7 +290,9 @@ export function WaveformZoomModal({
       if (!isOpen) return;
       if (e.key === 'p' || e.key === 'P') {
         e.preventDefault();
-        playSelection();
+        playSelection().catch(error => {
+          console.error('Error playing selection:', error);
+        });
       }
     };
 
@@ -432,6 +439,30 @@ export function WaveformZoomModal({
           </div>
           
           <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: '1rem', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+              <button
+                onClick={() => playSelection().catch(error => {
+                  console.error('Error playing selection:', error);
+                })}
+                style={{
+                  padding: '0.65rem 1rem',
+                  border: `1px solid ${c.border}`,
+                  borderRadius: '3px',
+                  background: 'transparent',
+                  color: c.textSecondary,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  fontFamily: 'inherit'
+                }}
+              >
+                <i className="fas fa-play" style={{ fontSize: '0.8rem' }}></i>
+                play selection (P)
+              </button>
+            </div>
             <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem' }}>
               <input
                 type="checkbox"

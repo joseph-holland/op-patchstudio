@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
+import { audioContextManager } from '../../utils/audioContext';
+import { WaveformEditor } from '../common/WaveformEditor';
+import { Slider } from '@carbon/react';
 
 interface DrumSampleSettingsModalProps {
   isOpen: boolean;
@@ -37,8 +40,22 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
         gain: sample.gain || 0,
         pan: sample.pan || 0
       });
+
+      // Set default marker positions if not already set
+      if ((sample.inPoint === undefined || sample.outPoint === undefined) && sample.audioBuffer) {
+        dispatch({
+          type: 'UPDATE_DRUM_SAMPLE',
+          payload: {
+            index: sampleIndex,
+            updates: {
+              inPoint: 0,
+              outPoint: sample.audioBuffer.duration
+            }
+          }
+        });
+      }
     }
-  }, [isOpen, sample]);
+  }, [isOpen, sample, sampleIndex, dispatch]);
 
   const handleSave = () => {
     if (sample?.isLoaded) {
@@ -76,11 +93,11 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
     onClose();
   };
 
-  const handlePlaySample = () => {
+  const handlePlaySample = async () => {
     if (!sample?.audioBuffer) return;
 
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = await audioContextManager.getAudioContext();
       let buffer = sample.audioBuffer;
 
       // Apply reverse if enabled
@@ -151,30 +168,27 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
         overflow: 'auto'
       }}>
         <div style={{
-          padding: '1rem 1.5rem',
-          borderBottom: '1px solid #e0e0e0'
+          padding: '1.5rem 1.5rem 1rem 1.5rem',
+          borderBottom: '1px solid #f0f0f0'
         }}>
-          <h5 style={{
-            margin: 0,
-            fontSize: '1.1rem',
-            fontWeight: '600',
-            color: '#222'
-          }}>sample options</h5>
+          <h3 style={{
+            margin: '0',
+            fontSize: '1.25rem',
+            fontWeight: '300',
+            color: '#222',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <i className="fas fa-cog" style={{
+              color: '#222',
+              fontSize: '1.25rem'
+            }}></i>
+            sample options
+          </h3>
         </div>
         <div style={{ padding: '1.5rem' }}>
-          <div 
-            style={{ 
-              fontSize: '0.9rem', 
-              background: '#e0e0e0', 
-              color: '#222', 
-              border: '1px solid #bbb',
-              borderRadius: '4px',
-              padding: '0.75rem',
-              marginBottom: '1rem'
-            }}
-          >
-            tip: press <b>p</b> to demo the sample.
-          </div>
+
 
           {/* Playmode */}
           <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center' }}>
@@ -242,147 +256,97 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
             </button>
           </div>
 
+          {/* Waveform Display */}
+          {sample?.audioBuffer && (
+            <div style={{ marginBottom: '1rem' }}>
+              <WaveformEditor
+                audioBuffer={sample.audioBuffer}
+                inPoint={sample.inPoint || 0}
+                outPoint={sample.outPoint || sample.audioBuffer.duration}
+                onMarkersChange={(markers: { inPoint: number; outPoint: number; loopStart?: number; loopEnd?: number }) => {
+                  dispatch({
+                    type: 'UPDATE_DRUM_SAMPLE',
+                    payload: {
+                      index: sampleIndex,
+                      updates: {
+                        inPoint: markers.inPoint,
+                        outPoint: markers.outPoint,
+                        hasBeenEdited: true
+                      }
+                    }
+                  });
+                }}
+                height={80}
+                className="sample-waveform"
+              />
+            </div>
+          )}
+
           {/* Tuning */}
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ 
-              display: 'block',
-              marginBottom: '0.5rem',
+            <div style={{
               fontSize: '0.9rem',
-              fontWeight: '500'
-            }}>tuning (semitones)</label>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <input
-                type="range"
-                min="-48"
-                max="48"
+              fontWeight: '500',
+              color: 'var(--color-text-primary)',
+              marginBottom: '0.5rem'
+            }}>
+              tuning: {settings.tune} semitones
+            </div>
+            <div style={{ width: '100%' }}>
+              <Slider
+                id="sample-tuning"
+                min={-48}
+                max={48}
+                step={1}
                 value={settings.tune}
-                step="1"
-                style={{
-                  accentColor: '#222',
-                  background: '#fff',
-                  height: '2.2em',
-                  borderRadius: '8px',
-                  outline: 'none',
-                  boxShadow: 'none',
-                  flex: 1,
-                  marginRight: '8px'
-                }}
-                onChange={(e) => setSettings({...settings, tune: parseInt(e.target.value)})}
-              />
-              <input 
-                type="number" 
-                min="-48" 
-                max="48" 
-                value={settings.tune} 
-                style={{ 
-                  width: '80px', 
-                  flexShrink: 0,
-                  padding: '0.25rem',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  fontSize: '0.9rem'
-                }}
-                onChange={(e) => {
-                  const val = Math.max(-48, Math.min(48, parseInt(e.target.value) || 0));
-                  setSettings({...settings, tune: val});
-                }}
+                onChange={({ value }) => setSettings({...settings, tune: value})}
+                hideTextInput
               />
             </div>
           </div>
 
           {/* Gain */}
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ 
-              display: 'block',
-              marginBottom: '0.5rem',
+            <div style={{
               fontSize: '0.9rem',
-              fontWeight: '500'
-            }}>gain (db)</label>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <input
-                type="range"
-                min="-30"
-                max="20"
+              fontWeight: '500',
+              color: 'var(--color-text-primary)',
+              marginBottom: '0.5rem'
+            }}>
+              gain: {settings.gain} db
+            </div>
+            <div style={{ width: '100%' }}>
+              <Slider
+                id="sample-gain"
+                min={-30}
+                max={20}
+                step={1}
                 value={settings.gain}
-                step="1"
-                style={{
-                  accentColor: '#222',
-                  background: '#fff',
-                  height: '2.2em',
-                  borderRadius: '8px',
-                  outline: 'none',
-                  boxShadow: 'none',
-                  flex: 1,
-                  marginRight: '8px'
-                }}
-                onChange={(e) => setSettings({...settings, gain: parseInt(e.target.value)})}
-              />
-              <input 
-                type="number" 
-                min="-30" 
-                max="20" 
-                value={settings.gain} 
-                style={{ 
-                  width: '80px', 
-                  flexShrink: 0,
-                  padding: '0.25rem',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  fontSize: '0.9rem'
-                }}
-                onChange={(e) => {
-                  const val = Math.max(-30, Math.min(20, parseInt(e.target.value) || 0));
-                  setSettings({...settings, gain: val});
-                }}
+                onChange={({ value }) => setSettings({...settings, gain: value})}
+                hideTextInput
               />
             </div>
           </div>
 
           {/* Pan */}
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ 
-              display: 'block',
-              marginBottom: '0.5rem',
+            <div style={{
               fontSize: '0.9rem',
-              fontWeight: '500'
-            }}>pan</label>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <input
-                type="range"
-                min="-100"
-                max="100"
+              fontWeight: '500',
+              color: 'var(--color-text-primary)',
+              marginBottom: '0.5rem'
+            }}>
+              pan: {settings.pan}
+            </div>
+            <div style={{ width: '100%' }}>
+              <Slider
+                id="sample-pan"
+                min={-100}
+                max={100}
+                step={1}
                 value={settings.pan}
-                step="1"
-                style={{
-                  accentColor: '#222',
-                  background: '#fff',
-                  height: '2.2em',
-                  borderRadius: '8px',
-                  outline: 'none',
-                  boxShadow: 'none',
-                  flex: 1,
-                  marginRight: '8px'
-                }}
-                onChange={(e) => setSettings({...settings, pan: parseInt(e.target.value)})}
-              />
-              <input 
-                type="number" 
-                min="-100" 
-                max="100" 
-                value={settings.pan} 
-                step="1" 
-                style={{ 
-                  width: '80px', 
-                  flexShrink: 0,
-                  padding: '0.25rem',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  fontSize: '0.9rem'
-                }}
-                onChange={(e) => {
-                  const val = Math.max(-100, Math.min(100, parseInt(e.target.value) || 0));
-                  setSettings({...settings, pan: val});
-                }}
+                onChange={({ value }) => setSettings({...settings, pan: value})}
+                hideTextInput
               />
             </div>
           </div>
@@ -426,7 +390,9 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               display: 'flex',
               alignItems: 'center'
             }}
-            onClick={handlePlaySample}
+            onClick={() => handlePlaySample().catch(error => {
+              console.error('Error playing sample:', error);
+            })}
           >
             <i className="fa fa-play" style={{ marginRight: '0.25rem' }}></i>
             play

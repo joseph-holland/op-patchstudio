@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
+import { audioContextManager } from '../../utils/audioContext';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { WaveformEditor } from '../common/WaveformEditor';
 import { Tooltip } from '../common/Tooltip';
@@ -362,12 +363,12 @@ export function MultisampleSampleTable({
     setHoveredIndex(null);
   };
 
-  const playSample = (index: number) => {
+  const playSample = async (index: number) => {
     const sample = state.multisampleFiles[index];
     if (!sample?.isLoaded || !sample.audioBuffer) return;
 
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = await audioContextManager.getAudioContext();
       const source = audioContext.createBufferSource();
       source.buffer = sample.audioBuffer;
       source.connect(audioContext.destination);
@@ -560,7 +561,9 @@ export function MultisampleSampleTable({
                       {sample.isLoaded ? (
                         <>
                           <button
-                            onClick={() => playSample(index)}
+                            onClick={() => playSample(index).catch(error => {
+                              console.error('Error playing sample:', error);
+                            })}
                             style={actionButtonStyle}
                             title="play"
                           >
@@ -999,7 +1002,9 @@ export function MultisampleSampleTable({
                     {sample.isLoaded ? (
                       <>
                         <button
-                          onClick={() => playSample(index)}
+                          onClick={() => playSample(index).catch(error => {
+                            console.error('Error playing sample:', error);
+                          })}
                           style={actionButtonStyle}
                           title="play"
                         >

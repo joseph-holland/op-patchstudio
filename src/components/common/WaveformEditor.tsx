@@ -54,7 +54,7 @@ export function WaveformEditor({
     const step = Math.ceil(data.length / width);
     const amp = height / 2;
 
-    ctx.fillStyle = '#000000'; // Waveform color
+    ctx.fillStyle = '#333333'; // Waveform color (OP-XY slate)
     ctx.beginPath();
 
     for (let i = 0; i < width; i++) {

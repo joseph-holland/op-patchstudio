@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
+import { audioContextManager } from '../../utils/audioContext';
 
 import { WaveformEditor } from '../common/WaveformEditor';
 import { WaveformZoomModal } from '../common/WaveformZoomModal';
@@ -81,12 +82,12 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
     fileInputRefs.current[index]?.click();
   };
 
-  const playSample = (index: number) => {
+  const playSample = async (index: number) => {
     const sample = state.drumSamples[index];
     if (!sample?.isLoaded || !sample.audioBuffer) return;
 
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = await audioContextManager.getAudioContext();
       const source = audioContext.createBufferSource();
       source.buffer = sample.audioBuffer;
       source.connect(audioContext.destination);
@@ -160,7 +161,9 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
   };
 
   const playSelectedSample = () => {
-    playSample(selectedSampleIndex);
+    playSample(selectedSampleIndex).catch(error => {
+      console.error('Error playing sample:', error);
+    });
   };
 
   // Add keyboard handler for 'p' key in settings modal
@@ -247,7 +250,9 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                      }}>
                        <button
                          disabled={!isLoaded}
-                         onClick={() => playSample(index)}
+                         onClick={() => playSample(index).catch(error => {
+                           console.error('Error playing sample:', error);
+                         })}
                          style={{
                            ...actionButtonStyle,
                            color: isLoaded ? c.action : c.textSecondary
@@ -604,7 +609,9 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                 }}>
                   <button
                     disabled={!isLoaded}
-                    onClick={() => playSample(index)}
+                    onClick={() => playSample(index).catch(error => {
+                      console.error('Error playing sample:', error);
+                    })}
                     style={{
                       ...actionButtonStyle,
                       color: isLoaded ? c.action : c.textSecondary

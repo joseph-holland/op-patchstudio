@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext';
+import { audioContextManager } from '../../utils/audioContext';
 import { ConfirmationModal } from '../common/ConfirmationModal';
 import { RecordingModal } from '../common/RecordingModal';
 import { AudioProcessingSection } from '../common/AudioProcessingSection';
@@ -253,7 +254,7 @@ export function MultisampleTool() {
   };
 
   // Handler for clicking an assigned key
-  const handleKeyClick = useCallback((midiNote: number) => {
+  const handleKeyClick = useCallback(async (midiNote: number) => {
     const zoneInfo = zoneMap.get(midiNote);
     if (!zoneInfo) return;
 
@@ -264,7 +265,7 @@ export function MultisampleTool() {
 
     if (rootSample && rootSample.audioBuffer) {
       try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const audioContext = await audioContextManager.getAudioContext();
         const source = audioContext.createBufferSource();
         source.buffer = rootSample.audioBuffer;
 
