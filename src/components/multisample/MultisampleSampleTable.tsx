@@ -1024,10 +1024,29 @@ export function MultisampleSampleTable({
                         </button>
                         <button
                           onClick={() => onRecordSample(index)}
-                          style={actionButtonStyle}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onRecordSample(index);
+                            }
+                          }}
+                          aria-label={`record sample for slot ${index + 1}`}
+                          style={{
+                            ...actionButtonStyle,
+                            backgroundColor: 'var(--color-surface-primary)',
+                            border: '1px solid var(--color-interactive-primary)',
+                            outline: 'none'
+                          }}
                           title="record"
+                          onFocus={(e) => {
+                            e.currentTarget.style.outline = '2px solid var(--color-interactive-focus)';
+                            e.currentTarget.style.outlineOffset = '2px';
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.outline = 'none';
+                          }}
                         >
-                          <i className="fas fa-microphone" style={{ fontSize: '18px' }}></i>
+                          <i className="fas fa-microphone" style={{ fontSize: '18px', color: 'var(--color-accent-primary)' }} aria-hidden="true"></i>
                         </button>
                       </>
                     )}

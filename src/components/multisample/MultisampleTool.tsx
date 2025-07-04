@@ -400,12 +400,21 @@ export function MultisampleTool() {
                     browseFilesRef.current();
                   }
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (browseFilesRef.current) {
+                      browseFilesRef.current();
+                    }
+                  }
+                }}
+                aria-label="browse and select audio files"
                 style={{
                   padding: '0.625rem 1.25rem',
                   border: 'none',
                   borderRadius: '3px',
-                  backgroundColor: '#333',
-                  color: '#fff',
+                  backgroundColor: 'var(--color-interactive-primary)',
+                  color: 'var(--color-text-inverse)',
                   fontSize: '0.9rem',
                   fontWeight: '500',
                   cursor: 'pointer',
@@ -415,30 +424,45 @@ export function MultisampleTool() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '0.5rem',
-                  flex: isMobile ? '1' : 'none'
+                  flex: isMobile ? '1' : 'none',
+                  outline: 'none'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#555';
+                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-hover)';
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px var(--shadow-medium)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#333';
+                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-primary)';
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
+                onFocus={(e) => {
+                  e.currentTarget.style.outline = '2px solid var(--color-interactive-focus)';
+                  e.currentTarget.style.outlineOffset = '2px';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.outline = 'none';
+                }}
               >
-                <i className="fas fa-folder-open"></i>
+                <i className="fas fa-folder-open" aria-hidden="true"></i>
                 browse files
               </button>
               <button
                 onClick={() => setRecordingModal({ isOpen: true, targetIndex: null })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setRecordingModal({ isOpen: true, targetIndex: null });
+                  }
+                }}
+                aria-label="record new sample"
                 style={{
                   padding: '0.625rem 1.25rem',
-                  border: 'none',
+                  border: '1px solid var(--color-interactive-primary)',
                   borderRadius: '3px',
-                  backgroundColor: '#333',
-                  color: '#fff',
+                  backgroundColor: 'var(--color-surface-primary)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.9rem',
                   fontWeight: '500',
                   cursor: 'pointer',
@@ -448,20 +472,28 @@ export function MultisampleTool() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '0.5rem',
-                  flex: isMobile ? '1' : 'none'
+                  flex: isMobile ? '1' : 'none',
+                  outline: 'none'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#555';
+                  e.currentTarget.style.backgroundColor = 'var(--color-surface-secondary)';
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px var(--shadow-medium)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#333';
+                  e.currentTarget.style.backgroundColor = 'var(--color-surface-primary)';
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
+                onFocus={(e) => {
+                  e.currentTarget.style.outline = '2px solid var(--color-interactive-focus)';
+                  e.currentTarget.style.outlineOffset = '2px';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.outline = 'none';
+                }}
               >
-                <i className="fas fa-microphone"></i>
+                <i className="fas fa-microphone" style={{ color: 'var(--color-accent-primary)' }} aria-hidden="true"></i>
                 record sample
               </button>
               <button
