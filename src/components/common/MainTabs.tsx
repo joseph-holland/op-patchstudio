@@ -38,7 +38,8 @@ export function MainTabs() {
     marginRight: '2px',
     position: 'relative' as const,
     zIndex: 1,
-    outline: 'none'
+    outline: 'none',
+    borderColor: 'var(--color-border-subtle) var(--color-border-subtle) var(--color-border-subtle) var(--color-border-subtle)'
   };
 
   const drumTabStyle = {
@@ -59,7 +60,8 @@ export function MainTabs() {
     marginRight: '2px',
     position: 'relative' as const,
     zIndex: 1,
-    outline: 'none'
+    outline: 'none',
+    borderColor: 'var(--color-border-subtle) var(--color-border-subtle) var(--color-border-subtle) var(--color-border-subtle)'
   } as React.CSSProperties;
 
   const activeDrumTabStyle = {
