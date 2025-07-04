@@ -395,6 +395,93 @@ export function MultisampleTool() {
               alignSelf: isMobile ? 'stretch' : 'auto'
             }}>
               <button
+                onClick={handleClearAll}
+                disabled={!hasLoadedSamples}
+                style={{
+                  padding: '0.625rem 1.25rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '3px',
+                  backgroundColor: '#fff',
+                  color: hasLoadedSamples ? '#6b7280' : '#9ca3af',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  cursor: hasLoadedSamples ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  opacity: hasLoadedSamples ? 1 : 0.6,
+                  flex: isMobile ? '1' : 'none'
+                }}
+                onMouseEnter={(e) => {
+                  if (hasLoadedSamples) {
+                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                    e.currentTarget.style.borderColor = '#9ca3af';
+                    e.currentTarget.style.color = '#374151';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (hasLoadedSamples) {
+                    e.currentTarget.style.backgroundColor = '#fff';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                    e.currentTarget.style.color = '#6b7280';
+                  }
+                }}
+              >
+                <i className="fas fa-trash"></i>
+                clear all
+              </button>
+              <button
+                onClick={() => setRecordingModal({ isOpen: true, targetIndex: null })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setRecordingModal({ isOpen: true, targetIndex: null });
+                  }
+                }}
+                aria-label="record new sample"
+                style={{
+                  padding: '0.625rem 1.25rem',
+                  border: '1px solid var(--color-interactive-primary)',
+                  borderRadius: '3px',
+                  backgroundColor: 'var(--color-surface-primary)',
+                  color: 'var(--color-text-primary)',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  flex: isMobile ? '1' : 'none',
+                  outline: 'none'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-surface-secondary)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px var(--shadow-medium)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-surface-primary)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.outline = '2px solid var(--color-interactive-focus)';
+                  e.currentTarget.style.outlineOffset = '2px';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.outline = 'none';
+                }}
+              >
+                <i className="fas fa-microphone" style={{ color: 'var(--color-accent-primary)' }} aria-hidden="true"></i>
+                record sample
+              </button>
+              <button
                 onClick={() => {
                   // Trigger the browse files function from MultisampleSampleTable
                   if (browseFilesRef.current) {
@@ -448,93 +535,6 @@ export function MultisampleTool() {
               >
                 <i className="fas fa-folder-open" aria-hidden="true"></i>
                 browse files
-              </button>
-              <button
-                onClick={() => setRecordingModal({ isOpen: true, targetIndex: null })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setRecordingModal({ isOpen: true, targetIndex: null });
-                  }
-                }}
-                aria-label="record new sample"
-                style={{
-                  padding: '0.625rem 1.25rem',
-                  border: '1px solid var(--color-interactive-primary)',
-                  borderRadius: '3px',
-                  backgroundColor: 'var(--color-surface-primary)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: '0.9rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  flex: isMobile ? '1' : 'none',
-                  outline: 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-surface-secondary)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px var(--shadow-medium)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-surface-primary)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.outline = '2px solid var(--color-interactive-focus)';
-                  e.currentTarget.style.outlineOffset = '2px';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.outline = 'none';
-                }}
-              >
-                <i className="fas fa-microphone" style={{ color: 'var(--color-accent-primary)' }} aria-hidden="true"></i>
-                record sample
-              </button>
-              <button
-                onClick={handleClearAll}
-                disabled={!hasLoadedSamples}
-                style={{
-                  padding: '0.625rem 1.25rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '3px',
-                  backgroundColor: '#fff',
-                  color: hasLoadedSamples ? '#6b7280' : '#9ca3af',
-                  fontSize: '0.9rem',
-                  fontWeight: '500',
-                  cursor: hasLoadedSamples ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.2s ease',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  opacity: hasLoadedSamples ? 1 : 0.6,
-                  flex: isMobile ? '1' : 'none'
-                }}
-                onMouseEnter={(e) => {
-                  if (hasLoadedSamples) {
-                    e.currentTarget.style.backgroundColor = '#f9fafb';
-                    e.currentTarget.style.borderColor = '#9ca3af';
-                    e.currentTarget.style.color = '#374151';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (hasLoadedSamples) {
-                    e.currentTarget.style.backgroundColor = '#fff';
-                    e.currentTarget.style.borderColor = '#d1d5db';
-                    e.currentTarget.style.color = '#6b7280';
-                  }
-                }}
-              >
-                <i className="fas fa-trash"></i>
-                clear all
               </button>
             </div>
           </div>

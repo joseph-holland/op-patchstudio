@@ -472,7 +472,8 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
             border: '1px solid #ddd',
             borderRadius: '6px',
             boxSizing: 'border-box',
-            width: '100%'
+            width: '100%',
+            boxShadow: '0 2px 8px var(--color-shadow-primary)'
           }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -564,7 +565,8 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
             border: '1px solid #ddd',
             borderRadius: '6px',
             overflow: 'hidden',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            boxShadow: '0 2px 8px var(--color-shadow-primary)'
           }}>
           {/* Octave 1 (Lower) */}
           <div style={{

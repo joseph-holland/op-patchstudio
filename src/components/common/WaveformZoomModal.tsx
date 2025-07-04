@@ -9,7 +9,9 @@ interface WaveformZoomModalProps {
   audioBuffer: AudioBuffer | null;
   initialInPoint: number;
   initialOutPoint: number;
-  onSave: (inPoint: number, outPoint: number) => void;
+  initialLoopStart?: number;
+  initialLoopEnd?: number;
+  onSave: (inPoint: number, outPoint: number, loopStart?: number, loopEnd?: number) => void;
 }
 
 export function WaveformZoomModal({
@@ -18,33 +20,34 @@ export function WaveformZoomModal({
   audioBuffer,
   initialInPoint,
   initialOutPoint,
+  initialLoopStart,
+  initialLoopEnd,
   onSave,
 }: WaveformZoomModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [inFrame, setInFrame] = useState(0);
   const [outFrame, setOutFrame] = useState(0);
+  const [loopStartFrame, setLoopStartFrame] = useState(0);
+  const [loopEndFrame, setLoopEndFrame] = useState(0);
   const [snapToZero, setSnapToZero] = useState(true);
-  const [dragging, setDragging] = useState<'in' | 'out' | null>(null);
+  const [dragging, setDragging] = useState<'in' | 'out' | 'loopStart' | 'loopEnd' | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
 
-  // Helper functions for percentage display
-  const frameToPercentage = (frame: number): number => {
+  // Check if this is a multisample (has loop points)
+  const hasLoopPoints = initialLoopStart !== undefined && initialLoopEnd !== undefined;
+
+  // Helper functions for frame and time display
+  const frameToTime = (frame: number): number => {
     if (!audioBuffer) return 0;
-    return (frame / audioBuffer.length) * 100;
+    return frame / audioBuffer.sampleRate;
   };
 
-  // Get sample values at marker positions
-  const inValue = useMemo(() => {
-    if (!audioBuffer || !audioBuffer.getChannelData(0)) return 0;
-    const channelData = audioBuffer.getChannelData(0);
-    return inFrame < channelData.length ? channelData[inFrame] : 0;
-  }, [audioBuffer, inFrame]);
-
-  const outValue = useMemo(() => {
-    if (!audioBuffer || !audioBuffer.getChannelData(0)) return 0;
-    const channelData = audioBuffer.getChannelData(0);
-    return outFrame < channelData.length ? channelData[outFrame] : 0;
-  }, [audioBuffer, outFrame]);
+  // Check if a frame is at or near zero crossing
+  const isNearZeroCrossing = (frame: number, threshold: number = 0.01): boolean => {
+    if (!audioBuffer) return false;
+    const data = audioBuffer.getChannelData(0);
+    return frame >= 0 && frame < data.length && Math.abs(data[frame]) < threshold;
+  };
 
   // Theme colors
   const c = {
@@ -62,8 +65,40 @@ export function WaveformZoomModal({
       const durationSec = audioBuffer.length / audioBuffer.sampleRate;
       setInFrame(Math.floor((initialInPoint / durationSec) * audioBuffer.length));
       setOutFrame(Math.floor((initialOutPoint / durationSec) * audioBuffer.length));
+      
+      if (hasLoopPoints) {
+        setLoopStartFrame(Math.floor((initialLoopStart! / durationSec) * audioBuffer.length));
+        setLoopEndFrame(Math.floor((initialLoopEnd! / durationSec) * audioBuffer.length));
+      }
     }
-  }, [isOpen, audioBuffer, initialInPoint, initialOutPoint]);
+  }, [isOpen, audioBuffer, initialInPoint, initialOutPoint, initialLoopStart, initialLoopEnd, hasLoopPoints]);
+
+  const findNearestZeroCrossingLocal = useCallback((position: number, searchDirection: number, maxSearchDistance = 1000): number => {
+    if (!audioBuffer) return position;
+    
+    const data = audioBuffer.getChannelData(0);
+    const searchStart = Math.max(0, Math.min(position, data.length - 1));
+    let bestPosition = searchStart;
+    let minAbsValue = Math.abs(data[searchStart]);
+
+    const searchLimit = Math.min(maxSearchDistance, 
+      searchDirection > 0 ? data.length - searchStart : searchStart);
+
+    for (let i = 1; i <= searchLimit; i++) {
+      const checkPos = searchStart + (i * searchDirection);
+      if (checkPos < 0 || checkPos >= data.length) break;
+
+      const absValue = Math.abs(data[checkPos]);
+      if (absValue < minAbsValue) {
+        minAbsValue = absValue;
+        bestPosition = checkPos;
+      }
+
+      if (absValue < 0.01) break;
+    }
+
+    return bestPosition;
+  }, [audioBuffer]);
 
   const drawWaveform = useCallback(() => {
     const canvas = canvasRef.current;
@@ -79,7 +114,7 @@ export function WaveformZoomModal({
     // Clear entire canvas first
     ctx.clearRect(0, 0, width, height);
 
-    // --- New background drawing logic ---
+    // Background drawing logic
     const sampleToPixel = (frame: number) => (audioBuffer.length > 1 ? (frame / audioBuffer.length) * width : 0);
     const inX = sampleToPixel(inFrame);
     const outX = sampleToPixel(outFrame);
@@ -91,8 +126,8 @@ export function WaveformZoomModal({
     // In-bounds area (white)
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(inX, 0, outX - inX, height);
-    // --- End new background drawing logic ---
 
+    // Waveform
     ctx.fillStyle = '#333333';
     const step = Math.ceil(data.length / width);
     const amp = height / 2;
@@ -110,13 +145,34 @@ export function WaveformZoomModal({
       ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
     }
 
+    // Draw center line
     ctx.strokeStyle = '#333333';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, height / 2);
     ctx.lineTo(width, height / 2);
     ctx.stroke();
-  }, [audioBuffer, inFrame, outFrame]);
+
+    // Draw zero crossing indicators (subtle dotted lines)
+    if (snapToZero) {
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 4]);
+      
+      // Find and draw zero crossings every ~1000 samples
+      const stepSize = Math.max(1000, Math.floor(data.length / 50));
+      for (let i = 0; i < data.length; i += stepSize) {
+        if (Math.abs(data[i]) < 0.05) {
+          const x = sampleToPixel(i);
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+      }
+      ctx.setLineDash([]);
+    }
+  }, [audioBuffer, inFrame, outFrame, snapToZero]);
 
   const drawMarkers = useCallback(() => {
     const canvas = canvasRef.current;
@@ -131,7 +187,10 @@ export function WaveformZoomModal({
 
     const inPos = (inFrame / data.length) * width;
     const outPos = (outFrame / data.length) * width;
+    const loopStartPos = hasLoopPoints ? (loopStartFrame / data.length) * width : 0;
+    const loopEndPos = hasLoopPoints ? (loopEndFrame / data.length) * width : 0;
 
+    // In/Out markers (dark grey) - solid lines
     ctx.strokeStyle = '#333333';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -141,53 +200,117 @@ export function WaveformZoomModal({
     ctx.lineTo(outPos, height);
     ctx.stroke();
 
+    // In/Out marker handles - triangles with connected squares
     ctx.fillStyle = '#333333';
-    const sampleTriangleSize = 14;
-    const bottomY = height;
-
+    const sampleTriangleSize = 10;
+    const squareSize = sampleTriangleSize; // Square width matches triangle base
+    const margin = 2; // margin from bottom
+    const bottomHandleY = height - (squareSize + margin);
+    
+    // Sample start marker (triangle above square, triangle pointing up)
+    const squareY = height - squareSize;
+    const triBaseY = squareY;
+    const triTipY = squareY - sampleTriangleSize;
     ctx.beginPath();
-    ctx.moveTo(inPos - sampleTriangleSize / 2, bottomY);
-    ctx.lineTo(inPos + sampleTriangleSize / 2, bottomY);
-    ctx.lineTo(inPos, bottomY - sampleTriangleSize);
+    ctx.moveTo(inPos - sampleTriangleSize / 2, triBaseY);
+    ctx.lineTo(inPos + sampleTriangleSize / 2, triBaseY);
+    ctx.lineTo(inPos, triTipY);
     ctx.closePath();
     ctx.fill();
-
+    ctx.fillRect(inPos - squareSize / 2, squareY, squareSize, squareSize);
+    
+    // Sample end marker (triangle above square, triangle pointing up)
     ctx.beginPath();
-    ctx.moveTo(outPos - sampleTriangleSize / 2, bottomY);
-    ctx.lineTo(outPos + sampleTriangleSize / 2, bottomY);
-    ctx.lineTo(outPos, bottomY - sampleTriangleSize);
+    ctx.moveTo(outPos - sampleTriangleSize / 2, triBaseY);
+    ctx.lineTo(outPos + sampleTriangleSize / 2, triBaseY);
+    ctx.lineTo(outPos, triTipY);
     ctx.closePath();
     ctx.fill();
-  }, [audioBuffer, inFrame, outFrame]);
+    ctx.fillRect(outPos - squareSize / 2, squareY, squareSize, squareSize);
 
-  // Redraw logic
+    // Draw loop markers if this is a multisample
+    if (hasLoopPoints) {
+      // Loop markers (medium grey) - dashed lines
+      const triangleSize = 10;
+      const squareSize = triangleSize; // Square width matches triangle base
+      ctx.fillStyle = '#555555';
+      ctx.strokeStyle = '#555555';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 4]);
+
+      // Loop start - vertical line, square above triangle
+      ctx.beginPath();
+      ctx.moveTo(loopStartPos, 0);
+      ctx.lineTo(loopStartPos, height);
+      ctx.stroke();
+      
+      ctx.setLineDash([]);
+      // Square above triangle
+      ctx.fillRect(loopStartPos - squareSize / 2, 0, squareSize, squareSize);
+      // Triangle pointing down from square
+      ctx.beginPath();
+      ctx.moveTo(loopStartPos - triangleSize / 2, squareSize);
+      ctx.lineTo(loopStartPos + triangleSize / 2, squareSize);
+      ctx.lineTo(loopStartPos, squareSize + triangleSize);
+      ctx.closePath();
+      ctx.fill();
+
+      // Loop end - vertical line, square above triangle
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(loopEndPos, 0);
+      ctx.lineTo(loopEndPos, height);
+      ctx.stroke();
+      
+      ctx.setLineDash([]);
+      // Square above triangle
+      ctx.fillRect(loopEndPos - squareSize / 2, 0, squareSize, squareSize);
+      // Triangle pointing down from square
+      ctx.beginPath();
+      ctx.moveTo(loopEndPos - triangleSize / 2, squareSize);
+      ctx.lineTo(loopEndPos + triangleSize / 2, squareSize);
+      ctx.lineTo(loopEndPos, squareSize + triangleSize);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }, [audioBuffer, inFrame, outFrame, loopStartFrame, loopEndFrame, hasLoopPoints]);
+
+  // Combined effect for initialization and resizing
   useEffect(() => {
+    if (!isOpen || !audioBuffer) return;
+
     const canvas = canvasRef.current;
-    if (isOpen && audioBuffer && canvas) {
+    if (!canvas) return;
+
+    const resizeAndDraw = () => {
       const parent = canvas.parentElement;
       if (parent) {
         canvas.width = parent.clientWidth;
-        canvas.height = 200;
-        drawWaveform();
-        drawMarkers();
-      }
-    }
-  }, [isOpen, audioBuffer, drawWaveform, drawMarkers, inFrame, outFrame]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleResize = () => {
-      const canvas = canvasRef.current;
-      if (canvas && canvas.parentElement) {
-        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = 200; // Fixed height
         drawWaveform();
         drawMarkers();
       }
     };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isOpen, drawWaveform, drawMarkers]);
+
+    resizeAndDraw(); // Initial setup
+
+    window.addEventListener('resize', resizeAndDraw);
+    return () => window.removeEventListener('resize', resizeAndDraw);
+  }, [isOpen, audioBuffer, drawWaveform, drawMarkers]);
+
+  // Effect for redrawing markers only, without resizing canvas
+  useEffect(() => {
+    if (isOpen && audioBuffer) {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          drawWaveform();
+          drawMarkers();
+        }
+      }
+    }
+  }, [inFrame, outFrame, loopStartFrame, loopEndFrame, isOpen, audioBuffer, drawWaveform, drawMarkers]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!audioBuffer) return;
@@ -197,33 +320,93 @@ export function WaveformZoomModal({
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     const width = canvas.width;
+    const height = canvas.height;
+    const data = audioBuffer.getChannelData(0);
 
-    const inPos = (inFrame / audioBuffer.length) * width;
-    const outPos = (outFrame / audioBuffer.length) * width;
+    const inPos = (inFrame / data.length) * width;
+    const outPos = (outFrame / data.length) * width;
+    const loopStartPos = hasLoopPoints ? (loopStartFrame / data.length) * width : 0;
+    const loopEndPos = hasLoopPoints ? (loopEndFrame / data.length) * width : 0;
 
-    const tolerance = 20;
+    // Define vertical zones for marker selection
+    const topZone = height * 0.2;
+    const bottomZone = height * 0.8;
+    const tolerance = 40;
 
-    if (Math.abs(x - inPos) < tolerance) {
-      setDragging('in');
-    } else if (Math.abs(x - outPos) < tolerance) {
-      setDragging('out');
+    // Determine available markers based on vertical zone and sample type
+    let availableMarkers: Array<'in' | 'out' | 'loopStart' | 'loopEnd'> = [];
+    
+    if (hasLoopPoints) {
+      if (y <= topZone) {
+        availableMarkers = ['loopStart', 'loopEnd'];
+      } else if (y >= bottomZone) {
+        availableMarkers = ['in', 'out'];
+      } else {
+        availableMarkers = ['in', 'loopStart', 'loopEnd', 'out'];
+      }
     } else {
-      const frame = Math.round((x / width) * audioBuffer.length);
-      const distanceToIn = Math.abs(x - inPos);
-      const distanceToOut = Math.abs(x - outPos);
+      availableMarkers = ['in', 'out'];
+    }
 
-      let targetFrame = frame;
+    const markerPositions = {
+      in: inPos,
+      loopStart: loopStartPos,
+      loopEnd: loopEndPos,
+      out: outPos
+    };
+
+    // Check for marker grabs
+    let grabbed = false;
+    for (const markerType of availableMarkers) {
+      if (Math.abs(x - markerPositions[markerType]) < tolerance) {
+        setDragging(markerType);
+        grabbed = true;
+        break;
+      }
+    }
+
+    if (!grabbed) {
+      // Click to move nearest available marker
+      const distances: Record<string, number> = {};
+      availableMarkers.forEach(markerType => {
+        distances[markerType] = Math.abs(x - markerPositions[markerType]);
+      });
+
+      const closest = Object.keys(distances).reduce((a, b) => distances[a] < distances[b] ? a : b) as 'in' | 'out' | 'loopStart' | 'loopEnd';
+      
+      let targetFrame = Math.round((x / width) * data.length);
       if (snapToZero) {
-        targetFrame = findNearestZeroCrossing(audioBuffer, frame, 'both', 500);
+        targetFrame = findNearestZeroCrossingLocal(targetFrame, targetFrame > data.length / 2 ? -1 : 1, 500);
       }
 
-      if (distanceToIn < distanceToOut) {
-        const newInFrame = Math.max(0, Math.min(targetFrame, outFrame - 1));
-        setInFrame(newInFrame);
-      } else {
-        const newOutFrame = Math.max(inFrame + 1, Math.min(targetFrame, audioBuffer.length));
-        setOutFrame(newOutFrame);
+      // Apply constraints when moving markers
+      switch (closest) {
+        case 'in':
+          const newInFrame = Math.max(0, Math.min(targetFrame, data.length - 1));
+          setInFrame(newInFrame);
+          if (hasLoopPoints && newInFrame >= loopStartFrame) {
+            setLoopStartFrame(Math.min(newInFrame + 1, loopEndFrame - 1));
+          }
+          break;
+        case 'loopStart':
+          if (hasLoopPoints) {
+            setLoopStartFrame(Math.max(inFrame, Math.min(targetFrame, loopEndFrame - 1)));
+          }
+          break;
+        case 'loopEnd':
+          if (hasLoopPoints) {
+            setLoopEndFrame(Math.max(loopStartFrame + 1, Math.min(targetFrame, outFrame)));
+          }
+          break;
+        case 'out':
+          const newOutFrame = Math.max(hasLoopPoints ? loopStartFrame + 2 : inFrame + 1, Math.min(targetFrame, data.length));
+          setOutFrame(newOutFrame);
+          if (hasLoopPoints && newOutFrame <= loopEndFrame) {
+            setLoopEndFrame(Math.max(newOutFrame - 1, loopStartFrame + 1));
+          }
+          break;
       }
     }
   };
@@ -237,17 +420,44 @@ export function WaveformZoomModal({
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const width = canvas.width;
-    let frame = Math.round((x / width) * audioBuffer.length);
+    const data = audioBuffer.getChannelData(0);
 
+    const frame = Math.round((x / width) * data.length);
+    let targetFrame = frame;
     if (snapToZero) {
-      const direction = frame > (dragging === 'in' ? inFrame : outFrame) ? 1 : -1;
-      frame = findNearestZeroCrossing(audioBuffer, frame, direction > 0 ? 'forward' : 'backward', 500);
+      targetFrame = findNearestZeroCrossingLocal(frame, frame > data.length / 2 ? -1 : 1, 500);
     }
 
-    if (dragging === 'in') {
-      setInFrame(Math.max(0, Math.min(frame, outFrame - 1)));
-    } else {
-      setOutFrame(Math.max(inFrame + 1, Math.min(frame, audioBuffer.length)));
+    switch (dragging) {
+      case 'in':
+        const newInFrame = Math.max(0, Math.min(targetFrame, hasLoopPoints ? loopEndFrame - 2 : outFrame - 1, data.length - 1));
+        setInFrame(newInFrame);
+        if (hasLoopPoints && newInFrame >= loopStartFrame) {
+          setLoopStartFrame(Math.min(newInFrame + 1, loopEndFrame - 1));
+        }
+        break;
+      case 'loopStart':
+        if (hasLoopPoints) {
+          if (targetFrame < inFrame) {
+            setInFrame(Math.max(0, targetFrame));
+            setLoopStartFrame(Math.max(Math.max(0, targetFrame), Math.min(targetFrame, loopEndFrame - 1)));
+          } else {
+            setLoopStartFrame(Math.max(inFrame, Math.min(targetFrame, loopEndFrame - 1)));
+          }
+        }
+        break;
+      case 'loopEnd':
+        if (hasLoopPoints) {
+          setLoopEndFrame(Math.max(loopStartFrame + 1, Math.min(targetFrame, outFrame)));
+        }
+        break;
+      case 'out':
+        const newOutFrame = Math.max(hasLoopPoints ? loopStartFrame + 2 : inFrame + 1, Math.min(targetFrame, data.length));
+        setOutFrame(newOutFrame);
+        if (hasLoopPoints && newOutFrame <= loopEndFrame) {
+          setLoopEndFrame(Math.max(newOutFrame - 1, loopStartFrame + 1));
+        }
+        break;
     }
   };
 
@@ -260,7 +470,14 @@ export function WaveformZoomModal({
     const durationSec = audioBuffer.length / audioBuffer.sampleRate;
     const inPointSec = (inFrame / audioBuffer.length) * durationSec;
     const outPointSec = (outFrame / audioBuffer.length) * durationSec;
-    onSave(inPointSec, outPointSec);
+    
+    if (hasLoopPoints) {
+      const loopStartSec = (loopStartFrame / audioBuffer.length) * durationSec;
+      const loopEndSec = (loopEndFrame / audioBuffer.length) * durationSec;
+      onSave(inPointSec, outPointSec, loopStartSec, loopEndSec);
+    } else {
+      onSave(inPointSec, outPointSec);
+    }
     onClose();
   };
 
@@ -286,8 +503,9 @@ export function WaveformZoomModal({
   };
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (!isOpen) return;
       if (e.key === 'p' || e.key === 'P') {
         e.preventDefault();
         playSelection().catch(error => {
@@ -296,11 +514,9 @@ export function WaveformZoomModal({
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => {
-      window.removeEventListener('keydown', handleKeyPress);
-    };
-  }, [isOpen, playSelection]);
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -395,48 +611,186 @@ export function WaveformZoomModal({
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: c.textSecondary, marginBottom: '0.25rem' }}>
-                sample start
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          {/* Marker Display */}
+          {hasLoopPoints ? (
+            // Multisample layout: 2x2 grid
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
+                    sample start:
+                  </span>
+                  <span style={{
+                    padding: '0.25rem 0.5rem',
+                    backgroundColor: c.bgAlt,
+                    border: `1px solid ${c.border}`,
+                    borderRadius: '3px',
+                    fontSize: '0.8rem',
+                    fontWeight: '500',
+                    minWidth: '90px',
+                    textAlign: 'right'
+                  }}>
+                    {audioBuffer ? inFrame.toLocaleString() : '0'}
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
+                    frames ({audioBuffer ? frameToTime(inFrame).toFixed(3) : '0.000'}s)
+                  </span>
+                  <span style={{ 
+                    fontSize: '0.65rem', 
+                    color: isNearZeroCrossing(inFrame) ? '#6b7280' : '#9ca3af',
+                    fontWeight: '500'
+                  }}>
+                    {isNearZeroCrossing(inFrame) ? '✓ zero' : '✗ not zero'}
+                  </span>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
+                    sample end:
+                  </span>
+                  <span style={{
+                    padding: '0.25rem 0.5rem',
+                    backgroundColor: c.bgAlt,
+                    border: `1px solid ${c.border}`,
+                    borderRadius: '3px',
+                    fontSize: '0.8rem',
+                    fontWeight: '500',
+                    minWidth: '90px',
+                    textAlign: 'right'
+                  }}>
+                    {audioBuffer ? outFrame.toLocaleString() : '0'}
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
+                    frames ({audioBuffer ? frameToTime(outFrame).toFixed(3) : '0.000'}s)
+                  </span>
+                  <span style={{ 
+                    fontSize: '0.65rem', 
+                    color: isNearZeroCrossing(outFrame) ? '#6b7280' : '#9ca3af',
+                    fontWeight: '500'
+                  }}>
+                    {isNearZeroCrossing(outFrame) ? '✓ zero' : '✗ not zero'}
+                  </span>
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
+                    loop start:
+                  </span>
+                  <span style={{
+                    padding: '0.25rem 0.5rem',
+                    backgroundColor: c.bgAlt,
+                    border: `1px solid ${c.border}`,
+                    borderRadius: '3px',
+                    fontSize: '0.8rem',
+                    fontWeight: '500',
+                    minWidth: '90px',
+                    textAlign: 'right'
+                  }}>
+                    {audioBuffer ? loopStartFrame.toLocaleString() : '0'}
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
+                    frames ({audioBuffer ? frameToTime(loopStartFrame).toFixed(3) : '0.000'}s)
+                  </span>
+                  <span style={{ 
+                    fontSize: '0.65rem', 
+                    color: isNearZeroCrossing(loopStartFrame) ? '#6b7280' : '#9ca3af',
+                    fontWeight: '500'
+                  }}>
+                    {isNearZeroCrossing(loopStartFrame) ? '✓ zero' : '✗ not zero'}
+                  </span>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
+                    loop end:
+                  </span>
+                  <span style={{
+                    padding: '0.25rem 0.5rem',
+                    backgroundColor: c.bgAlt,
+                    border: `1px solid ${c.border}`,
+                    borderRadius: '3px',
+                    fontSize: '0.8rem',
+                    fontWeight: '500',
+                    minWidth: '90px',
+                    textAlign: 'right'
+                  }}>
+                    {audioBuffer ? loopEndFrame.toLocaleString() : '0'}
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
+                    frames ({audioBuffer ? frameToTime(loopEndFrame).toFixed(3) : '0.000'}s)
+                  </span>
+                  <span style={{ 
+                    fontSize: '0.65rem', 
+                    color: isNearZeroCrossing(loopEndFrame) ? '#6b7280' : '#9ca3af',
+                    fontWeight: '500'
+                  }}>
+                    {isNearZeroCrossing(loopEndFrame) ? '✓ zero' : '✗ not zero'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            // Drum sample layout: single row
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
+                  sample start:
+                </span>
                 <span style={{
                   padding: '0.25rem 0.5rem',
                   backgroundColor: c.bgAlt,
                   border: `1px solid ${c.border}`,
                   borderRadius: '3px',
-                  width: '70px',
-                  textAlign: 'center',
                   fontSize: '0.8rem',
-                  fontWeight: 500,
+                  fontWeight: '500',
+                  minWidth: '90px',
+                  textAlign: 'right'
                 }}>
-                  {frameToPercentage(inFrame).toFixed(1)}%
+                  {inFrame.toLocaleString()}
                 </span>
-                <span style={{ fontSize: '0.7rem' }}>val: {inValue.toFixed(4)}</span>
+                <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
+                  frames ({frameToTime(inFrame).toFixed(3)}s)
+                </span>
+                <span style={{ 
+                  fontSize: '0.65rem', 
+                  color: isNearZeroCrossing(inFrame) ? '#6b7280' : '#9ca3af',
+                  fontWeight: '500'
+                }}>
+                  {isNearZeroCrossing(inFrame) ? '✓ zero' : '✗ not zero'}
+                </span>
               </div>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: c.textSecondary, marginBottom: '0.25rem' }}>
-                sample end
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
+                  sample end:
+                </span>
                 <span style={{
                   padding: '0.25rem 0.5rem',
                   backgroundColor: c.bgAlt,
                   border: `1px solid ${c.border}`,
                   borderRadius: '3px',
-                  width: '70px',
-                  textAlign: 'center',
                   fontSize: '0.8rem',
-                  fontWeight: 500,
+                  fontWeight: '500',
+                  minWidth: '90px',
+                  textAlign: 'right'
                 }}>
-                  {frameToPercentage(outFrame).toFixed(1)}%
+                  {outFrame.toLocaleString()}
                 </span>
-                <span style={{ fontSize: '0.7rem' }}>val: {outValue.toFixed(4)}</span>
+                <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
+                  frames ({frameToTime(outFrame).toFixed(3)}s)
+                </span>
+                <span style={{ 
+                  fontSize: '0.65rem', 
+                  color: isNearZeroCrossing(outFrame) ? '#6b7280' : '#9ca3af',
+                  fontWeight: '500'
+                }}>
+                  {isNearZeroCrossing(outFrame) ? '✓ zero' : '✗ not zero'}
+                </span>
               </div>
             </div>
-          </div>
+          )}
           
           <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: '1rem', marginTop: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
@@ -462,15 +816,30 @@ export function WaveformZoomModal({
                 <i className="fas fa-play" style={{ fontSize: '0.8rem' }}></i>
                 play selection (P)
               </button>
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem', 
+                fontSize: '0.875rem', 
+                fontWeight: '500',
+                color: 'var(--color-text-primary)',
+                cursor: 'pointer'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={snapToZero}
+                  onChange={(e) => setSnapToZero(e.target.checked)}
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    accentColor: 'var(--color-text-primary)'
+                  }}
+                />
+                <span style={{ marginLeft: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                  snap to zero crossings
+                </span>
+              </label>
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem' }}>
-              <input
-                type="checkbox"
-                checked={snapToZero}
-                onChange={(e) => setSnapToZero(e.target.checked)}
-              />
-              snap to nearest zero-crossing
-            </label>
           </div>
         </div>
         

@@ -2,9 +2,9 @@ import React, { useState, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { audioContextManager } from '../../utils/audioContext';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
-import { WaveformEditor } from '../common/WaveformEditor';
+import { SmallWaveform } from '../common/SmallWaveform';
 import { Tooltip } from '../common/Tooltip';
-import { MultisampleWaveformZoomModal } from './MultisampleWaveformZoomModal';
+import { WaveformZoomModal } from '../common/WaveformZoomModal';
 import { midiNoteToString, noteStringToMidiValue } from '../../utils/audio';
 
 
@@ -412,7 +412,7 @@ export function MultisampleSampleTable({
     setZoomModalOpen(false);
   };
 
-  const handleZoomSave = (inPoint: number, outPoint: number, loopStart: number, loopEnd: number) => {
+  const handleZoomSave = (inPoint: number, outPoint: number, loopStart?: number, loopEnd?: number) => {
     dispatch({
       type: 'UPDATE_MULTISAMPLE_FILE',
       payload: {
@@ -420,8 +420,8 @@ export function MultisampleSampleTable({
         updates: {
           inPoint,
           outPoint,
-          loopStart,
-          loopEnd
+          loopStart: loopStart || 0,
+          loopEnd: loopEnd || (state.multisampleFiles[zoomSampleIndex]?.audioBuffer ? state.multisampleFiles[zoomSampleIndex].audioBuffer!.duration : 0)
         }
       }
     });
@@ -625,15 +625,14 @@ export function MultisampleSampleTable({
                         marginBottom: '0.1rem'
                       }}>
                         {sample.audioBuffer ? (
-                          <WaveformEditor
+                          <SmallWaveform
                             audioBuffer={sample.audioBuffer}
                             height={44}
                             inPoint={Math.floor((sample.inPoint || 0) * sample.audioBuffer.sampleRate)}
                             outPoint={Math.floor((sample.outPoint || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
                             loopStart={Math.floor((sample.loopStart || 0) * sample.audioBuffer.sampleRate)}
                             loopEnd={Math.floor((sample.loopEnd || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
-                            showLoopMarkers={true}
-                            onMarkersChange={(markers) => {
+                            onMarkersChange={(markers: { inPoint: number; outPoint: number; loopStart?: number; loopEnd?: number }) => {
                               if (!sample.audioBuffer) return;
                               const toSeconds = (frame: number) => frame / sample.audioBuffer.sampleRate;
                               dispatch({
@@ -805,7 +804,7 @@ export function MultisampleSampleTable({
                 {isDragOver ? 'drop files here' : 'no samples loaded'}
               </h3>
               <p style={{ margin: 0, fontSize: '0.9rem' }}>
-                drag and drop WAV files here or click to browse
+                drag and drop wav files here or click to browse
               </p>
             </div>
           </div>
@@ -920,15 +919,14 @@ export function MultisampleSampleTable({
                         alignItems: 'center'
                       }}>
                         {sample.audioBuffer ? (
-                          <WaveformEditor
+                          <SmallWaveform
                             audioBuffer={sample.audioBuffer}
                             height={44}
                             inPoint={Math.floor((sample.inPoint || 0) * sample.audioBuffer.sampleRate)}
                             outPoint={Math.floor((sample.outPoint || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
                             loopStart={Math.floor((sample.loopStart || 0) * sample.audioBuffer.sampleRate)}
                             loopEnd={Math.floor((sample.loopEnd || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
-                            showLoopMarkers={true}
-                            onMarkersChange={(markers) => {
+                            onMarkersChange={(markers: { inPoint: number; outPoint: number; loopStart?: number; loopEnd?: number }) => {
                               if (!sample.audioBuffer) return;
                               const toSeconds = (frame: number) => frame / sample.audioBuffer.sampleRate;
                               dispatch({
@@ -1063,15 +1061,15 @@ export function MultisampleSampleTable({
         )}
               </div>
 
-        {/* Multisample Waveform Zoom Modal */}
-        <MultisampleWaveformZoomModal
+        {/* Waveform Zoom Modal */}
+        <WaveformZoomModal
           isOpen={zoomModalOpen}
           onClose={closeZoomModal}
           audioBuffer={state.multisampleFiles[zoomSampleIndex]?.audioBuffer || null}
           initialInPoint={state.multisampleFiles[zoomSampleIndex]?.inPoint || 0}
-                  initialOutPoint={state.multisampleFiles[zoomSampleIndex]?.outPoint || (state.multisampleFiles[zoomSampleIndex]?.audioBuffer ? state.multisampleFiles[zoomSampleIndex].audioBuffer!.length / state.multisampleFiles[zoomSampleIndex].audioBuffer!.sampleRate : 0)}
-        initialLoopStart={state.multisampleFiles[zoomSampleIndex]?.loopStart || 0}
-        initialLoopEnd={state.multisampleFiles[zoomSampleIndex]?.loopEnd || (state.multisampleFiles[zoomSampleIndex]?.audioBuffer ? state.multisampleFiles[zoomSampleIndex].audioBuffer!.length / state.multisampleFiles[zoomSampleIndex].audioBuffer!.sampleRate : 0)}
+          initialOutPoint={state.multisampleFiles[zoomSampleIndex]?.outPoint || (state.multisampleFiles[zoomSampleIndex]?.audioBuffer ? state.multisampleFiles[zoomSampleIndex].audioBuffer!.length / state.multisampleFiles[zoomSampleIndex].audioBuffer!.sampleRate : 0)}
+          initialLoopStart={state.multisampleFiles[zoomSampleIndex]?.loopStart || 0}
+          initialLoopEnd={state.multisampleFiles[zoomSampleIndex]?.loopEnd || (state.multisampleFiles[zoomSampleIndex]?.audioBuffer ? state.multisampleFiles[zoomSampleIndex].audioBuffer!.length / state.multisampleFiles[zoomSampleIndex].audioBuffer!.sampleRate : 0)}
           onSave={handleZoomSave}
         />
       </div>

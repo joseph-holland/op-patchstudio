@@ -110,11 +110,9 @@ export function MainTabs() {
         }}
       >
         <button
-          role="tab"
-          aria-selected={state.currentTab === 'drum'}
-          aria-controls="drum-tabpanel"
           id="drum-tab"
           tabIndex={state.currentTab === 'drum' ? 0 : -1}
+          aria-controls="drum-tabpanel"
           style={{
             ...(state.currentTab === 'drum' ? activeDrumTabStyle : drumTabStyle)
           }}
@@ -132,22 +130,13 @@ export function MainTabs() {
               e.currentTarget.style.color = 'var(--color-text-secondary)';
             }
           }}
-          onFocus={(e) => {
-            e.currentTarget.style.outline = '2px solid var(--color-interactive-focus)';
-            e.currentTarget.style.outlineOffset = '2px';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.outline = 'none';
-          }}
         >
           drum
         </button>
         <button
-          role="tab"
-          aria-selected={state.currentTab === 'multisample'}
-          aria-controls="multisample-tabpanel"
           id="multisample-tab"
           tabIndex={state.currentTab === 'multisample' ? 0 : -1}
+          aria-controls="multisample-tabpanel"
           style={state.currentTab === 'multisample' ? activeTabStyle : tabStyle}
           onClick={() => handleTabChange('multisample')}
           onKeyDown={(e) => handleKeyDown(e, 'multisample')}
@@ -162,13 +151,6 @@ export function MainTabs() {
               e.currentTarget.style.background = 'var(--color-bg-secondary)';
               e.currentTarget.style.color = 'var(--color-text-secondary)';
             }
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.outline = '2px solid var(--color-interactive-focus)';
-            e.currentTarget.style.outlineOffset = '2px';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.outline = 'none';
           }}
         >
           multisample

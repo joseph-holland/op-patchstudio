@@ -349,3 +349,27 @@ body {
   border-right: 5px solid transparent;
   border-top: 5px solid rgba(51, 51, 51, 0.95);
 }
+
+/* Hide focus outline for mouse users, keep for keyboard users (accessibility best practice) */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--color-interactive-focus);
+  outline-offset: 2px;
+}
+
+/* Remove thick border from selected/focused tab and keep subtle focus ring for keyboard users */
+[role="tab"][aria-selected="true"],
+[role="tab"]:focus {
+  border-color: var(--color-border-subtle) var(--color-border-subtle) var(--color-bg-primary) !important;
+  box-shadow: none !important;
+}
+[role="tab"]:focus:not(:focus-visible) {
+  border-color: var(--color-border-subtle) var(--color-border-subtle) var(--color-bg-primary) !important;
+  box-shadow: none !important;
+}
+[role="tab"]:focus-visible {
+  outline: 2px solid var(--color-interactive-focus);
+  outline-offset: 2px;
+}
