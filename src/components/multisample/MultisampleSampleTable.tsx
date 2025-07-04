@@ -628,23 +628,23 @@ export function MultisampleSampleTable({
                           <WaveformEditor
                             audioBuffer={sample.audioBuffer}
                             height={44}
-                            inPoint={Math.floor(((sample.inPoint || 0) / (sample.duration || 1)) * sample.audioBuffer.length)}
-                            outPoint={Math.floor(((sample.outPoint || sample.duration || 1) / (sample.duration || 1)) * sample.audioBuffer.length)}
-                            loopStart={Math.floor(((sample.loopStart || 0) / (sample.duration || 1)) * sample.audioBuffer.length)}
-                            loopEnd={Math.floor(((sample.loopEnd || sample.duration || 1) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            inPoint={Math.floor((sample.inPoint || 0) * sample.audioBuffer.sampleRate)}
+                            outPoint={Math.floor((sample.outPoint || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
+                            loopStart={Math.floor((sample.loopStart || 0) * sample.audioBuffer.sampleRate)}
+                            loopEnd={Math.floor((sample.loopEnd || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
                             showLoopMarkers={true}
                             onMarkersChange={(markers) => {
                               if (!sample.audioBuffer) return;
-                              const duration = sample.audioBuffer.duration;
+                              const toSeconds = (frame: number) => frame / sample.audioBuffer.sampleRate;
                               dispatch({
                                 type: 'UPDATE_MULTISAMPLE_FILE',
                                 payload: {
                                   index,
                                   updates: {
-                                    inPoint: (markers.inPoint / sample.audioBuffer.length) * duration,
-                                    outPoint: (markers.outPoint / sample.audioBuffer.length) * duration,
-                                    loopStart: ((markers.loopStart || 0) / sample.audioBuffer.length) * duration,
-                                    loopEnd: ((markers.loopEnd || 0) / sample.audioBuffer.length) * duration,
+                                    inPoint: toSeconds(markers.inPoint),
+                                    outPoint: toSeconds(markers.outPoint),
+                                    loopStart: toSeconds(markers.loopStart || 0),
+                                    loopEnd: toSeconds(markers.loopEnd || sample.audioBuffer.duration),
                                   },
                                 },
                               });
@@ -923,23 +923,23 @@ export function MultisampleSampleTable({
                           <WaveformEditor
                             audioBuffer={sample.audioBuffer}
                             height={44}
-                            inPoint={Math.floor(((sample.inPoint || 0) / (sample.duration || 1)) * sample.audioBuffer.length)}
-                            outPoint={Math.floor(((sample.outPoint || sample.duration || 1) / (sample.duration || 1)) * sample.audioBuffer.length)}
-                            loopStart={Math.floor(((sample.loopStart || 0) / (sample.duration || 1)) * sample.audioBuffer.length)}
-                            loopEnd={Math.floor(((sample.loopEnd || sample.duration || 1) / (sample.duration || 1)) * sample.audioBuffer.length)}
+                            inPoint={Math.floor((sample.inPoint || 0) * sample.audioBuffer.sampleRate)}
+                            outPoint={Math.floor((sample.outPoint || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
+                            loopStart={Math.floor((sample.loopStart || 0) * sample.audioBuffer.sampleRate)}
+                            loopEnd={Math.floor((sample.loopEnd || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
                             showLoopMarkers={true}
                             onMarkersChange={(markers) => {
                               if (!sample.audioBuffer) return;
-                              const duration = sample.audioBuffer.duration;
+                              const toSeconds = (frame: number) => frame / sample.audioBuffer.sampleRate;
                               dispatch({
                                 type: 'UPDATE_MULTISAMPLE_FILE',
                                 payload: {
                                   index,
                                   updates: {
-                                    inPoint: (markers.inPoint / sample.audioBuffer.length) * duration,
-                                    outPoint: (markers.outPoint / sample.audioBuffer.length) * duration,
-                                    loopStart: ((markers.loopStart || 0) / sample.audioBuffer.length) * duration,
-                                    loopEnd: ((markers.loopEnd || 0) / sample.audioBuffer.length) * duration,
+                                    inPoint: toSeconds(markers.inPoint),
+                                    outPoint: toSeconds(markers.outPoint),
+                                    loopStart: toSeconds(markers.loopStart || 0),
+                                    loopEnd: toSeconds(markers.loopEnd || sample.audioBuffer.duration),
                                   },
                                 },
                               });
