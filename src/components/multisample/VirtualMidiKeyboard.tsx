@@ -37,6 +37,7 @@ export function VirtualMidiKeyboard({
   // Keyboard control state
   const [activeOctave, setActiveOctave] = useState(4); // Default to middle C (C4)
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
+  const [mousePressedKey, setMousePressedKey] = useState<number | null>(null);
   
   // Keyboard mapping - white keys (bottom row) and black keys (top row)
   const keyboardMapping = {
@@ -111,10 +112,12 @@ export function VirtualMidiKeyboard({
       
       // Handle octave switching
       if (key === 'z') {
+        setPressedKeys(prev => new Set([...prev, key]));
         changeOctave('down');
         return;
       }
       if (key === 'x') {
+        setPressedKeys(prev => new Set([...prev, key]));
         changeOctave('up');
         return;
       }
@@ -144,7 +147,7 @@ export function VirtualMidiKeyboard({
       }
       
       const key = e.key.toLowerCase();
-      if (key in keyboardMapping) {
+      if (key in keyboardMapping || key === 'z' || key === 'x') {
         setPressedKeys(prev => {
           const newSet = new Set(prev);
           newSet.delete(key);
@@ -266,13 +269,24 @@ export function VirtualMidiKeyboard({
 
   const handleKeyClick = useCallback((midiNote: number) => {
     const isAssigned = assignedNotes.includes(midiNote);
-    
+    // Find the computer key for this midiNote in the current octave
+    const computerKey = getComputerKeyForNote(midiNote);
+    if (computerKey) {
+      setPressedKeys(prev => new Set([...prev, computerKey.toLowerCase()]));
+      setTimeout(() => {
+        setPressedKeys(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(computerKey.toLowerCase());
+          return newSet;
+        });
+      }, 150);
+    }
     if (isAssigned) {
       onKeyClick?.(midiNote);
     } else {
       onUnassignedKeyClick?.(midiNote);
     }
-  }, [assignedNotes, onKeyClick, onUnassignedKeyClick]);
+  }, [assignedNotes, onKeyClick, onUnassignedKeyClick, getComputerKeyForNote]);
 
   const handleKeyMouseEnter = useCallback((midiNote: number) => {
     setHoveredKey(midiNote);
@@ -333,13 +347,13 @@ export function VirtualMidiKeyboard({
         const isHovered = hoveredKey === midiNote;
         const isDragOver = dragOverKey === midiNote;
         const computerKey = getComputerKeyForNote(midiNote);
-        const isPressed = computerKey && pressedKeys.has(computerKey.toLowerCase());
+        const isPressed = (computerKey && pressedKeys.has(computerKey.toLowerCase())) || mousePressedKey === midiNote;
         
         // Define key colors based on state
         const whiteKeyColors = {
           base: isAssigned ? 'var(--color-bg-primary)' : 'var(--color-key-inactive-white-bg)',
           hover: 'var(--color-surface-secondary)',
-          pressed: 'var(--color-interactive-secondary)',
+          pressed: isPressed ? 'linear-gradient(to top, var(--color-border-subtle) 0%, var(--color-bg-primary) 70%, var(--color-bg-primary) 100%)' : 'var(--color-interactive-secondary)',
           dragOver: 'var(--color-interactive-focus-ring)',
         };
         
@@ -351,7 +365,15 @@ export function VirtualMidiKeyboard({
               position: 'relative',
               width: '24px',
               height: '120px',
-              backgroundColor: isDragOver ? whiteKeyColors.dragOver : isPressed ? whiteKeyColors.pressed : isHovered ? whiteKeyColors.hover : whiteKeyColors.base,
+              ...(isDragOver
+                ? { backgroundColor: whiteKeyColors.dragOver }
+                : isPressed && whiteKeyColors.pressed.startsWith('linear-gradient')
+                  ? { background: whiteKeyColors.pressed }
+                  : isPressed
+                    ? { backgroundColor: whiteKeyColors.pressed }
+                    : isHovered
+                      ? { backgroundColor: whiteKeyColors.hover }
+                      : { backgroundColor: whiteKeyColors.base }),
               border: isDragOver ? '2px solid var(--color-text-secondary)' : `1px solid ${isAssigned ? 'var(--color-black)' : 'var(--color-key-inactive-border)'}`,
               borderRadius: '0 0 4px 4px',
               cursor: 'pointer',
@@ -365,11 +387,12 @@ export function VirtualMidiKeyboard({
               transition: 'all 0.1s ease',
               userSelect: 'none',
               boxShadow: isHovered ? '0 2px 4px rgba(0,0,0,0.1)' : '0 2px 6px rgba(0,0,0,0.3)',
-              transform: isHovered ? 'translateY(-1px)' : 'none'
             }}
+            onMouseDown={() => setMousePressedKey(midiNote)}
+            onMouseUp={() => setMousePressedKey(null)}
+            onMouseLeave={() => { setMousePressedKey(null); handleKeyMouseLeave(); }}
             onClick={() => handleKeyClick(midiNote)}
             onMouseEnter={() => handleKeyMouseEnter(midiNote)}
-            onMouseLeave={handleKeyMouseLeave}
             onDragOver={(e) => handleKeyDragOver(e, midiNote)}
             onDragLeave={handleKeyDragLeave}
             onDrop={(e) => handleKeyDrop(e, midiNote)}
@@ -407,13 +430,13 @@ export function VirtualMidiKeyboard({
         const isHovered = hoveredKey === midiNote;
         const isDragOver = dragOverKey === midiNote;
         const computerKey = getComputerKeyForNote(midiNote);
-        const isPressed = computerKey && pressedKeys.has(computerKey.toLowerCase());
+        const isPressed = (computerKey && pressedKeys.has(computerKey.toLowerCase())) || mousePressedKey === midiNote;
         
         // Define key colors based on state
         const blackKeyColors = {
           base: isAssigned ? 'var(--color-interactive-dark)' : 'var(--color-key-inactive-black-bg)',
           hover: 'var(--color-interactive-dark)',
-          pressed: 'var(--color-interactive-secondary)',
+          pressed: isPressed ? 'linear-gradient(to top, var(--color-key-inactive-black-bg) 0%, var(--color-interactive-dark) 70%, var(--color-interactive-dark) 100%)' : 'var(--color-interactive-secondary)',
           dragOver: 'var(--color-interactive-secondary)',
         };
         
@@ -427,19 +450,27 @@ export function VirtualMidiKeyboard({
               top: '0',
               width: '14px',
               height: '75px',
-              backgroundColor: isDragOver ? blackKeyColors.dragOver : isPressed ? blackKeyColors.pressed : isHovered ? blackKeyColors.hover : blackKeyColors.base,
+              ...(isDragOver
+                ? { backgroundColor: blackKeyColors.dragOver }
+                : isPressed && blackKeyColors.pressed.startsWith('linear-gradient')
+                  ? { background: blackKeyColors.pressed }
+                  : isPressed
+                    ? { backgroundColor: blackKeyColors.pressed }
+                    : isHovered
+                      ? { backgroundColor: blackKeyColors.hover }
+                      : { backgroundColor: blackKeyColors.base }),
               border: isDragOver ? '2px solid var(--color-text-secondary)' : `1px solid ${isAssigned ? 'var(--color-interactive-focus)' : 'var(--color-key-inactive-border)'}`,
               borderRadius: '0 0 2px 2px',
               cursor: 'pointer',
               zIndex: 2,
-              transition: 'all 0.1s ease',
               userSelect: 'none',
               boxShadow: isHovered ? '0 3px 8px rgba(0,0,0,0.5)' : '0 2px 4px rgba(0,0,0,0.3)',
-              transform: isHovered ? 'translateY(-1px)' : 'none'
             }}
+            onMouseDown={() => setMousePressedKey(midiNote)}
+            onMouseUp={() => setMousePressedKey(null)}
+            onMouseLeave={() => { setMousePressedKey(null); handleKeyMouseLeave(); }}
             onClick={() => handleKeyClick(midiNote)}
             onMouseEnter={() => handleKeyMouseEnter(midiNote)}
-            onMouseLeave={handleKeyMouseLeave}
             onDragOver={(e) => handleKeyDragOver(e, midiNote)}
             onDragLeave={handleKeyDragLeave}
             onDrop={(e) => handleKeyDrop(e, midiNote)}
@@ -661,22 +692,22 @@ export function VirtualMidiKeyboard({
                     width: `${letterContainerWidth}px`,
                     height: '100%'
                   }}>
-                    {/* C key - A (white key 0-24px, center at 12px) */}
-                    <div style={{
-                      position: 'absolute',
-                      left: '9px',
-                      top: '65%', // Adjusted to be in lower part of rect
-                      transform: 'translate(-50%, -50%)',
-                      fontSize: '10px',
-                      fontWeight: '600',
-                      color: pressedKeys.has('a') ? '#ffd700' : '#000',
-                      letterSpacing: '0.5px',
-                      lineHeight: '1',
-                      textShadow: pressedKeys.has('a') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                      transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
-                    }}>
-                      A
-                    </div>
+                                      {/* C key - A (white key 0-24px, center at 12px) */}
+                  <div style={{
+                    position: 'absolute',
+                    left: '9px',
+                    top: '65%', // Adjusted to be in lower part of rect
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: '10px',
+                    fontWeight: pressedKeys.has('a') ? '700' : '600',
+                    color: pressedKeys.has('a') ? 'var(--color-interactive-secondary)' : '#000',
+                    letterSpacing: '0.5px',
+                    lineHeight: '1',
+                    textShadow: pressedKeys.has('a') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
+                  }}>
+                    A
+                  </div>
                   
                   {/* C# key - W (black key at 17px, width 14px, center at 17+7=24px) */}
                   <div style={{
@@ -685,11 +716,11 @@ export function VirtualMidiKeyboard({
                     top: '35%', // Adjusted to be in upper part of rect
                     transform: 'translate(-50%, -50%)',
                     fontSize: '10px',
-                    fontWeight: '600',
-                    color: pressedKeys.has('w') ? '#ffd700' : '#000',
+                    fontWeight: pressedKeys.has('w') ? '700' : '600',
+                    color: pressedKeys.has('w') ? 'var(--color-interactive-secondary)' : '#000',
                     letterSpacing: '0.5px',
                     lineHeight: '1',
-                    textShadow: pressedKeys.has('w') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                    textShadow: pressedKeys.has('w') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                     transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     W
@@ -702,11 +733,11 @@ export function VirtualMidiKeyboard({
                     top: '65%', // Adjusted to be in lower part of rect
                     transform: 'translate(-50%, -50%)',
                     fontSize: '10px',
-                    fontWeight: '600',
-                    color: pressedKeys.has('s') ? '#ffd700' : '#000',
+                    fontWeight: pressedKeys.has('s') ? '700' : '600',
+                    color: pressedKeys.has('s') ? 'var(--color-interactive-secondary)' : '#000',
                     letterSpacing: '0.5px',
                     lineHeight: '1',
-                    textShadow: pressedKeys.has('s') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                    textShadow: pressedKeys.has('s') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                     transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     S
@@ -719,11 +750,11 @@ export function VirtualMidiKeyboard({
                     top: '35%', // Adjusted to be in upper part of rect
                     transform: 'translate(-50%, -50%)',
                     fontSize: '10px',
-                    fontWeight: '600',
-                    color: pressedKeys.has('e') ? '#ffd700' : '#000',
+                    fontWeight: pressedKeys.has('e') ? '700' : '600',
+                    color: pressedKeys.has('e') ? 'var(--color-interactive-secondary)' : '#000',
                     letterSpacing: '0.5px',
                     lineHeight: '1',
-                    textShadow: pressedKeys.has('e') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                    textShadow: pressedKeys.has('e') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                     transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     E
@@ -736,11 +767,11 @@ export function VirtualMidiKeyboard({
                     top: '65%', // Adjusted to be in lower part of rect
                     transform: 'translate(-50%, -50%)',
                     fontSize: '10px',
-                    fontWeight: '600',
-                    color: pressedKeys.has('d') ? '#ffd700' : '#000',
+                    fontWeight: pressedKeys.has('d') ? '700' : '600',
+                    color: pressedKeys.has('d') ? 'var(--color-interactive-secondary)' : '#000',
                     letterSpacing: '0.5px',
                     lineHeight: '1',
-                    textShadow: pressedKeys.has('d') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                    textShadow: pressedKeys.has('d') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                     transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     D
@@ -753,11 +784,11 @@ export function VirtualMidiKeyboard({
                     top: '65%', // Adjusted to be in lower part of rect
                     transform: 'translate(-50%, -50%)',
                     fontSize: '10px',
-                    fontWeight: '600',
-                    color: pressedKeys.has('f') ? '#ffd700' : '#000',
+                    fontWeight: pressedKeys.has('f') ? '700' : '600',
+                    color: pressedKeys.has('f') ? 'var(--color-interactive-secondary)' : '#000',
                     letterSpacing: '0.5px',
                     lineHeight: '1',
-                    textShadow: pressedKeys.has('f') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                    textShadow: pressedKeys.has('f') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                     transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     F
@@ -770,11 +801,11 @@ export function VirtualMidiKeyboard({
                     top: '35%', // Adjusted to be in upper part of rect
                     transform: 'translate(-50%, -50%)',
                     fontSize: '10px',
-                    fontWeight: '600',
-                    color: pressedKeys.has('t') ? '#ffd700' : '#000',
+                    fontWeight: pressedKeys.has('t') ? '700' : '600',
+                    color: pressedKeys.has('t') ? 'var(--color-interactive-secondary)' : '#000',
                     letterSpacing: '0.5px',
                     lineHeight: '1',
-                    textShadow: pressedKeys.has('t') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                    textShadow: pressedKeys.has('t') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                     transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     T
@@ -787,11 +818,11 @@ export function VirtualMidiKeyboard({
                     top: '65%',
                     transform: 'translate(-50%, -50%)',
                     fontSize: '10px',
-                    fontWeight: '600',
-                    color: pressedKeys.has('g') ? '#ffd700' : '#000',
+                    fontWeight: pressedKeys.has('g') ? '700' : '600',
+                    color: pressedKeys.has('g') ? 'var(--color-interactive-secondary)' : '#000',
                     letterSpacing: '0.5px',
                     lineHeight: '1',
-                    textShadow: pressedKeys.has('g') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                    textShadow: pressedKeys.has('g') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                     transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
                     G
@@ -807,11 +838,11 @@ export function VirtualMidiKeyboard({
                         top: '35%',
                         transform: 'translate(-50%, -50%)',
                         fontSize: '10px',
-                        fontWeight: '600',
-                        color: pressedKeys.has('y') ? '#ffd700' : '#000',
+                        fontWeight: pressedKeys.has('y') ? '700' : '600',
+                        color: pressedKeys.has('y') ? 'var(--color-interactive-secondary)' : '#000',
                         letterSpacing: '0.5px',
                         lineHeight: '1',
-                        textShadow: pressedKeys.has('y') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                        textShadow: pressedKeys.has('y') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                         transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                       }}>
                         Y
@@ -824,11 +855,11 @@ export function VirtualMidiKeyboard({
                         top: '65%',
                         transform: 'translate(-50%, -50%)',
                         fontSize: '10px',
-                        fontWeight: '600',
-                        color: pressedKeys.has('h') ? '#ffd700' : '#000',
+                        fontWeight: pressedKeys.has('h') ? '700' : '600',
+                        color: pressedKeys.has('h') ? 'var(--color-interactive-secondary)' : '#000',
                         letterSpacing: '0.5px',
                         lineHeight: '1',
-                        textShadow: pressedKeys.has('h') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                        textShadow: pressedKeys.has('h') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                         transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                       }}>
                         H
@@ -841,11 +872,11 @@ export function VirtualMidiKeyboard({
                         top: '35%',
                         transform: 'translate(-50%, -50%)',
                         fontSize: '10px',
-                        fontWeight: '600',
-                        color: pressedKeys.has('u') ? '#ffd700' : '#000',
+                        fontWeight: pressedKeys.has('u') ? '700' : '600',
+                        color: pressedKeys.has('u') ? 'var(--color-interactive-secondary)' : '#000',
                         letterSpacing: '0.5px',
                         lineHeight: '1',
-                        textShadow: pressedKeys.has('u') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                        textShadow: pressedKeys.has('u') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                         transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                       }}>
                         U
@@ -858,11 +889,11 @@ export function VirtualMidiKeyboard({
                         top: '65%',
                         transform: 'translate(-50%, -50%)',
                         fontSize: '10px',
-                        fontWeight: '600',
-                        color: pressedKeys.has('j') ? '#ffd700' : '#000',
+                        fontWeight: pressedKeys.has('j') ? '700' : '600',
+                        color: pressedKeys.has('j') ? 'var(--color-interactive-secondary)' : '#000',
                         letterSpacing: '0.5px',
                         lineHeight: '1',
-                        textShadow: pressedKeys.has('j') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                        textShadow: pressedKeys.has('j') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                         transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                       }}>
                         J
@@ -880,11 +911,11 @@ export function VirtualMidiKeyboard({
                       top: '50%',
                       transform: 'translateY(-50%)',
                       fontSize: '10px',
-                      fontWeight: '600',
-                      color: pressedKeys.has('z') ? '#ffd700' : '#000',
+                      fontWeight: pressedKeys.has('z') ? '700' : '600',
+                      color: pressedKeys.has('z') ? 'var(--color-interactive-secondary)' : '#000',
                       letterSpacing: '-0.5px',
                       lineHeight: '1',
-                      textShadow: pressedKeys.has('z') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                      textShadow: pressedKeys.has('z') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                       transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                     }}>
                       Z ◀
@@ -899,11 +930,11 @@ export function VirtualMidiKeyboard({
                       top: '50%',
                       transform: 'translateY(-50%)',
                       fontSize: '10px',
-                      fontWeight: '600',
-                      color: pressedKeys.has('x') ? '#ffd700' : '#000',
+                      fontWeight: pressedKeys.has('x') ? '700' : '600',
+                      color: pressedKeys.has('x') ? 'var(--color-interactive-secondary)' : '#000',
                       letterSpacing: '-0.5px',
                       lineHeight: '1',
-                      textShadow: pressedKeys.has('x') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
+                      textShadow: pressedKeys.has('x') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
                       transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                     }}>
                       ▶ X
