@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { audioContextManager } from '../../utils/audioContext';
+import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 
 // Drum key mapping for two octaves (matching legacy)
 const drumKeyMap = [
@@ -52,6 +52,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
   const [pendingUploadIndex, setPendingUploadIndex] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
+  const { playAudioBuffer } = useAudioPlayer();
   
   // Touch/swipe handling for mobile
   const touchStartX = useRef<number | null>(null);
@@ -144,11 +145,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
     if (!sample?.isLoaded || !sample.audioBuffer) return;
 
     try {
-      const audioContext = await audioContextManager.getAudioContext();
-      const source = audioContext.createBufferSource();
-      source.buffer = sample.audioBuffer;
-      source.connect(audioContext.destination);
-      source.start(0);
+      await playAudioBuffer(sample.audioBuffer);
     } catch (error) {
       console.error('Error playing sample:', error);
     }

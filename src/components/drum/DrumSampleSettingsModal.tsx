@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { audioContextManager } from '../../utils/audioContext';
+import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { WaveformEditor } from '../common/WaveformEditor';
 import { Slider } from '@carbon/react';
+import React from 'react';
 
 interface DrumSampleSettingsModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface SampleSettings {
 
 export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSampleSettingsModalProps) {
   const { state, dispatch } = useAppContext();
+  const { play, stopCurrentPlayback } = useAudioPlayer();
   const sample = state.drumSamples[sampleIndex];
   
   const [settings, setSettings] = useState<SampleSettings>({
@@ -30,7 +32,11 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
     pan: 0
   });
 
-  // Initialize settings from sample data when modal opens
+  // Add local state for marker positions
+  const [localInPoint, setLocalInPoint] = useState<number | null>(null);
+  const [localOutPoint, setLocalOutPoint] = useState<number | null>(null);
+
+  // Initialize settings and markers from sample data when modal opens
   useEffect(() => {
     if (isOpen && sample?.isLoaded) {
       setSettings({
@@ -40,7 +46,14 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
         gain: sample.gain || 0,
         pan: sample.pan || 0
       });
-
+      
+      // Set local marker state to actual sample marker positions
+      const actualInPoint = sample.inPoint !== undefined ? sample.inPoint : 0;
+      const actualOutPoint = sample.outPoint !== undefined ? sample.outPoint : (sample.audioBuffer?.duration || 0);
+      
+      setLocalInPoint(actualInPoint);
+      setLocalOutPoint(actualOutPoint);
+      
       // Set default marker positions if not already set
       if ((sample.inPoint === undefined || sample.outPoint === undefined) && sample.audioBuffer) {
         dispatch({
@@ -57,15 +70,15 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
     }
   }, [isOpen, sample, sampleIndex, dispatch]);
 
-  // Convert time values to sample indices for WaveformEditor
+  // Use local marker state for sample index calculations
   const getInPointSampleIndex = () => {
     if (!sample?.audioBuffer) return 0;
-    return Math.floor((sample.inPoint || 0) * sample.audioBuffer.sampleRate);
+    return Math.floor(((localInPoint !== null ? localInPoint : sample.inPoint || 0) * sample.audioBuffer.sampleRate));
   };
 
   const getOutPointSampleIndex = () => {
     if (!sample?.audioBuffer) return 0;
-    return Math.floor((sample.outPoint || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate);
+    return Math.floor(((localOutPoint !== null ? localOutPoint : sample.outPoint || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate));
   };
 
   // Convert sample indices back to time values
@@ -74,17 +87,18 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
     return sampleIndex / sample.audioBuffer.sampleRate;
   };
 
-  // Convert time values to percentages for UI display
+  // Use local marker state for percentage display
   const getInPointPercentage = () => {
     if (!sample?.audioBuffer) return 0;
-    return Math.round((sample.inPoint || 0) / sample.audioBuffer.duration * 100);
+    return Math.round(((localInPoint !== null ? localInPoint : sample.inPoint || 0) / sample.audioBuffer.duration) * 100);
   };
 
   const getOutPointPercentage = () => {
     if (!sample?.audioBuffer) return 0;
-    return Math.round((sample.outPoint || sample.audioBuffer.duration) / sample.audioBuffer.duration * 100);
+    return Math.round(((localOutPoint !== null ? localOutPoint : sample.outPoint || sample.audioBuffer.duration) / sample.audioBuffer.duration) * 100);
   };
 
+  // Save local marker state to global state on save
   const handleSave = () => {
     if (sample?.isLoaded) {
       // Check if any values actually changed
@@ -95,20 +109,20 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
         gain: sample.gain || 0,
         pan: sample.pan || 0
       };
-      
-      const valuesChanged = 
+      const valuesChanged =
         settings.playmode !== originalValues.playmode ||
         settings.reverse !== originalValues.reverse ||
         settings.tune !== originalValues.tune ||
         settings.gain !== originalValues.gain ||
         settings.pan !== originalValues.pan;
-      
       dispatch({
         type: 'UPDATE_DRUM_SAMPLE',
         payload: {
           index: sampleIndex,
           updates: {
             ...settings,
+            inPoint: localInPoint !== null ? localInPoint : sample.inPoint,
+            outPoint: localOutPoint !== null ? localOutPoint : sample.outPoint,
             hasBeenEdited: sample.hasBeenEdited || valuesChanged
           }
         }
@@ -117,51 +131,60 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
     onClose();
   };
 
+  // Discard local marker changes on cancel
   const handleCancel = () => {
+    setLocalInPoint(null);
+    setLocalOutPoint(null);
     onClose();
   };
 
   const handlePlaySample = async () => {
     if (!sample?.audioBuffer) return;
 
+    const inFrame = getInPointSampleIndex();
+    const outFrame = getOutPointSampleIndex();
+
     try {
-      const audioContext = await audioContextManager.getAudioContext();
-      let buffer = sample.audioBuffer;
-
-      // Apply reverse if enabled
-      if (settings.reverse) {
-        const revBuffer = audioContext.createBuffer(
-          buffer.numberOfChannels,
-          buffer.length,
-          buffer.sampleRate
-        );
-        for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
-          const srcData = buffer.getChannelData(ch);
-          const dstData = revBuffer.getChannelData(ch);
-          for (let i = 0, j = srcData.length - 1; i < srcData.length; i++, j--) {
-            dstData[i] = srcData[j];
+      if (settings.playmode === 'gate') {
+        // For gate mode, we'll start playback and let the key up handler stop it
+        await play(
+          sample.audioBuffer,
+          {
+            inFrame,
+            outFrame,
+            playbackRate: Math.pow(2, settings.tune / 12),
+            gain: settings.gain,
+            pan: settings.pan,
+            reverse: settings.reverse,
           }
-        }
-        buffer = revBuffer;
+        );
+      } else {
+        // For oneshot mode, play the selection normally
+        await play(
+          sample.audioBuffer,
+          {
+            inFrame,
+            outFrame,
+            playbackRate: Math.pow(2, settings.tune / 12),
+            gain: settings.gain,
+            pan: settings.pan,
+            reverse: settings.reverse,
+          }
+        );
       }
-
-      const source = audioContext.createBufferSource();
-      const gainNode = audioContext.createGain();
-      const panNode = audioContext.createStereoPanner();
-
-      source.buffer = buffer;
-      source.playbackRate.value = Math.pow(2, settings.tune / 12); // Semitone tuning
-      gainNode.gain.value = Math.pow(10, settings.gain / 20); // Convert dB to linear gain
-      panNode.pan.value = Math.max(-1, Math.min(1, settings.pan / 100)); // Convert pan range
-
-      source.connect(gainNode);
-      gainNode.connect(panNode);
-      panNode.connect(audioContext.destination);
-      source.start(0);
     } catch (error) {
       console.error('Error playing sample:', error);
     }
   };
+
+  const handleStopSample = () => {
+    if (settings.playmode === 'gate') {
+      stopCurrentPlayback();
+    }
+  };
+
+  // Add keyboard handler for 'p' key
+  useDrumSampleSettingsKeyboard(isOpen, handlePlaySample, handleStopSample, settings.playmode);
 
   if (!isOpen) return null;
 
@@ -312,19 +335,10 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
                 audioBuffer={sample.audioBuffer}
                 inPoint={getInPointSampleIndex()}
                 outPoint={getOutPointSampleIndex()}
-                onMarkersChange={(markers: { inPoint: number; outPoint: number; loopStart?: number; loopEnd?: number }) => {
+                onMarkersChange={(markers) => {
                   if (sample?.audioBuffer) {
-                    dispatch({
-                      type: 'UPDATE_DRUM_SAMPLE',
-                      payload: {
-                        index: sampleIndex,
-                        updates: {
-                          inPoint: sampleIndexToTime(markers.inPoint),
-                          outPoint: sampleIndexToTime(markers.outPoint),
-                          hasBeenEdited: true,
-                        },
-                      },
-                    });
+                    setLocalInPoint(sampleIndexToTime(markers.inPoint));
+                    setLocalOutPoint(sampleIndexToTime(markers.outPoint));
                   }
                 }}
                 height={80}
@@ -464,7 +478,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               backgroundColor: c.text,
               color: c.white,
               fontSize: '0.875rem',
-              fontWeight: 500,
+              fontWeight: '500',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               fontFamily: 'inherit',
@@ -473,9 +487,25 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               alignItems: 'center',
               gap: '0.5rem',
             }}
-            onClick={() => handlePlaySample().catch(error => {
-              console.error('Error playing sample:', error);
-            })}
+            onMouseDown={() => {
+              if (settings.playmode === 'gate') {
+                handlePlaySample().catch(error => {
+                  console.error('Error playing sample:', error);
+                });
+              }
+            }}
+            onMouseUp={() => {
+              if (settings.playmode === 'gate') {
+                handleStopSample();
+              }
+            }}
+            onClick={() => {
+              if (settings.playmode !== 'gate') {
+                handlePlaySample().catch(error => {
+                  console.error('Error playing sample:', error);
+                });
+              }
+            }}
             onMouseEnter={e => {
               e.currentTarget.style.backgroundColor = c.textSecondary;
               e.currentTarget.style.transform = 'translateY(-1px)';
@@ -485,10 +515,14 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               e.currentTarget.style.backgroundColor = c.text;
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = 'none';
+              // Stop playback if mouse leaves button in gate mode
+              if (settings.playmode === 'gate') {
+                handleStopSample();
+              }
             }}
           >
             <i className="fa fa-play" style={{ marginRight: '0.25rem' }}></i>
-            play
+            {settings.playmode === 'gate' ? 'hold to play' : 'play'}
           </button>
           <button
             type="button"
@@ -530,18 +564,45 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
 }
 
 // Add keyboard event handler for 'p' key
-export function useDrumSampleSettingsKeyboard(isOpen: boolean, onPlay: () => void) {
+export function useDrumSampleSettingsKeyboard(isOpen: boolean, onPlay: () => void, onStop?: () => void, playmode?: string) {
+  const isPHeld = React.useRef(false);
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleKeyPress = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === 'p' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        onPlay();
+        if (playmode === 'gate') {
+          if (!isPHeld.current) {
+            isPHeld.current = true;
+            onPlay();
+          }
+        } else {
+          onPlay();
+        }
         e.preventDefault();
       }
     };
 
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [isOpen, onPlay]);
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'p' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (playmode === 'gate' && onStop) {
+          isPHeld.current = false;
+          onStop();
+        }
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    if (playmode === 'gate') {
+      document.addEventListener('keyup', handleKeyUp);
+    }
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (playmode === 'gate') {
+        document.removeEventListener('keyup', handleKeyUp);
+      }
+    };
+  }, [isOpen, onPlay, onStop, playmode]);
 } 

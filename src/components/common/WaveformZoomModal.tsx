@@ -1,8 +1,8 @@
 import { useRef, useEffect, useState, useCallback, useLayoutEffect } from 'react';
-import { audioContextManager } from '../../utils/audioContext';
 import { Tooltip } from './Tooltip';
 import { isMobile, isTablet } from 'react-device-detect';
 import { triggerRotateOverlay } from '../../App';
+import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 
 interface WaveformZoomModalProps {
   isOpen: boolean;
@@ -36,6 +36,7 @@ export function WaveformZoomModal({
   const [snapToZero, setSnapToZero] = useState(true);
   const [dragging, setDragging] = useState<'in' | 'out' | 'loopStart' | 'loopEnd' | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
+  const { play } = useAudioPlayer();
 
   // Check if device is mobile/tablet in portrait mode
   const isMobilePortrait = () => {
@@ -94,11 +95,20 @@ export function WaveformZoomModal({
       const durationSec = audioBuffer.length / audioBuffer.sampleRate;
       setInFrame(Math.floor((initialInPoint / durationSec) * audioBuffer.length));
       setOutFrame(Math.floor((initialOutPoint / durationSec) * audioBuffer.length));
-      
       if (hasLoopPoints) {
         setLoopStartFrame(Math.floor((initialLoopStart! / durationSec) * audioBuffer.length));
         setLoopEndFrame(Math.floor((initialLoopEnd! / durationSec) * audioBuffer.length));
+      } else {
+        setLoopStartFrame(0);
+        setLoopEndFrame(0);
       }
+    }
+    // Reset marker state on close
+    if (!isOpen) {
+      setInFrame(0);
+      setOutFrame(0);
+      setLoopStartFrame(0);
+      setLoopEndFrame(0);
     }
   }, [isOpen, audioBuffer, initialInPoint, initialOutPoint, initialLoopStart, initialLoopEnd, hasLoopPoints]);
 
@@ -511,20 +521,9 @@ export function WaveformZoomModal({
 
   const playSelection = async () => {
     if (!audioBuffer) return;
-
+    
     try {
-      const audioContext = await audioContextManager.getAudioContext();
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-
-      const startOffset = (inFrame / audioBuffer.length) * audioBuffer.duration;
-      const endOffset = (outFrame / audioBuffer.length) * audioBuffer.duration;
-      const duration = endOffset - startOffset;
-
-      if (duration > 0) {
-        source.connect(audioContext.destination);
-        source.start(0, startOffset, duration);
-      }
+      await play(audioBuffer, inFrame, outFrame);
     } catch (error) {
       console.error('Error playing selection:', error);
     }

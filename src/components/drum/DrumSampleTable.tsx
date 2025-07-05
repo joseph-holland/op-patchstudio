@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { audioContextManager } from '../../utils/audioContext';
+import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 
 import { SmallWaveform } from '../common/SmallWaveform';
 import { WaveformZoomModal } from '../common/WaveformZoomModal';
@@ -56,6 +57,7 @@ const actionButtonStyle: React.CSSProperties = {
 
 export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }: DrumSampleTableProps) {
   const { state, dispatch } = useAppContext();
+  const { playAudioBuffer } = useAudioPlayer();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -87,11 +89,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
     if (!sample?.isLoaded || !sample.audioBuffer) return;
 
     try {
-      const audioContext = await audioContextManager.getAudioContext();
-      const source = audioContext.createBufferSource();
-      source.buffer = sample.audioBuffer;
-      source.connect(audioContext.destination);
-      source.start(0);
+      await playAudioBuffer(sample.audioBuffer);
     } catch (error) {
       console.error('Error playing sample:', error);
     }
@@ -165,9 +163,6 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
       console.error('Error playing sample:', error);
     });
   };
-
-  // Add keyboard handler for 'p' key in settings modal
-  useDrumSampleSettingsKeyboard(settingsModalOpen, playSelectedSample);
 
   if (isMobile) {
     // Mobile Card Layout
