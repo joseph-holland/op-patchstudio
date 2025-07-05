@@ -148,11 +148,15 @@ export async function generateDrumPatch(
 
     // Create region object in correct OP-XY format
     const midiNote = midiNoteCounter++;
-    const calculatedFramecount = Math.floor(duration * (targetSampleRate || sampleRate));
+    const effectiveSampleRate = targetSampleRate || sampleRate;
+    const framecount = Math.floor(duration * effectiveSampleRate);
+    const getClamped = (val: number, min: number, max: number) => Math.max(min, Math.min(val, max));
+    const sampleStart = 0;
+    const sampleEnd = getClamped(framecount, 1, framecount);
     const region: DrumRegion = {
       "fade.in": 0,
       "fade.out": 0,
-      framecount: calculatedFramecount,
+      framecount: framecount,
       hikey: midiNote,
       lokey: midiNote,
       pan: 0, // TODO: Get from advanced settings when implemented
@@ -162,8 +166,8 @@ export async function generateDrumPatch(
       sample: outputName,
       transpose: 0,
       tune: 0, // TODO: Get from advanced settings when implemented
-      "sample.start": 0,
-      "sample.end": calculatedFramecount,
+      "sample.start": sampleStart,
+      "sample.end": sampleEnd,
     };
 
     // Handle audio conversions if needed
@@ -262,20 +266,8 @@ export async function generateMultisamplePatch(
     return aMidiNote - bMidiNote;
   });
 
-  // Calculate key ranges for each sample
+  // Calculate key ranges and create regions in the same loop (matching working implementation)
   let lastKey = 0;
-  validSamples.forEach((sample) => {
-    const sampleNote = sample.rootNote >= 0 ? sample.rootNote : 60 + sample.originalIndex;
-    sample.lokey = lastKey;
-    sample.hikey = sampleNote;
-    lastKey = sampleNote + 1;
-  });
-
-  // Set the last sample to cover up to MIDI note 127
-  if (validSamples.length > 0) {
-    validSamples[validSamples.length - 1].hikey = 127;
-  }
-
   for (const sample of validSamples) {
     if (!sample.file || !sample.audioBuffer) continue;
 
@@ -283,41 +275,40 @@ export async function generateMultisamplePatch(
     const sampleRate = sample.audioBuffer.sampleRate;
     const duration = sample.audioBuffer.duration;
     const sampleNote = sample.rootNote >= 0 ? sample.rootNote : 60 + sample.originalIndex;
+    const effectiveSampleRate = targetSampleRate || sampleRate;
+    const framecount = Math.floor(duration * effectiveSampleRate);
 
-    // Create region data for multisample using correct OP-XY format
-    const calculatedFramecount = Math.floor(duration * (targetSampleRate || sampleRate));
-    
-    // Calculate loop points and validate they stay within bounds
-    const loopStart = Math.floor((sample.loopStart || 0) / duration * calculatedFramecount);
-    const loopEnd = Math.floor((sample.loopEnd || duration) / duration * calculatedFramecount);
-    
-    // Validate and clamp loop points to sample boundaries
-    const validatedLoopStart = Math.max(0, Math.min(loopStart, calculatedFramecount - 1));
-    const validatedLoopEnd = Math.max(validatedLoopStart + 1, Math.min(loopEnd, calculatedFramecount));
-    
-    // Calculate and validate sample boundaries
-    const sampleStart = Math.floor((sample.inPoint || 0) / duration * calculatedFramecount);
-    const sampleEnd = Math.floor((sample.outPoint || duration) / duration * calculatedFramecount);
-    
-    // Validate and clamp sample points to frame boundaries
-    const validatedSampleStart = Math.max(0, Math.min(sampleStart, calculatedFramecount - 1));
-    const validatedSampleEnd = Math.max(validatedSampleStart + 1, Math.min(sampleEnd, calculatedFramecount));
-    
+    // Calculate key ranges (matching working implementation)
+    const lowKey = lastKey;
+    const hiKey = sampleNote;
+    lastKey = sampleNote + 1;
+
+    // Debug logging
+    console.log(`Processing sample: ${outputName}, MIDI: ${sampleNote}, lokey: ${lowKey}, hikey: ${hiKey}, framecount: ${framecount}`);
+
+    // Calculate proportional points
+    const getClamped = (val: number, min: number, max: number) => Math.max(min, Math.min(val, max));
+    const prop = (point: number | undefined, fallback: number) => (typeof point === 'number' ? point : fallback);
+    const loopStart = getClamped(Math.floor(framecount * (prop(sample.loopStart, 0) / duration)), 0, framecount - 1);
+    const loopEnd = getClamped(Math.floor(framecount * (prop(sample.loopEnd, duration) / duration)), loopStart + 1, framecount);
+    const sampleStart = getClamped(Math.floor(framecount * (prop(sample.inPoint, 0) / duration)), 0, framecount - 1);
+    const sampleEnd = getClamped(Math.floor(framecount * (prop(sample.outPoint, duration) / duration)), sampleStart + 1, framecount);
+
     const region: MultisampleRegion = {
-      framecount: calculatedFramecount,
+      framecount: framecount,
       gain: multisampleGain || 0,
-      hikey: sample.hikey || 127,
-      lokey: sample.lokey || 0,
+      hikey: hiKey,
+      lokey: lowKey,
       "loop.crossfade": 0,
-      "loop.end": validatedLoopEnd,
+      "loop.end": loopEnd,
       "loop.onrelease": false, // TODO: Get from advanced settings
       "loop.enabled": false, // TODO: Get from advanced settings
-      "loop.start": validatedLoopStart,
+      "loop.start": loopStart,
       "pitch.keycenter": sampleNote,
       reverse: false,
       sample: outputName,
-      "sample.end": validatedSampleEnd,
-      "sample.start": validatedSampleStart,
+      "sample.end": sampleEnd,
+      "sample.start": sampleStart,
       tune: 0,
     };
 
@@ -338,7 +329,7 @@ export async function generateMultisamplePatch(
             });
             
             // Validate that converted buffer frame count matches our calculation
-            const expectedFramecount = Math.floor(duration * (targetSampleRate || sampleRate));
+            const expectedFramecount = Math.floor(duration * effectiveSampleRate);
             validateFrameCount(sample.name, expectedFramecount, convertedBuffer.length, region);
             
             // Convert to WAV blob
@@ -368,6 +359,11 @@ export async function generateMultisamplePatch(
         })
       );
     }
+  }
+
+  // Set the last region's hikey to 127 (matching working implementation)
+  if (patchJson.regions.length > 0) {
+    patchJson.regions[patchJson.regions.length - 1].hikey = 127;
   }
 
   await Promise.all(fileReadPromises);
