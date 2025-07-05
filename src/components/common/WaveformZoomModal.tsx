@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { findNearestZeroCrossing } from '../../utils/audio';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { audioContextManager } from '../../utils/audioContext';
 import { Tooltip } from './Tooltip';
+import { isMobile, isTablet } from 'react-device-detect';
+import { triggerRotateOverlay } from '../../App';
 
 interface WaveformZoomModalProps {
   isOpen: boolean;
@@ -33,8 +34,28 @@ export function WaveformZoomModal({
   const [dragging, setDragging] = useState<'in' | 'out' | 'loopStart' | 'loopEnd' | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
 
+  // Check if device is mobile/tablet in portrait mode
+  const isMobilePortrait = () => {
+    const mobileOrTablet = isMobile || isTablet;
+    const isPortraitMode = window.innerHeight > window.innerWidth;
+    return mobileOrTablet && isPortraitMode;
+  };
+
   // Check if this is a multisample (has loop points)
   const hasLoopPoints = initialLoopStart !== undefined && initialLoopEnd !== undefined;
+
+  // Check for mobile portrait mode when modal opens
+  useEffect(() => {
+    if (isOpen && isMobilePortrait()) {
+      // Use the global overlay system instead of local state
+      triggerRotateOverlay(() => {
+        // The modal will open automatically when user rotates to landscape
+        // No additional action needed as modal is already trying to open
+      });
+      // Close the modal since we're showing the rotate overlay
+      onClose();
+    }
+  }, [isOpen, onClose]);
 
   // Helper functions for frame and time display
   const frameToTime = (frame: number): number => {
@@ -521,101 +542,219 @@ export function WaveformZoomModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        fontFamily: '"Montserrat", "Arial", sans-serif'
-      }}
-      onClick={onClose}
-    >
       <div
         style={{
-          backgroundColor: c.bg,
-          borderRadius: '6px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-          maxWidth: '900px',
-          width: '90%',
-          margin: '0 1rem',
-          overflow: 'hidden'
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          fontFamily: '"Montserrat", "Arial", sans-serif'
         }}
-        onClick={(e) => e.stopPropagation()}
+        onClick={onClose}
       >
-        {/* Header */}
-        <div style={{
-          padding: '1.5rem 1.5rem 1rem 1.5rem',
-          borderBottom: `1px solid ${c.border}`
-        }}>
-          <h3 style={{
-            margin: '0',
-            fontSize: '1.25rem',
-            fontWeight: '300',
-            color: c.text,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
+        <div
+          style={{
+            backgroundColor: c.bg,
+            borderRadius: '6px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+            maxWidth: '900px',
+            width: '90%',
+            margin: '0 1rem',
+            overflow: 'hidden'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div style={{
+            padding: '1.5rem 1.5rem 1rem 1.5rem',
+            borderBottom: `1px solid ${c.border}`
           }}>
-            <i className="fas fa-search-plus" style={{
-              color: c.textSecondary,
-              fontSize: '1.25rem'
-            }}></i>
-            zoom and edit markers
-            <Tooltip
-              content="drag markers to adjust positions. press 'p' to preview."
-              isVisible={showTooltip}
-            >
-              <i
-                className="fas fa-question-circle"
-                style={{
-                  color: c.textSecondary,
-                  fontSize: '1rem',
-                  cursor: 'help',
-                  marginLeft: '0.25rem'
-                }}
-                onMouseEnter={() => setShowTooltip(true)}
-                onMouseLeave={() => setShowTooltip(false)}
-              />
-            </Tooltip>
-          </h3>
-        </div>
-
-        {/* Content */}
-        <div style={{
-          padding: '1.5rem',
-          color: c.textSecondary,
-          fontSize: '0.95rem',
-          lineHeight: '1.5'
-        }}>
-          <div style={{ marginBottom: '1rem' }}>
-            <canvas
-              ref={canvasRef}
-              style={{
-                width: '100%',
-                border: `1px solid ${c.border}`,
-                borderRadius: '3px',
-                cursor: dragging ? 'grabbing' : 'pointer',
-                display: 'block'
-              }}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-            />
+            <h3 style={{
+              margin: '0',
+              fontSize: '1.25rem',
+              fontWeight: '300',
+              color: c.text,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <i className="fas fa-search-plus" style={{
+                color: c.textSecondary,
+                fontSize: '1.25rem'
+              }}></i>
+              zoom and edit markers
+              <Tooltip
+                content="drag markers to adjust positions. press 'p' to preview."
+                isVisible={showTooltip}
+              >
+                <i
+                  className="fas fa-question-circle"
+                  style={{
+                    color: c.textSecondary,
+                    fontSize: '1rem',
+                    cursor: 'help',
+                    marginLeft: '0.25rem'
+                  }}
+                  onMouseEnter={() => setShowTooltip(true)}
+                  onMouseLeave={() => setShowTooltip(false)}
+                />
+              </Tooltip>
+            </h3>
           </div>
 
-          {/* Marker Display */}
-          {hasLoopPoints ? (
-            // Multisample layout: 2x2 grid
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {/* Content */}
+          <div style={{
+            padding: '1.5rem',
+            color: c.textSecondary,
+            fontSize: '0.95rem',
+            lineHeight: '1.5'
+          }}>
+            <div style={{ marginBottom: '1rem' }}>
+              <canvas
+                ref={canvasRef}
+                style={{
+                  width: '100%',
+                  border: `1px solid ${c.border}`,
+                  borderRadius: '3px',
+                  cursor: dragging ? 'grabbing' : 'pointer',
+                  display: 'block'
+                }}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              />
+            </div>
+
+            {/* Marker Display */}
+            {hasLoopPoints ? (
+              // Multisample layout: 2x2 grid
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
+                      sample start:
+                    </span>
+                    <span style={{
+                      padding: '0.25rem 0.5rem',
+                      backgroundColor: c.bgAlt,
+                      border: `1px solid ${c.border}`,
+                      borderRadius: '3px',
+                      fontSize: '0.8rem',
+                      fontWeight: '500',
+                      minWidth: '90px',
+                      textAlign: 'right'
+                    }}>
+                      {audioBuffer ? inFrame.toLocaleString() : '0'}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
+                      frames ({audioBuffer ? frameToTime(inFrame).toFixed(3) : '0.000'}s)
+                    </span>
+                    <span style={{ 
+                      fontSize: '0.65rem', 
+                      color: isNearZeroCrossing(inFrame) ? '#6b7280' : '#9ca3af',
+                      fontWeight: '500'
+                    }}>
+                      {isNearZeroCrossing(inFrame) ? '✓ zero' : '✗ not zero'}
+                    </span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
+                      sample end:
+                    </span>
+                    <span style={{
+                      padding: '0.25rem 0.5rem',
+                      backgroundColor: c.bgAlt,
+                      border: `1px solid ${c.border}`,
+                      borderRadius: '3px',
+                      fontSize: '0.8rem',
+                      fontWeight: '500',
+                      minWidth: '90px',
+                      textAlign: 'right'
+                    }}>
+                      {audioBuffer ? outFrame.toLocaleString() : '0'}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
+                      frames ({audioBuffer ? frameToTime(outFrame).toFixed(3) : '0.000'}s)
+                    </span>
+                    <span style={{ 
+                      fontSize: '0.65rem', 
+                      color: isNearZeroCrossing(outFrame) ? '#6b7280' : '#9ca3af',
+                      fontWeight: '500'
+                    }}>
+                      {isNearZeroCrossing(outFrame) ? '✓ zero' : '✗ not zero'}
+                    </span>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
+                      loop start:
+                    </span>
+                    <span style={{
+                      padding: '0.25rem 0.5rem',
+                      backgroundColor: c.bgAlt,
+                      border: `1px solid ${c.border}`,
+                      borderRadius: '3px',
+                      fontSize: '0.8rem',
+                      fontWeight: '500',
+                      minWidth: '90px',
+                      textAlign: 'right'
+                    }}>
+                      {audioBuffer ? loopStartFrame.toLocaleString() : '0'}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
+                      frames ({audioBuffer ? frameToTime(loopStartFrame).toFixed(3) : '0.000'}s)
+                    </span>
+                    <span style={{ 
+                      fontSize: '0.65rem', 
+                      color: isNearZeroCrossing(loopStartFrame) ? '#6b7280' : '#9ca3af',
+                      fontWeight: '500'
+                    }}>
+                      {isNearZeroCrossing(loopStartFrame) ? '✓ zero' : '✗ not zero'}
+                    </span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
+                      loop end:
+                    </span>
+                    <span style={{
+                      padding: '0.25rem 0.5rem',
+                      backgroundColor: c.bgAlt,
+                      border: `1px solid ${c.border}`,
+                      borderRadius: '3px',
+                      fontSize: '0.8rem',
+                      fontWeight: '500',
+                      minWidth: '90px',
+                      textAlign: 'right'
+                    }}>
+                      {audioBuffer ? loopEndFrame.toLocaleString() : '0'}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
+                      frames ({audioBuffer ? frameToTime(loopEndFrame).toFixed(3) : '0.000'}s)
+                    </span>
+                    <span style={{ 
+                      fontSize: '0.65rem', 
+                      color: isNearZeroCrossing(loopEndFrame) ? '#6b7280' : '#9ca3af',
+                      fontWeight: '500'
+                    }}>
+                      {isNearZeroCrossing(loopEndFrame) ? '✓ zero' : '✗ not zero'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Drum sample layout: single row
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
                     sample start:
@@ -630,10 +769,10 @@ export function WaveformZoomModal({
                     minWidth: '90px',
                     textAlign: 'right'
                   }}>
-                    {audioBuffer ? inFrame.toLocaleString() : '0'}
+                    {inFrame.toLocaleString()}
                   </span>
                   <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
-                    frames ({audioBuffer ? frameToTime(inFrame).toFixed(3) : '0.000'}s)
+                    frames ({frameToTime(inFrame).toFixed(3)}s)
                   </span>
                   <span style={{ 
                     fontSize: '0.65rem', 
@@ -658,10 +797,10 @@ export function WaveformZoomModal({
                     minWidth: '90px',
                     textAlign: 'right'
                   }}>
-                    {audioBuffer ? outFrame.toLocaleString() : '0'}
+                    {outFrame.toLocaleString()}
                   </span>
                   <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
-                    frames ({audioBuffer ? frameToTime(outFrame).toFixed(3) : '0.000'}s)
+                    frames ({frameToTime(outFrame).toFixed(3)}s)
                   </span>
                   <span style={{ 
                     fontSize: '0.65rem', 
@@ -672,214 +811,96 @@ export function WaveformZoomModal({
                   </span>
                 </div>
               </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
-                    loop start:
-                  </span>
-                  <span style={{
-                    padding: '0.25rem 0.5rem',
-                    backgroundColor: c.bgAlt,
-                    border: `1px solid ${c.border}`,
-                    borderRadius: '3px',
-                    fontSize: '0.8rem',
-                    fontWeight: '500',
-                    minWidth: '90px',
-                    textAlign: 'right'
-                  }}>
-                    {audioBuffer ? loopStartFrame.toLocaleString() : '0'}
-                  </span>
-                  <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
-                    frames ({audioBuffer ? frameToTime(loopStartFrame).toFixed(3) : '0.000'}s)
-                  </span>
-                  <span style={{ 
-                    fontSize: '0.65rem', 
-                    color: isNearZeroCrossing(loopStartFrame) ? '#6b7280' : '#9ca3af',
-                    fontWeight: '500'
-                  }}>
-                    {isNearZeroCrossing(loopStartFrame) ? '✓ zero' : '✗ not zero'}
-                  </span>
-                </div>
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
-                    loop end:
-                  </span>
-                  <span style={{
-                    padding: '0.25rem 0.5rem',
-                    backgroundColor: c.bgAlt,
-                    border: `1px solid ${c.border}`,
-                    borderRadius: '3px',
-                    fontSize: '0.8rem',
-                    fontWeight: '500',
-                    minWidth: '90px',
-                    textAlign: 'right'
-                  }}>
-                    {audioBuffer ? loopEndFrame.toLocaleString() : '0'}
-                  </span>
-                  <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
-                    frames ({audioBuffer ? frameToTime(loopEndFrame).toFixed(3) : '0.000'}s)
-                  </span>
-                  <span style={{ 
-                    fontSize: '0.65rem', 
-                    color: isNearZeroCrossing(loopEndFrame) ? '#6b7280' : '#9ca3af',
-                    fontWeight: '500'
-                  }}>
-                    {isNearZeroCrossing(loopEndFrame) ? '✓ zero' : '✗ not zero'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            // Drum sample layout: single row
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
-                  sample start:
-                </span>
-                <span style={{
-                  padding: '0.25rem 0.5rem',
-                  backgroundColor: c.bgAlt,
-                  border: `1px solid ${c.border}`,
-                  borderRadius: '3px',
-                  fontSize: '0.8rem',
-                  fontWeight: '500',
-                  minWidth: '90px',
-                  textAlign: 'right'
-                }}>
-                  {inFrame.toLocaleString()}
-                </span>
-                <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
-                  frames ({frameToTime(inFrame).toFixed(3)}s)
-                </span>
-                <span style={{ 
-                  fontSize: '0.65rem', 
-                  color: isNearZeroCrossing(inFrame) ? '#6b7280' : '#9ca3af',
-                  fontWeight: '500'
-                }}>
-                  {isNearZeroCrossing(inFrame) ? '✓ zero' : '✗ not zero'}
-                </span>
-              </div>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ minWidth: '80px', fontSize: '0.75rem', color: c.textSecondary }}>
-                  sample end:
-                </span>
-                <span style={{
-                  padding: '0.25rem 0.5rem',
-                  backgroundColor: c.bgAlt,
-                  border: `1px solid ${c.border}`,
-                  borderRadius: '3px',
-                  fontSize: '0.8rem',
-                  fontWeight: '500',
-                  minWidth: '90px',
-                  textAlign: 'right'
-                }}>
-                  {outFrame.toLocaleString()}
-                </span>
-                <span style={{ fontSize: '0.7rem', color: c.textSecondary }}>
-                  frames ({frameToTime(outFrame).toFixed(3)}s)
-                </span>
-                <span style={{ 
-                  fontSize: '0.65rem', 
-                  color: isNearZeroCrossing(outFrame) ? '#6b7280' : '#9ca3af',
-                  fontWeight: '500'
-                }}>
-                  {isNearZeroCrossing(outFrame) ? '✓ zero' : '✗ not zero'}
-                </span>
-              </div>
-            </div>
-          )}
-          
-          <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: '1rem', marginTop: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-              <button
-                onClick={() => playSelection().catch(error => {
-                  console.error('Error playing selection:', error);
-                })}
-                style={{
-                  padding: '0.65rem 1rem',
-                  border: `1px solid ${c.border}`,
-                  borderRadius: '3px',
-                  background: 'transparent',
-                  color: c.textSecondary,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  fontFamily: 'inherit'
-                }}
-              >
-                <i className="fas fa-play" style={{ fontSize: '0.8rem' }}></i>
-                play selection (P)
-              </button>
-              <label style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem', 
-                fontSize: '0.875rem', 
-                fontWeight: '500',
-                color: 'var(--color-text-primary)',
-                cursor: 'pointer'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={snapToZero}
-                  onChange={(e) => setSnapToZero(e.target.checked)}
+            )}
+            
+            <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: '1rem', marginTop: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                <button
+                  onClick={() => playSelection().catch(error => {
+                    console.error('Error playing selection:', error);
+                  })}
                   style={{
-                    width: '16px',
-                    height: '16px',
-                    accentColor: 'var(--color-text-primary)'
+                    padding: '0.65rem 1rem',
+                    border: `1px solid ${c.border}`,
+                    borderRadius: '3px',
+                    background: 'transparent',
+                    color: c.textSecondary,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    fontFamily: 'inherit'
                   }}
-                />
-                <span style={{ marginLeft: '8px', cursor: 'pointer', userSelect: 'none' }}>
-                  snap to zero crossings
-                </span>
-              </label>
+                >
+                  <i className="fas fa-play" style={{ fontSize: '0.8rem' }}></i>
+                  play selection (P)
+                </button>
+                <label style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem', 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500',
+                  color: 'var(--color-text-primary)',
+                  cursor: 'pointer'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={snapToZero}
+                    onChange={(e) => setSnapToZero(e.target.checked)}
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      accentColor: 'var(--color-text-primary)'
+                    }}
+                  />
+                  <span style={{ marginLeft: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                    snap to zero crossings
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
-        </div>
-        
-        {/* Footer */}
-        <div style={{
-          padding: '1rem 1.5rem',
-          background: c.bgAlt,
-          borderTop: `1px solid ${c.border}`,
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: '1rem'
-        }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '0.65rem 1rem',
-              border: `1px solid ${c.border}`,
-              borderRadius: '3px',
-              background: 'transparent',
-              color: c.textSecondary,
-              cursor: 'pointer'
-            }}
-          >
-            cancel
-          </button>
-          <button
-            onClick={handleSave}
-            style={{
-              padding: '0.65rem 1rem',
-              border: 'none',
-              borderRadius: '3px',
-              background: c.action,
-              color: '#fff',
-              cursor: 'pointer'
-            }}
-          >
-            save markers
-          </button>
+          
+          {/* Footer */}
+          <div style={{
+            padding: '1rem 1.5rem',
+            background: c.bgAlt,
+            borderTop: `1px solid ${c.border}`,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '1rem'
+          }}>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '0.65rem 1rem',
+                border: `1px solid ${c.border}`,
+                borderRadius: '3px',
+                background: 'transparent',
+                color: c.textSecondary,
+                cursor: 'pointer'
+              }}
+            >
+              cancel
+            </button>
+            <button
+              onClick={handleSave}
+              style={{
+                padding: '0.65rem 1rem',
+                border: 'none',
+                borderRadius: '3px',
+                background: c.action,
+                color: '#fff',
+                cursor: 'pointer'
+              }}
+            >
+              save markers
+            </button>
+          </div>
         </div>
       </div>
-    </div>
   );
 } 

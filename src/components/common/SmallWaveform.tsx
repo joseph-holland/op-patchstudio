@@ -1,4 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { isMobile, isTablet } from 'react-device-detect';
+import { triggerRotateOverlay } from '../../App';
 
 interface SmallWaveformProps {
   audioBuffer: AudioBuffer | null;
@@ -31,6 +33,13 @@ export function SmallWaveform({
   
   // Check if this is a multisample (has loop points)
   const hasLoopPoints = loopStart !== undefined && loopEnd !== undefined;
+
+  // Check if device is mobile/tablet in portrait mode
+  const isMobilePortrait = () => {
+    const mobileOrTablet = isMobile || isTablet;
+    const isPortraitMode = window.innerHeight > window.innerWidth;
+    return mobileOrTablet && isPortraitMode;
+  };
 
   // Theme colors
   const c = {
@@ -286,6 +295,20 @@ export function SmallWaveform({
     };
   }, [height, drawWaveform]);
 
+  const handleZoomClick = () => {
+    if (!onZoomEdit) return;
+
+    // Check if we're on mobile in portrait mode
+    if (isMobilePortrait()) {
+      // Show rotate overlay instead of zoom modal
+      triggerRotateOverlay(onZoomEdit);
+      return;
+    }
+    
+    // Otherwise, proceed with normal zoom functionality
+    onZoomEdit();
+  };
+
   const handleCanvasClick = (e: React.MouseEvent) => {
     // If clicking on zoom icon area, don't trigger zoom
     const rect = e.currentTarget.getBoundingClientRect();
@@ -298,9 +321,7 @@ export function SmallWaveform({
     }
 
     // If onZoomEdit is provided, the waveform is clickable for zooming
-    if (onZoomEdit) {
-      onZoomEdit();
-    }
+    handleZoomClick();
   };
 
   if (!audioBuffer) {
@@ -326,7 +347,7 @@ export function SmallWaveform({
       {/* Zoom icon in top-right corner */}
       {audioBuffer && onZoomEdit && (
         <button
-          onClick={onZoomEdit}
+          onClick={handleZoomClick}
           style={{
             position: 'absolute',
             top: '2px',

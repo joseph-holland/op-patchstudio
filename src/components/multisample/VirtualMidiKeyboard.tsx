@@ -170,6 +170,14 @@ export function VirtualMidiKeyboard({
     centerActiveOctave();
   }, [activeOctave, centerActiveOctave]);
 
+  // Handle unpinning while stuck - reset stuck state without scrolling
+  useEffect(() => {
+    if (!isPinned && isStuck) {
+      setDynamicStyles({});
+      setIsStuck(false);
+    }
+  }, [isPinned, isStuck]);
+
   useEffect(() => {
     const container = containerRef.current;
     const placeholder = placeholderRef.current;
