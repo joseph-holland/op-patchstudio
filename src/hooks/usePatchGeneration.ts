@@ -61,7 +61,7 @@ export function usePatchGeneration() {
       const targetSampleRate = state.multisampleSettings.sampleRate || undefined;
       const targetBitDepth = state.multisampleSettings.bitDepth || undefined;
       const targetChannels = state.multisampleSettings.channels === 1 ? "mono" : "keep";
-      const multisampleGain = 0; // TODO: Get from advanced settings when implemented
+      const multisampleGain = state.multisampleSettings.gain || 0; // Get gain from UI settings
       
       const patchBlob = await generateMultisamplePatch(
         state, 

@@ -18,6 +18,8 @@ interface AudioProcessingSectionProps {
   cutAtLoopEnd?: boolean;
   onCutAtLoopEndChange?: (enabled: boolean) => void;
   onResetAudioSettingsConfirm?: () => void;
+  gain?: number; // -30 to +20 dB
+  onGainChange?: (gain: number) => void;
 }
 
 export function AudioProcessingSection({
@@ -35,7 +37,9 @@ export function AudioProcessingSection({
   onNormalizeLevelChange,
   cutAtLoopEnd = false,
   onCutAtLoopEndChange,
-  onResetAudioSettingsConfirm
+  onResetAudioSettingsConfirm,
+  gain = 0,
+  onGainChange
 }: AudioProcessingSectionProps) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -56,400 +60,293 @@ export function AudioProcessingSection({
     channels !== 0 ||
     normalize !== false ||
     normalizeLevel !== 0.0 ||
-    (type === 'multisample' && cutAtLoopEnd !== false)
+    (type === 'multisample' && cutAtLoopEnd !== false) ||
+    (type === 'multisample' && gain !== 0)
   );
+
+
 
   return (
     <div style={{
       background: 'var(--color-bg-primary)',
-      borderTop: '1px solid var(--color-progress-track)',
-      padding: '1.5rem 2rem'
+      borderRadius: '15px',
+      border: '1px solid var(--color-border-subtle)',
+      boxShadow: '0 2px 8px var(--color-shadow-primary)',
+      overflow: 'hidden',
+      marginBottom: isMobile ? '1.5rem' : '2rem'
     }}>
       {/* Header */}
       <div style={{
-        marginBottom: '2rem',
         display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        justifyContent: isMobile ? 'flex-start' : 'space-between',
-        alignItems: isMobile ? 'flex-start' : 'center',
-        gap: isMobile ? '1rem' : '0'
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: isMobile ? '0.5rem 1rem 0.5rem 1rem' : '0.7rem 1rem 0.5rem 1rem',
+        borderBottom: '1px solid var(--color-border-light)',
+        backgroundColor: 'var(--color-bg-secondary)',
       }}>
-        <h3 style={{ 
-          margin: '0',
-          color: 'var(--color-text-primary)',
-          fontSize: '1.25rem',
-          fontWeight: '300',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          alignSelf: isMobile ? 'flex-start' : 'auto'
-        }}>
-          audio processing
-        </h3>
-        {onResetAudioSettingsConfirm && (
-          <button
-            onClick={hasAudioSettingsChanged ? onResetAudioSettingsConfirm : undefined}
-            disabled={!hasAudioSettingsChanged}
-            style={{
-              padding: '0.625rem 1.25rem',
-              border: '1px solid var(--color-interactive-focus-ring)',
-              borderRadius: '3px',
-              backgroundColor: 'var(--color-bg-primary)',
-              color: hasAudioSettingsChanged ? 'var(--color-interactive-secondary)' : 'var(--color-border-medium)',
-              fontSize: '0.9rem',
-              fontWeight: '500',
-              cursor: hasAudioSettingsChanged ? 'pointer' : 'not-allowed',
-              transition: 'all 0.2s ease',
-              fontFamily: 'inherit',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              opacity: hasAudioSettingsChanged ? 1 : 0.6,
-              alignSelf: isMobile ? 'center' : 'auto'
-            }}
-            onMouseEnter={(e) => {
-              if (hasAudioSettingsChanged) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                e.currentTarget.style.borderColor = 'var(--color-border-medium)';
-                e.currentTarget.style.color = 'var(--color-interactive-dark)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (hasAudioSettingsChanged) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
-                e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
-                e.currentTarget.style.color = 'var(--color-interactive-secondary)';
-              }
-            }}
-          >
-            <i className="fas fa-undo"></i>
-            reset settings
-          </button>
-        )}
-      </div>
-
-      {/* Audio Format Controls and Processing Controls */}
-      <div>
-        <div style={{
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? '2rem' : '4rem',
-          alignItems: isMobile ? 'stretch' : 'flex-start'
-        }}>
-          {/* Audio Format Controls */}
-          <div style={{
-            flex: isMobile ? 'none' : '1'
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+          <h3 style={{
+            margin: 0,
+            color: '#222',
+            fontSize: '1.25rem',
+            fontWeight: 300,
           }}>
-            <AudioFormatControls
-              sampleRate={sampleRate}
-              bitDepth={bitDepth}
-              channels={channels}
-              onSampleRateChange={onSampleRateChange}
-              onBitDepthChange={onBitDepthChange}
-              onChannelsChange={onChannelsChange}
-              samples={samples}
-              size="sm"
-              isMobile={isMobile}
-            />
-          </div>
+            audio processing
+          </h3>
+        </div>
+      </div>
+      {/* Content */}
+      <div style={{
+        paddingLeft: isMobile ? '1rem' : '2rem',
+        paddingRight: isMobile ? '1rem' : '2rem',
+        paddingTop: isMobile ? '1rem' : '2rem',
+        paddingBottom: isMobile ? '1rem' : '2rem',
+        width: '100%',
+        boxSizing: 'border-box',
+      }}>
+        {/* Audio Format Controls */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: isMobile ? '1.25rem' : '2rem',
+            marginBottom: isMobile ? '1.25rem' : '2rem',
+          }}
+        >
+          <AudioFormatControls
+            sampleRate={sampleRate}
+            bitDepth={bitDepth}
+            channels={channels}
+            onSampleRateChange={onSampleRateChange}
+            onBitDepthChange={onBitDepthChange}
+            onChannelsChange={onChannelsChange}
+            samples={samples}
+            size="sm"
+            isMobile={isMobile}
+          />
+        </div>
 
-          {/* Processing Controls */}
+        {/* Processing Controls */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: isMobile ? '1.25rem' : '2rem',
+            marginBottom: isMobile ? '1.25rem' : '2rem',
+          }}
+        >
+          {/* Normalization Row */}
           <div style={{
             display: 'flex',
             flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? '1.5rem' : '2rem',
-            alignItems: isMobile ? 'stretch' : 'flex-start'
+            gap: isMobile ? '1rem' : '2rem',
+            alignItems: isMobile ? 'center' : 'flex-start',
           }}>
-            {isMobile ? (
-              // Mobile Layout: Toggles side by side, slider below
-              <>
-                {/* Toggles Row */}
-                <div style={{
-                  display: 'flex',
-                  gap: '1rem',
-                  justifyContent: 'space-around',
-                  width: '100%',
-                  maxWidth: '100%',
-                  overflow: 'hidden'
-                }}>
-                  {/* Cut at Loop End - only for multisample tool */}
-                  {type === 'multisample' && (
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.5rem',
-                      flex: '1',
-                      alignItems: 'center',
-                      minWidth: 0,
-                      maxWidth: '100%'
-                    }}>
-                      <div style={{
-                        fontSize: '0.8rem',
-                        fontWeight: '500',
-                        color: 'var(--color-text-primary)',
-                        textAlign: 'center',
-                        lineHeight: '1.2',
-                        hyphens: 'auto',
-                        wordBreak: 'break-word',
-                        maxWidth: '100%'
-                      }}>
-                        loop end cut
-                      </div>
-                      <Toggle
-                        id="cut-loop-toggle"
-                        labelA="off"
-                        labelB="on"
-                        toggled={cutAtLoopEnd}
-                        onToggle={onCutAtLoopEndChange || (() => {})}
-                        size="sm"
-                      />
-                      <style>{`
-                        #cut-loop-toggle .cds--toggle-input__appearance {
-                          background-color: var(--color-bg-slider-track) !important;
-                        }
-                        #cut-loop-toggle .cds--toggle-input__appearance:before {
-                          background-color: var(--color-interactive-secondary) !important;
-                        }
-                        #cut-loop-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance {
-                          background-color: var(--color-interactive-dark) !important;
-                        }
-                        #cut-loop-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
-                          background-color: var(--color-bg-primary) !important;
-                        }
-                        #cut-loop-toggle .cds--toggle__text--off,
-                        #cut-loop-toggle .cds--toggle__text--on {
-                          color: var(--color-interactive-secondary) !important;
-                        }
-                      `}</style>
-                    </div>
-                  )}
-
-                  {/* Normalize Toggle */}
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                    flex: '1',
-                    alignItems: 'center',
-                    minWidth: 0,
-                    maxWidth: '100%'
-                  }}>
-                    <div style={{
-                      fontSize: '0.8rem',
-                      fontWeight: '500',
-                      color: 'var(--color-text-primary)',
-                      textAlign: 'center',
-                      lineHeight: '1.2',
-                      wordBreak: 'break-word',
-                      maxWidth: '100%'
-                    }}>
-                      normalize
-                    </div>
-                    <Toggle
-                      id="normalize-toggle"
-                      labelA="off"
-                      labelB="on"
-                      toggled={normalize}
-                      onToggle={onNormalizeChange}
-                      size="sm"
-                    />
-                    <style>{`
-                      #normalize-toggle .cds--toggle-input__appearance {
-                        background-color: var(--color-bg-slider-track) !important;
-                      }
-                      #normalize-toggle .cds--toggle-input__appearance:before {
-                        background-color: var(--color-interactive-secondary) !important;
-                      }
-                      #normalize-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance {
-                        background-color: var(--color-interactive-dark) !important;
-                      }
-                      #normalize-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
-                        background-color: var(--color-bg-primary) !important;
-                      }
-                      #normalize-toggle .cds--toggle__text--off,
-                      #normalize-toggle .cds--toggle__text--on {
-                        color: var(--color-interactive-secondary) !important;
-                      }
-                    `}</style>
-                  </div>
-                </div>
-
-                {/* Normalization Level Slider - below toggles */}
-                <div style={{
-                  width: '100%'
-                }}>
-                  <div style={{
-                    fontSize: '0.8rem',
-                    fontWeight: '500',
-                    color: 'var(--color-text-primary)',
-                    marginBottom: '0.5rem',
-                    textAlign: 'center'
-                  }}>
-                    normalization level: {normalizeLevel.toFixed(1)} db
-                  </div>
-                  <div style={{ width: '100%' }}>
-                    <Slider
-                      id="normalize-level"
-                      min={-6.0}
-                      max={0.0}
-                      step={0.1}
-                      value={normalizeLevel}
-                      onChange={({ value }) => onNormalizeLevelChange(value)}
-                      hideTextInput
-                    />
-                  </div>
-                  <style>{`
-                    #normalize-level .cds--slider__track {
-                      background: linear-gradient(to right, var(--color-bg-slider-track) 0%, var(--color-interactive-secondary) 100%) !important;
-                    }
-                    #normalize-level .cds--slider__filled-track {
-                      background: var(--color-interactive-dark) !important;
-                    }
-                    #normalize-level .cds--slider__thumb {
-                      background: var(--color-interactive-dark) !important;
-                      border: 2px solid var(--color-interactive-dark) !important;
-                    }
-                    #normalize-level .cds--slider__thumb:hover {
-                      background: var(--color-text-primary) !important;
-                      border-color: var(--color-text-primary) !important;
-                    }
-                  `}</style>
-                </div>
-              </>
-            ) : (
-              // Desktop Layout: All controls in a row
-              <>
-                {/* Cut at Loop End - only for multisample tool */}
-                {type === 'multisample' && (
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem'
-                  }}>
-                    <div style={{
-                      fontSize: '0.9rem',
-                      fontWeight: '500',
-                      color: 'var(--color-text-primary)'
-                    }}>
-                      loop end cut
-                    </div>
-                    <Toggle
-                      id="cut-loop-toggle"
-                      labelA="off"
-                      labelB="on"
-                      toggled={cutAtLoopEnd}
-                      onToggle={onCutAtLoopEndChange || (() => {})}
-                      size="sm"
-                    />
-                    <style>{`
-                      #cut-loop-toggle .cds--toggle-input__appearance {
-                        background-color: var(--color-bg-slider-track) !important;
-                      }
-                      #cut-loop-toggle .cds--toggle-input__appearance:before {
-                        background-color: var(--color-interactive-secondary) !important;
-                      }
-                      #cut-loop-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance {
-                        background-color: var(--color-interactive-dark) !important;
-                      }
-                      #cut-loop-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
-                        background-color: var(--color-bg-primary) !important;
-                      }
-                      #cut-loop-toggle .cds--toggle__text--off,
-                      #cut-loop-toggle .cds--toggle__text--on {
-                        color: var(--color-interactive-secondary) !important;
-                      }
-                    `}</style>
-                  </div>
-                )}
-
-                {/* Normalize Toggle */}
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem'
-                }}>
-                  <div style={{
-                    fontSize: '0.9rem',
-                    fontWeight: '500',
-                    color: 'var(--color-text-primary)'
-                  }}>
-                    normalize
-                  </div>
-                  <Toggle
-                    id="normalize-toggle"
-                    labelA="off"
-                    labelB="on"
-                    toggled={normalize}
-                    onToggle={onNormalizeChange}
-                    size="sm"
-                  />
-                  <style>{`
-                    #normalize-toggle .cds--toggle-input__appearance {
-                      background-color: var(--color-bg-slider-track) !important;
-                    }
-                    #normalize-toggle .cds--toggle-input__appearance:before {
-                      background-color: var(--color-interactive-secondary) !important;
-                    }
-                    #normalize-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance {
-                      background-color: var(--color-interactive-dark) !important;
-                    }
-                    #normalize-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
-                      background-color: var(--color-bg-primary) !important;
-                    }
-                    #normalize-toggle .cds--toggle__text--off,
-                    #normalize-toggle .cds--toggle__text--on {
-                      color: var(--color-interactive-secondary) !important;
-                    }
-                  `}</style>
-                </div>
-
-                {/* Normalization Level Slider - auto-adjusts to available space */}
-                <div style={{
-                  flex: '1',
-                  minWidth: '200px',
-                  maxWidth: '250px'
-                }}>
-                  <div style={{
-                    fontSize: '0.9rem',
-                    fontWeight: '500',
-                    color: 'var(--color-text-primary)',
-                    marginBottom: '0.5rem'
-                  }}>
-                    normalization level: {normalizeLevel.toFixed(1)} db
-                  </div>
-                  <div style={{ width: '100%' }}>
-                    <Slider
-                      id="normalize-level"
-                      min={-6.0}
-                      max={0.0}
-                      step={0.1}
-                      value={normalizeLevel}
-                      onChange={({ value }) => onNormalizeLevelChange(value)}
-                      hideTextInput
-                    />
-                  </div>
-                  <style>{`
-                    #normalize-level .cds--slider__track {
-                      background: linear-gradient(to right, var(--color-bg-slider-track) 0%, var(--color-interactive-secondary) 100%) !important;
-                    }
-                    #normalize-level .cds--slider__filled-track {
-                      background: var(--color-interactive-dark) !important;
-                    }
-                    #normalize-level .cds--slider__thumb {
-                      background: var(--color-interactive-dark) !important;
-                      border: 2px solid var(--color-interactive-dark) !important;
-                    }
-                    #normalize-level .cds--slider__thumb:hover {
-                      background: var(--color-text-primary) !important;
-                      border-color: var(--color-text-primary) !important;
-                    }
-                  `}</style>
-                </div>
-              </>
-            )}
+            {/* Normalization Toggle - Left Side */}
+            <div style={{ 
+              flex: isMobile ? 'none' : '1',
+              width: isMobile ? '100%' : 'auto',
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '1rem', 
+              justifyContent: isMobile ? 'center' : 'flex-start' 
+            }}>
+              <div style={{ fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                normalization
+              </div>
+              <Toggle
+                id="normalize-toggle"
+                labelA="off"
+                labelB="on"
+                toggled={normalize}
+                onToggle={onNormalizeChange}
+                size="sm"
+              />
+            </div>
+            
+            {/* Normalization Level Slider - Right Side */}
+            <div style={{ 
+              flex: isMobile ? 'none' : '1',
+              width: isMobile ? '100%' : 'auto'
+            }}>
+              <div style={{ fontSize: isMobile ? '0.9rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left' }}>
+                normalization level: {normalizeLevel.toFixed(1)} db
+              </div>
+              <Slider
+                id="normalize-level"
+                min={-6.0}
+                max={0.0}
+                step={0.1}
+                value={normalizeLevel}
+                onChange={({ value }) => onNormalizeLevelChange(value)}
+                hideTextInput
+                style={{ width: '100%' }}
+              />
+              <style>{`
+                #normalize-level .cds--slider__track {
+                  background: linear-gradient(to right, var(--color-bg-slider-track) 0%, var(--color-interactive-secondary) 100%) !important;
+                }
+                #normalize-level .cds--slider__filled-track {
+                  background: var(--color-interactive-dark) !important;
+                }
+                #normalize-level .cds--slider__thumb {
+                  background: var(--color-interactive-dark) !important;
+                  border: 2px solid var(--color-interactive-dark) !important;
+                }
+                #normalize-level .cds--slider__thumb:hover {
+                  background: var(--color-text-primary) !important;
+                  border-color: var(--color-text-primary) !important;
+                }
+              `}</style>
+            </div>
           </div>
+          {/* Gain Control (only for multisample) */}
+          {type === 'multisample' && (
+            <div style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? '1rem' : '2rem',
+              alignItems: isMobile ? 'center' : 'flex-start',
+            }}>
+              <div style={{ 
+                flex: isMobile ? 'none' : '1',
+                width: isMobile ? '100%' : 'auto',
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '1rem', 
+                justifyContent: isMobile ? 'center' : 'flex-start' 
+              }}>
+                <div style={{ fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                  gain
+                </div>
+              </div>
+              
+              <div style={{ 
+                flex: isMobile ? 'none' : '1',
+                width: isMobile ? '100%' : 'auto'
+              }}>
+                <div style={{ fontSize: isMobile ? '0.9rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left' }}>
+                  gain: {gain} db
+                </div>
+                <Slider
+                  id="gain-slider"
+                  min={-30}
+                  max={20}
+                  step={1}
+                  value={gain}
+                  onChange={({ value }) => onGainChange?.(value)}
+                  hideTextInput
+                  style={{ width: '100%' }}
+                />
+                <style>{`
+                  #gain-slider .cds--slider__track {
+                    background: linear-gradient(to right, var(--color-bg-slider-track) 0%, var(--color-interactive-secondary) 100%) !important;
+                  }
+                  #gain-slider .cds--slider__filled-track {
+                    background: var(--color-interactive-dark) !important;
+                  }
+                  #gain-slider .cds--slider__thumb {
+                    background: var(--color-interactive-dark) !important;
+                    border: 2px solid var(--color-interactive-dark) !important;
+                  }
+                  #gain-slider .cds--slider__thumb:hover {
+                    background: var(--color-text-primary) !important;
+                    border-color: var(--color-text-primary) !important;
+                  }
+                `}</style>
+              </div>
+            </div>
+          )}
+          {/* Loop End Cut Toggle (new row, only for multisample) */}
+          {type === 'multisample' && (
+            <div style={{ width: isMobile ? '100%' : 'auto', display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: isMobile ? 'center' : 'flex-start' }}>
+              <div style={{ fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                loop end cut
+              </div>
+              <Toggle
+                id="cut-loop-toggle"
+                labelA="off"
+                labelB="on"
+                toggled={cutAtLoopEnd}
+                onToggle={onCutAtLoopEndChange || (() => {})}
+                size="sm"
+              />
+              <style>{`
+                #cut-loop-toggle .cds--toggle-input__appearance {
+                  background-color: var(--color-bg-slider-track) !important;
+                }
+                #cut-loop-toggle .cds--toggle-input__appearance:before {
+                  background-color: var(--color-interactive-secondary) !important;
+                }
+                #cut-loop-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance {
+                  background-color: var(--color-interactive-dark) !important;
+                }
+                #cut-loop-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
+                  background-color: var(--color-bg-primary) !important;
+                }
+                #cut-loop-toggle .cds--toggle__text--off,
+                #cut-loop-toggle .cds--toggle__text--on {
+                  color: var(--color-interactive-secondary) !important;
+                }
+              `}</style>
+            </div>
+          )}
         </div>
+        
+        {/* Action Buttons Below Settings */}
+        {onResetAudioSettingsConfirm && (
+          <div style={{
+            display: 'flex',
+            gap: '1rem',
+            justifyContent: isMobile ? 'center' : 'flex-end',
+            flexDirection: isMobile ? 'column' : 'row',
+            marginTop: '2rem',
+            paddingTop: '1.5rem',
+            borderTop: '1px solid var(--color-border-light)',
+          }}>
+            <button
+              onClick={hasAudioSettingsChanged ? onResetAudioSettingsConfirm : undefined}
+              disabled={!hasAudioSettingsChanged}
+              style={{
+                minHeight: '44px',
+                minWidth: '44px',
+                padding: '0.75rem 1.5rem',
+                border: '1px solid var(--color-interactive-focus-ring)',
+                borderRadius: '6px',
+                backgroundColor: 'var(--color-bg-primary)',
+                color: hasAudioSettingsChanged ? 'var(--color-interactive-secondary)' : 'var(--color-border-medium)',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                cursor: hasAudioSettingsChanged ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s ease',
+                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem',
+                opacity: hasAudioSettingsChanged ? 1 : 0.6,
+                width: isMobile ? '100%' : 'auto',
+              }}
+              onMouseEnter={(e) => {
+                if (hasAudioSettingsChanged) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                  e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                  e.currentTarget.style.color = 'var(--color-interactive-dark)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (hasAudioSettingsChanged) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+                  e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
+                  e.currentTarget.style.color = 'var(--color-interactive-secondary)';
+                }
+              }}
+            >
+              <i className="fas fa-undo" style={{ fontSize: '1rem' }} />
+              reset audio settings
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

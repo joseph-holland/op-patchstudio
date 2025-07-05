@@ -1,40 +1,28 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { isMobile, isTablet } from 'react-device-detect';
+import { triggerRotateOverlay } from '../../App';
 
-// Import the overlay control functions from App.tsx
-// We'll need to create a way to access these functions
-let showRotateOverlayGlobal: ((zoomCallback?: () => void) => void) | null = null;
-
-// Function to register the overlay control
-export const registerOverlayControl = (showOverlay: (zoomCallback?: () => void) => void) => {
-  showRotateOverlayGlobal = showOverlay;
-};
-
-interface WaveformEditorProps {
+interface SmallWaveformProps {
   audioBuffer: AudioBuffer | null;
   inPoint?: number;
   outPoint?: number;
   loopStart?: number;
   loopEnd?: number;
   onMarkersChange?: (markers: { inPoint: number; outPoint: number; loopStart?: number; loopEnd?: number }) => void;
-  showLoopMarkers?: boolean;
   height?: number;
-  className?: string;
   onZoomEdit?: () => void;
 }
 
-export function WaveformEditor({
+export function SmallWaveform({
   audioBuffer,
   inPoint = 0,
   outPoint,
   loopStart,
   loopEnd,
   onMarkersChange,
-  showLoopMarkers = false,
-  height = 80,
-  className = '',
+  height = 44,
   onZoomEdit
-}: WaveformEditorProps) {
+}: SmallWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dragState, setDragState] = useState<{
     type: 'inPoint' | 'outPoint' | 'loopStart' | 'loopEnd' | null;
@@ -42,19 +30,33 @@ export function WaveformEditor({
   }>({ type: null, startX: 0 });
 
   const finalOutPoint = outPoint ?? (audioBuffer ? audioBuffer.length - 1 : 0);
+  
+  // Check if this is a multisample (has loop points)
+  const hasLoopPoints = loopStart !== undefined && loopEnd !== undefined;
 
   // Check if device is mobile/tablet in portrait mode
   const isMobilePortrait = () => {
     const mobileOrTablet = isMobile || isTablet;
     const isPortraitMode = window.innerHeight > window.innerWidth;
-    return mobileOrTablet && isPortraitMode;
+    const isSmallScreen = window.innerWidth < 768; // Additional check for small screens
+    return (mobileOrTablet || isSmallScreen) && isPortraitMode;
+  };
+
+  // Theme colors
+  const c = {
+    bg: 'var(--color-bg-primary)',
+    bgAlt: 'var(--color-bg-secondary)',
+    border: 'var(--color-border-light)',
+    text: 'var(--color-text-primary)',
+    textSecondary: 'var(--color-text-secondary)',
+    action: 'var(--color-interactive-focus)',
   };
 
   const drawWaveformPath = (ctx: CanvasRenderingContext2D, width: number, height: number, data: Float32Array) => {
     const step = Math.ceil(data.length / width);
     const amp = height / 2;
 
-    ctx.fillStyle = '#333333'; // Waveform color (OP-XY slate)
+    ctx.fillStyle = '#333333'; // Waveform color
     ctx.beginPath();
 
     for (let i = 0; i < width; i++) {
@@ -87,6 +89,9 @@ export function WaveformEditor({
     const width = canvas.width / window.devicePixelRatio;
     const height = canvas.height / window.devicePixelRatio;
 
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+
     // Draw background regions
     const sampleToPixel = (sample: number) => (audioBuffer.length > 1 ? (sample / audioBuffer.length) * width : 0);
     const inX = sampleToPixel(inPoint);
@@ -101,67 +106,54 @@ export function WaveformEditor({
     ctx.fillRect(inX, 0, outX - inX, height);
 
     const data = audioBuffer.getChannelData(0);
-
     drawWaveformPath(ctx, width, height, data);
     drawMarkers(ctx, width, height, audioBuffer.length);
-  }, [audioBuffer, height, inPoint, finalOutPoint, loopStart, loopEnd, showLoopMarkers]);
+  }, [audioBuffer, height, inPoint, finalOutPoint, loopStart, loopEnd, hasLoopPoints]);
 
   const drawMarkers = (ctx: CanvasRenderingContext2D, width: number, height: number, samples: number) => {
     if (!samples) return;
 
-    // This logic can now be simplified as the waveform drawing handles the scaling correctly.
-    // We just need to map sample points to pixels.
     const sampleToPixel = (sample: number) => (samples > 1 ? (sample / samples) * width : 0);
-    
-    // The rest of drawMarkers remains the same...
     const strokeWidth = 2;
     const halfStroke = strokeWidth / 2;
     
-    // Ensure markers stay within canvas bounds by constraining to stroke width
+    // Ensure markers stay within canvas bounds
     const inX = Math.max(halfStroke, Math.min(width - halfStroke, sampleToPixel(inPoint)));
     const outX = Math.max(halfStroke, Math.min(width - halfStroke, sampleToPixel(finalOutPoint)));
 
-    // Draw IN marker - simple vertical line
+    // Draw sample markers (dark grey) - solid lines
     ctx.strokeStyle = '#333333';
     ctx.lineWidth = strokeWidth;
     ctx.beginPath();
     ctx.moveTo(inX, 0);
     ctx.lineTo(inX, height);
-    ctx.stroke();
-
-    // Draw OUT marker - simple vertical line
-    ctx.strokeStyle = '#333333';
-    ctx.lineWidth = strokeWidth;
-    ctx.beginPath();
     ctx.moveTo(outX, 0);
     ctx.lineTo(outX, height);
     ctx.stroke();
 
-    // Draw loop markers if enabled
-    if (showLoopMarkers && loopStart !== undefined && loopEnd !== undefined) {
-      if (loopStart > 0) {
-        const x = Math.max(halfStroke, Math.min(width - halfStroke, sampleToPixel(loopStart)));
-        ctx.strokeStyle = '#555555'; // Medium gray
-        ctx.lineWidth = 1;
-        ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
+    // Draw loop markers if this is a multisample
+    if (hasLoopPoints && loopStart !== undefined && loopEnd !== undefined) {
+      const loopStartX = Math.max(halfStroke, Math.min(width - halfStroke, sampleToPixel(loopStart)));
+      const loopEndX = Math.max(halfStroke, Math.min(width - halfStroke, sampleToPixel(loopEnd)));
 
-      if (loopEnd < samples - 1) {
-        const x = Math.max(halfStroke, Math.min(width - halfStroke, sampleToPixel(loopEnd)));
-        ctx.strokeStyle = '#555555'; // Medium gray
-        ctx.lineWidth = 1;
-        ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
+      // Loop markers (medium grey) - dashed lines
+      ctx.strokeStyle = '#555555';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+
+      // Loop start
+      ctx.beginPath();
+      ctx.moveTo(loopStartX, 0);
+      ctx.lineTo(loopStartX, height);
+      ctx.stroke();
+
+      // Loop end
+      ctx.beginPath();
+      ctx.moveTo(loopEndX, 0);
+      ctx.lineTo(loopEndX, height);
+      ctx.stroke();
+
+      ctx.setLineDash([]);
     }
   };
 
@@ -185,9 +177,11 @@ export function WaveformEditor({
       { type: 'outPoint' as const, pos: finalOutPoint, tolerance: 10 },
     ];
 
-    if (showLoopMarkers) {
-      if (loopStart !== undefined) markers.push({ type: 'loopStart' as const, pos: loopStart, tolerance: 10 });
-      if (loopEnd !== undefined) markers.push({ type: 'loopEnd' as const, pos: loopEnd, tolerance: 10 });
+    if (hasLoopPoints && loopStart !== undefined && loopEnd !== undefined) {
+      markers.push(
+        { type: 'loopStart' as const, pos: loopStart, tolerance: 10 },
+        { type: 'loopEnd' as const, pos: loopEnd, tolerance: 10 }
+      );
     }
 
     let closestMarker: 'inPoint' | 'outPoint' | 'loopStart' | 'loopEnd' | null = null;
@@ -302,54 +296,97 @@ export function WaveformEditor({
     };
   }, [height, drawWaveform]);
 
-  const handleCanvasClick = (_e: React.MouseEvent) => {
-    // If onZoomEdit is provided, the entire waveform is clickable for zooming
-    if (onZoomEdit) {
+  const handleZoomClick = () => {
+    if (!onZoomEdit) return;
+
+    try {
       // Check if we're on mobile in portrait mode
       if (isMobilePortrait()) {
-        // Show rotate overlay instead of zoom modal, but store the zoom callback
-        if (showRotateOverlayGlobal) {
-          showRotateOverlayGlobal(onZoomEdit);
-        }
+        // Show rotate overlay instead of zoom modal
+        triggerRotateOverlay(onZoomEdit);
         return;
       }
       
       // Otherwise, proceed with normal zoom functionality
       onZoomEdit();
+    } catch (error) {
+      console.error('Error in handleZoomClick:', error);
+      // Fallback to direct zoom modal if overlay fails
+      onZoomEdit();
+    }
+  };
+
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    // If clicking on zoom icon area, don't trigger zoom
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Check if click is in top-right corner (zoom icon area)
+    if (x > rect.width - 30 && y < 30) {
       return;
     }
 
-    // Fallback or other click functionality if needed
-    // For example, could implement play from click position
+    // If onZoomEdit is provided, the waveform is clickable for zooming
+    handleZoomClick();
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Prevent default to avoid double-tap zoom on mobile
+    e.preventDefault();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // Handle touch as a click for zoom functionality
+    if (!onZoomEdit) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const touch = e.changedTouches[0];
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    // Check if touch is in top-right corner (zoom icon area)
+    if (x > rect.width - 30 && y < 30) {
+      return;
+    }
+
+    // If onZoomEdit is provided, the waveform is touchable for zooming
+    handleZoomClick();
   };
 
   if (!audioBuffer) {
     return (
-      <div className={`waveform-editor ${className}`} style={{ 
+      <div style={{ 
         height, 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        backgroundColor: 'var(--color-bg-secondary)',
+        backgroundColor: c.bgAlt,
         borderRadius: '3px',
-        border: '1px solid var(--color-border-subtle)'
+        border: `1px solid ${c.border}`,
+        color: c.textSecondary,
+        fontSize: '0.7rem'
       }}>
-        <span style={{ 
-          color: 'var(--color-text-secondary)', 
-          fontSize: '0.9rem' 
-        }}>
-          no sample
-        </span>
+        no sample
       </div>
     );
   }
 
   return (
-    <div className={`waveform-editor ${className}`} style={{ width: '100%', position: 'relative' }}>
+    <div style={{ width: '100%', position: 'relative' }}>
       {/* Zoom icon in top-right corner */}
       {audioBuffer && onZoomEdit && (
         <button
-          onClick={handleCanvasClick}
+          onClick={handleZoomClick}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleZoomClick();
+          }}
           style={{
             position: 'absolute',
             top: '2px',
@@ -363,7 +400,7 @@ export function WaveformEditor({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--color-text-secondary)',
+            color: c.textSecondary,
             fontSize: '14px',
             zIndex: 10,
             padding: 0
@@ -379,7 +416,7 @@ export function WaveformEditor({
           width: '100%', 
           height: height,
           cursor: dragState.type ? 'grabbing' : onZoomEdit && audioBuffer ? 'pointer' : 'grab',
-          border: '1px solid var(--color-border-subtle)',
+          border: `1px solid ${c.border}`,
           borderRadius: '3px',
           backgroundColor: '#ffffff',
           display: 'block'
@@ -389,7 +426,9 @@ export function WaveformEditor({
         onMouseUp={!onZoomEdit ? handleMouseUp : undefined}
         onMouseLeave={!onZoomEdit ? handleMouseUp : undefined}
         onClick={handleCanvasClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       />
     </div>
   );
-}
+} 

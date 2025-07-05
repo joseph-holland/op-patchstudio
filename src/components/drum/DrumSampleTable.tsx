@@ -1,10 +1,11 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
+import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 
-import { WaveformEditor } from '../common/WaveformEditor';
+import { SmallWaveform } from '../common/SmallWaveform';
 import { WaveformZoomModal } from '../common/WaveformZoomModal';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
-import { DrumSampleSettingsModal, useDrumSampleSettingsKeyboard } from './DrumSampleSettingsModal';
+import { DrumSampleSettingsModal } from './DrumSampleSettingsModal';
 
 interface DrumSampleTableProps {
   onFileUpload: (index: number, file: File) => void;
@@ -55,6 +56,7 @@ const actionButtonStyle: React.CSSProperties = {
 
 export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }: DrumSampleTableProps) {
   const { state, dispatch } = useAppContext();
+  const { play } = useAudioPlayer();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -81,16 +83,19 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
     fileInputRefs.current[index]?.click();
   };
 
-  const playSample = (index: number) => {
+  const playSample = async (index: number) => {
     const sample = state.drumSamples[index];
     if (!sample?.isLoaded || !sample.audioBuffer) return;
 
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const source = audioContext.createBufferSource();
-      source.buffer = sample.audioBuffer;
-      source.connect(audioContext.destination);
-      source.start(0);
+      await play(sample.audioBuffer, {
+        inFrame: sample.inPoint !== undefined ? Math.floor(sample.inPoint * sample.audioBuffer.sampleRate) : 0,
+        outFrame: sample.outPoint !== undefined ? Math.floor(sample.outPoint * sample.audioBuffer.sampleRate) : sample.audioBuffer.length,
+        playbackRate: Math.pow(2, (sample.tune || 0) / 12),
+        gain: sample.gain || 0,
+        pan: sample.pan || 0,
+        reverse: sample.reverse || false,
+      });
     } catch (error) {
       console.error('Error playing sample:', error);
     }
@@ -159,12 +164,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
     closeZoomModal();
   };
 
-  const playSelectedSample = () => {
-    playSample(selectedSampleIndex);
-  };
 
-  // Add keyboard handler for 'p' key in settings modal
-  useDrumSampleSettingsKeyboard(settingsModalOpen, playSelectedSample);
 
   if (isMobile) {
     // Mobile Card Layout
@@ -247,7 +247,9 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                      }}>
                        <button
                          disabled={!isLoaded}
-                         onClick={() => playSample(index)}
+                         onClick={() => playSample(index).catch(error => {
+                           console.error('Error playing sample:', error);
+                         })}
                          style={{
                            ...actionButtonStyle,
                            color: isLoaded ? c.action : c.textSecondary
@@ -271,11 +273,10 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                          onClick={() => onRecordSample?.(index)}
                          style={{
                            ...actionButtonStyle,
-                           color: c.action
                          }}
                          title="record"
                        >
-                         <i className="fas fa-microphone" style={{ fontSize: '18px' }}></i>
+                         <i className="fas fa-microphone" style={{ fontSize: '18px', color: 'var(--color-accent-primary)' }}></i>
                        </button>
                        <button
                          disabled={!isLoaded}
@@ -322,12 +323,12 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                          marginBottom: '0.5rem'
                        }}>
                          {sample.audioBuffer ? (
-                           <WaveformEditor
+                           <SmallWaveform
                              audioBuffer={sample.audioBuffer}
                              height={50}
                              inPoint={Math.round((sample.inPoint || 0) * sample.audioBuffer.sampleRate)}
                              outPoint={Math.round((sample.outPoint || sample.duration || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
-                             onMarkersChange={(markers) => {
+                             onMarkersChange={(markers: { inPoint: number; outPoint: number; loopStart?: number; loopEnd?: number }) => {
                                const toSeconds = (frame: number) => frame / (sample.audioBuffer?.sampleRate || 44100);
                                dispatch({
                                  type: 'UPDATE_DRUM_SAMPLE',
@@ -523,28 +524,28 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                       display: 'flex',
                       alignItems: 'center'
                     }}>
-                      {sample.audioBuffer ? (
-                        <WaveformEditor
-                          audioBuffer={sample.audioBuffer}
-                          height={44}
-                          inPoint={Math.round((sample.inPoint || 0) * sample.audioBuffer.sampleRate)}
-                          outPoint={Math.round((sample.outPoint || sample.duration || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
-                          onMarkersChange={(markers) => {
-                            const toSeconds = (frame: number) => frame / (sample.audioBuffer?.sampleRate || 44100);
-                            dispatch({
-                              type: 'UPDATE_DRUM_SAMPLE',
-                              payload: {
-                                index,
-                                updates: {
-                                  inPoint: toSeconds(markers.inPoint),
-                                  outPoint: toSeconds(markers.outPoint),
+                                              {sample.audioBuffer ? (
+                          <SmallWaveform
+                            audioBuffer={sample.audioBuffer}
+                            height={44}
+                            inPoint={Math.round((sample.inPoint || 0) * sample.audioBuffer.sampleRate)}
+                            outPoint={Math.round((sample.outPoint || sample.duration || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
+                            onMarkersChange={(markers: { inPoint: number; outPoint: number; loopStart?: number; loopEnd?: number }) => {
+                              const toSeconds = (frame: number) => frame / (sample.audioBuffer?.sampleRate || 44100);
+                              dispatch({
+                                type: 'UPDATE_DRUM_SAMPLE',
+                                payload: {
+                                  index,
+                                  updates: {
+                                    inPoint: toSeconds(markers.inPoint),
+                                    outPoint: toSeconds(markers.outPoint),
+                                  }
                                 }
-                              }
-                            });
-                          }}
-                          onZoomEdit={() => openZoomModal(index)}
-                        />
-                      ) : (
+                              });
+                            }}
+                            onZoomEdit={() => openZoomModal(index)}
+                          />
+                        ) : (
                         <div style={{
                           width: '100%',
                           height: '44px',
@@ -604,7 +605,9 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                 }}>
                   <button
                     disabled={!isLoaded}
-                    onClick={() => playSample(index)}
+                    onClick={() => playSample(index).catch(error => {
+                      console.error('Error playing sample:', error);
+                    })}
                     style={{
                       ...actionButtonStyle,
                       color: isLoaded ? c.action : c.textSecondary
@@ -628,11 +631,10 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                     onClick={() => onRecordSample?.(index)}
                     style={{
                       ...actionButtonStyle,
-                      color: c.action
                     }}
                     title="record"
                   >
-                    <i className="fas fa-microphone" style={{ fontSize: '18px' }}></i>
+                    <i className="fas fa-microphone" style={{ fontSize: '18px', color: 'var(--color-accent-primary)' }}></i>
                   </button>
                   <button
                     disabled={!isLoaded}

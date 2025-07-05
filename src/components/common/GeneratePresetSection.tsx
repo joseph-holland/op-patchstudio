@@ -45,52 +45,201 @@ export function GeneratePresetSection({
 
   return (
     <div style={{
-      background: '#f8f9fa',
-      borderTop: '1px solid #e0e0e0',
-      padding: isMobile ? '1rem' : '1.5rem 2rem',
-      width: '100%',
-      maxWidth: '100%',
-      overflow: 'hidden'
+      background: 'var(--color-bg-primary)',
+      borderRadius: '15px',
+      boxShadow: '0 2px 8px var(--color-shadow-primary)',
+      border: '1px solid var(--color-border-subtle)',
+      overflow: 'hidden',
+      marginBottom: isMobile ? '1rem' : '2rem',
     }}>
-      {/* Header with Buttons */}
+      {/* Header */}
       <div style={{
         display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        justifyContent: isMobile ? 'flex-start' : 'space-between',
-        alignItems: isMobile ? 'flex-start' : 'center',
-        marginBottom: '2rem',
-        gap: isMobile ? '1rem' : '0'
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: isMobile ? '0.5rem 1rem 0.5rem 1rem' : '0.7rem 1rem 0.5rem 1rem',
+        borderBottom: '1px solid var(--color-border-medium)',
+        backgroundColor: 'var(--color-bg-secondary)',
       }}>
-        <h3 style={{ 
-          margin: '0',
-          color: '#222',
-          fontSize: '1.25rem',
-          fontWeight: '300',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          alignSelf: isMobile ? 'flex-start' : 'auto'
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+          <h3 style={{
+            margin: 0,
+            color: '#222',
+            fontSize: '1.25rem',
+            fontWeight: 300,
+          }}>
+            generate preset
+          </h3>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ 
+        padding: isMobile ? '1rem' : '2rem',
+      }}>
+
+        {/* Preset Name */}
+        <div style={{
+          marginBottom: '2rem',
+          paddingBottom: '1.5rem',
+          borderBottom: '1px solid var(--color-border-light)'
         }}>
-          generate preset
-        </h3>
+          <div style={{ 
+            width: isMobile ? '100%' : '300px'
+          }}>
+            <div style={{ width: '100%' }}>
+              <TextInput
+                id={inputId}
+                labelText="preset name"
+                placeholder="enter preset name..."
+                value={presetName}
+                onChange={onPresetNameChange}
+              />
+              <style>{`
+                #${inputId} {
+                  width: 100% !important;
+                  min-width: 100% !important;
+                }
+                input#${inputId}.cds--text-input {
+                  width: 100% !important;
+                  min-width: 100% !important;
+                  background-color: var(--color-bg-primary) !important;
+                  background: var(--color-bg-primary) !important;
+                  text-align: left !important;
+                }
+                input#${inputId}.cds--text-input:focus {
+                  background-color: var(--color-bg-primary) !important;
+                  background: var(--color-bg-primary) !important;
+                  text-align: left !important;
+                }
+                input#${inputId}.cds--text-input::placeholder {
+                  text-align: left !important;
+                }
+              `}</style>
+            </div>
+          </div>
+        </div>
         
-        {/* Buttons aligned with header */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '0.75rem', 
-          flexWrap: 'wrap',
-          alignSelf: isMobile ? 'center' : 'auto',
-          justifyContent: isMobile ? 'center' : 'flex-start'
+        {/* Preset Size and Summary */}
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? '1.5rem' : '2rem',
+          alignItems: 'flex-start',
+          marginBottom: '2rem'
+        }}>
+          {/* Preset Size Indicator - 50% width */}
+          <div style={{ 
+            width: isMobile ? '100%' : '50%'
+          }}>
+            <PatchSizeIndicator type={type} />
+          </div>
+          
+          {/* Preset Summary - 50% width */}
+          <div style={{
+            width: isMobile ? '100%' : '50%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem'
+          }}>
+            <div style={{
+              fontSize: '0.9rem',
+              fontWeight: '500',
+              color: '#222',
+              marginBottom: '0.25rem'
+            }}>
+              preset summary
+            </div>
+            
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+              fontSize: '0.8rem',
+              color: '#666'
+            }}>
+              {/* Validation Message - only show when can't generate */}
+              {!canGeneratePatch && !hasPresetName && (
+                <div style={{
+                  color: '#666',
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '0.25rem'
+                }}>
+                  <i className="fas fa-exclamation-triangle" style={{ fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
+                  <span>enter preset name to continue</span>
+                </div>
+              )}
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <i className={`fas ${hasLoadedSamples ? 'fa-check' : 'fa-times'}`} 
+                   style={{ color: '#666', fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
+                <span>{loadedSamplesCount} {loadedSamplesCount === 1 ? 'sample' : 'samples'} loaded</span>
+              </div>
+              
+              {/* Show load samples message when no samples but have preset name */}
+              {!canGeneratePatch && hasPresetName && !hasLoadedSamples && (
+                <div style={{
+                  color: '#666',
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginTop: '0.25rem'
+                }}>
+                  <i className="fas fa-exclamation-triangle" style={{ fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
+                  <span>load samples to continue</span>
+                </div>
+              )}
+              
+              {/* Only show custom settings info when samples are loaded and settings have been changed */}
+              {hasLoadedSamples && editedSamplesCount > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <i className="fas fa-info-circle" style={{ color: '#666', fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
+                  <span>{editedSamplesCount} {editedSamplesCount === 1 ? 'sample' : 'samples'} with custom settings</span>
+                </div>
+              )}
+              
+              {/* File Format Info - only show when ready to generate */}
+              {canGeneratePatch && (
+                <div style={{
+                  color: '#666',
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginTop: '0.5rem'
+                }}>
+                  <i className="fas fa-file-archive" style={{ fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
+                  <span>saves as '{presetName}.preset.zip'</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons at Bottom */}
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          justifyContent: isMobile ? 'center' : 'flex-end',
+          flexDirection: isMobile ? 'column' : 'row',
+          paddingTop: '1.5rem',
+          borderTop: '1px solid var(--color-border-light)',
         }}>
           <button
             onClick={onResetAll}
             disabled={!hasChangesFromDefaults}
             style={{
+              minHeight: '44px',
+              minWidth: '44px',
               padding: '0.75rem 1.5rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '3px',
-              backgroundColor: '#fff',
-              color: hasChangesFromDefaults ? '#6b7280' : '#9ca3af',
+              border: '1px solid var(--color-interactive-focus-ring)',
+              borderRadius: '6px',
+              backgroundColor: 'var(--color-bg-primary)',
+              color: hasChangesFromDefaults ? 'var(--color-interactive-secondary)' : 'var(--color-border-medium)',
               fontSize: '0.9rem',
               fontWeight: '500',
               cursor: hasChangesFromDefaults ? 'pointer' : 'not-allowed',
@@ -98,205 +247,66 @@ export function GeneratePresetSection({
               fontFamily: 'inherit',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
-              opacity: hasChangesFromDefaults ? 1 : 0.6
+              justifyContent: 'center',
+              gap: '0.75rem',
+              opacity: hasChangesFromDefaults ? 1 : 0.6,
+              width: isMobile ? '100%' : 'auto',
             }}
             onMouseEnter={(e) => {
               if (hasChangesFromDefaults) {
-                e.currentTarget.style.backgroundColor = '#f9fafb';
-                e.currentTarget.style.borderColor = '#9ca3af';
-                e.currentTarget.style.color = '#374151';
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                e.currentTarget.style.color = 'var(--color-interactive-dark)';
               }
             }}
             onMouseLeave={(e) => {
               if (hasChangesFromDefaults) {
-                e.currentTarget.style.backgroundColor = '#fff';
-                e.currentTarget.style.borderColor = '#d1d5db';
-                e.currentTarget.style.color = '#6b7280';
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+                e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
+                e.currentTarget.style.color = 'var(--color-interactive-secondary)';
               }
             }}
           >
-            <i className="fas fa-undo"></i>
+            <i className="fas fa-undo" style={{ fontSize: '1rem' }}></i>
             reset all
           </button>
           <button
             onClick={onGeneratePatch}
             disabled={!canGeneratePatch}
             style={{
+              minHeight: '44px',
+              minWidth: '44px',
               padding: '0.75rem 1.5rem',
               border: 'none',
-              borderRadius: '3px',
-              backgroundColor: canGeneratePatch ? '#222' : '#9ca3af',
-              color: '#fff',
+              borderRadius: '6px',
+              backgroundColor: canGeneratePatch ? 'var(--color-interactive-focus)' : 'var(--color-border-medium)',
+              color: 'var(--color-white)',
               fontSize: '0.9rem',
               fontWeight: '500',
               cursor: canGeneratePatch ? 'pointer' : 'not-allowed',
+              opacity: canGeneratePatch ? 1 : 0.6,
               transition: 'all 0.2s ease',
               fontFamily: 'inherit',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
-              opacity: canGeneratePatch ? 1 : 0.6
+              justifyContent: 'center',
+              gap: '0.75rem',
+              width: isMobile ? '100%' : 'auto',
             }}
             onMouseEnter={(e) => {
               if (canGeneratePatch) {
-                e.currentTarget.style.backgroundColor = '#444';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+                e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
               }
             }}
             onMouseLeave={(e) => {
               if (canGeneratePatch) {
-                e.currentTarget.style.backgroundColor = '#222';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
               }
             }}
           >
-            <i className="fas fa-download"></i>
+            <i className="fas fa-download" style={{ fontSize: '1rem' }}></i>
             save preset
           </button>
-        </div>
-      </div>
-
-      {/* Preset Name */}
-      <div style={{
-        marginBottom: '2rem',
-        paddingBottom: '1.5rem',
-        borderBottom: '1px solid #e0e0e0'
-      }}>
-        <div style={{ 
-          width: isMobile ? '100%' : '300px'
-        }}>
-          <div style={{ width: '100%' }}>
-            <TextInput
-              id={inputId}
-              labelText="preset name"
-              placeholder="enter preset name..."
-              value={presetName}
-              onChange={onPresetNameChange}
-            />
-            <style>{`
-              #${inputId} {
-                width: 100% !important;
-                min-width: 100% !important;
-              }
-              input#${inputId}.cds--text-input {
-                width: 100% !important;
-                min-width: 100% !important;
-                background-color: #f8f9fa !important;
-                background: #f8f9fa !important;
-                text-align: left !important;
-              }
-              input#${inputId}.cds--text-input:focus {
-                background-color: #f8f9fa !important;
-                background: #f8f9fa !important;
-                text-align: left !important;
-              }
-              input#${inputId}.cds--text-input::placeholder {
-                text-align: left !important;
-              }
-            `}</style>
-          </div>
-        </div>
-      </div>
-      
-      {/* Preset Size and Summary */}
-      <div style={{
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        gap: isMobile ? '1.5rem' : '2rem',
-        alignItems: 'flex-start'
-      }}>
-        {/* Preset Size Indicator - 50% width */}
-        <div style={{ 
-          width: isMobile ? '100%' : '50%'
-        }}>
-          <PatchSizeIndicator type={type} />
-        </div>
-        
-        {/* Preset Summary - 50% width */}
-        <div style={{
-          width: isMobile ? '100%' : '50%',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.5rem'
-        }}>
-          <div style={{
-            fontSize: '0.9rem',
-            fontWeight: '500',
-            color: '#222',
-            marginBottom: '0.25rem'
-          }}>
-            preset summary
-          </div>
-          
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.25rem',
-            fontSize: '0.8rem',
-            color: '#666'
-          }}>
-            {/* Validation Message - only show when can't generate */}
-            {!canGeneratePatch && !hasPresetName && (
-              <div style={{
-                color: '#666',
-                fontSize: '0.8rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '0.25rem'
-              }}>
-                <i className="fas fa-exclamation-triangle" style={{ fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
-                <span>enter preset name to continue</span>
-              </div>
-            )}
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <i className={`fas ${hasLoadedSamples ? 'fa-check' : 'fa-times'}`} 
-                 style={{ color: '#666', fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
-              <span>{loadedSamplesCount} {loadedSamplesCount === 1 ? 'sample' : 'samples'} loaded</span>
-            </div>
-            
-            {/* Show load samples message when no samples but have preset name */}
-            {!canGeneratePatch && hasPresetName && !hasLoadedSamples && (
-              <div style={{
-                color: '#666',
-                fontSize: '0.8rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginTop: '0.25rem'
-              }}>
-                <i className="fas fa-exclamation-triangle" style={{ fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
-                <span>load samples to continue</span>
-              </div>
-            )}
-            
-            {/* Only show custom settings info when samples are loaded and settings have been changed */}
-            {hasLoadedSamples && editedSamplesCount > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <i className="fas fa-info-circle" style={{ color: '#666', fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
-                <span>{editedSamplesCount} {editedSamplesCount === 1 ? 'sample' : 'samples'} with custom settings</span>
-              </div>
-            )}
-            
-            {/* File Format Info - only show when ready to generate */}
-            {canGeneratePatch && (
-              <div style={{
-                color: '#666',
-                fontSize: '0.8rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginTop: '0.5rem'
-              }}>
-                <i className="fas fa-file-archive" style={{ fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
-                <span>saves as '{presetName}.preset.zip'</span>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

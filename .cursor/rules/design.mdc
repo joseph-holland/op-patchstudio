@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description: rules for design language and styling
+globs: ["**/*.ts", "**/*.tsx", "**/*.scss"]
 alwaysApply: true
 ---
 - use carbon design system for all ui elements

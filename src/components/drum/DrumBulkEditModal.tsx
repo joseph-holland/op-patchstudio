@@ -157,7 +157,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
             </select>
           </div>
 
-          {/* Playback Direction */}
+          {/* Direction */}
           <div style={{ marginBottom: '2rem' }}>
             <label style={{ 
               display: 'block',
@@ -166,7 +166,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
               fontWeight: '600',
               color: '#374151'
             }}>
-              playback direction
+              direction
             </label>
             <select 
               style={{ 

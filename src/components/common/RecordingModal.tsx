@@ -263,15 +263,17 @@ export function RecordingModal({
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       setRecordedBuffer(audioBuffer);
       
-      // Draw final waveform
-      drawStaticWaveform(audioBuffer);
+      // Draw final waveform with high quality rendering
+      drawHighQualityWaveform(audioBuffer);
     } catch (err) {
       console.error('Error processing recorded audio:', err);
       setError('failed to process recorded audio.');
     }
   };
 
-  const drawStaticWaveform = (audioBuffer: AudioBuffer) => {
+
+
+  const drawHighQualityWaveform = (audioBuffer: AudioBuffer) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
@@ -281,39 +283,33 @@ export function RecordingModal({
     const width = canvas.width;
     const height = canvas.height;
     const data = audioBuffer.getChannelData(0);
-    const samples = data.length;
-    const samplesPerPixel = samples / width;
     
+    // Clear canvas with background
     ctx.fillStyle = '#f8f9fa';
     ctx.fillRect(0, 0, width, height);
     
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
+    // Use the same waveform rendering approach as WaveformEditor
+    const step = Math.ceil(data.length / width);
+    const amp = height / 2;
+    
+    ctx.fillStyle = '#333333';
     ctx.beginPath();
     
-    const centerY = height / 2;
-    
-    for (let x = 0; x < width; x++) {
-      const startSample = Math.floor(x * samplesPerPixel);
-      const endSample = Math.floor((x + 1) * samplesPerPixel);
+    for (let i = 0; i < width; i++) {
+      let min = 1.0;
+      let max = -1.0;
       
-      let min = 0;
-      let max = 0;
-      
-      for (let i = startSample; i < endSample && i < samples; i++) {
-        const value = data[i];
-        if (value < min) min = value;
-        if (value > max) max = value;
+      for (let j = 0; j < step; j++) {
+        const datum = data[(i * step) + j];
+        if (datum < min) min = datum;
+        if (datum > max) max = datum;
       }
       
-      const minY = centerY - (min * centerY);
-      const maxY = centerY - (max * centerY);
-      
-      ctx.moveTo(x, minY);
-      ctx.lineTo(x, maxY);
+      // Draw a vertical line from min to max for each pixel column
+      ctx.rect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
     }
     
-    ctx.stroke();
+    ctx.fill();
   };
 
   const playRecording = async () => {
@@ -402,7 +398,7 @@ export function RecordingModal({
             gap: '0.5rem'
           }}>
             <i className="fas fa-microphone" style={{
-              color: '#222',
+              color: 'var(--color-accent-primary)',
               fontSize: '1.25rem'
             }}></i>
             record audio sample
@@ -496,18 +492,26 @@ export function RecordingModal({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               {isRecording && (
                 <div style={{
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: '#333',
+                  width: '16px',
+                  height: '16px',
+                  backgroundColor: 'var(--color-accent-primary)',
                   borderRadius: '50%',
                   animation: 'pulse 1s infinite'
                 }} />
               )}
-              <span style={{ fontSize: '0.9rem', color: '#333' }}>
+              <span style={{ fontSize: '1.1rem', color: isRecording ? 'var(--color-accent-primary)' : '#333' }}>
                 {isRecording ? 'recording...' : recordedBuffer ? 'recording complete' : 'ready to record'}
               </span>
             </div>
-            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#333' }}>
+            <div style={{ 
+              fontSize: '1.25rem', 
+              fontWeight: 'bold', 
+              color: isRecording ? 'var(--color-accent-primary)' : '#333',
+              animation: isRecording ? 'pulse 1s infinite' : 'none',
+              minWidth: '60px',
+              textAlign: 'right',
+              paddingRight: '8px'
+            }}>
               {formatTime(recordingTime)}
             </div>
           </div>
@@ -517,7 +521,7 @@ export function RecordingModal({
             display: 'flex', 
             gap: '0.75rem', 
             justifyContent: 'center',
-            marginBottom: '1.5rem'
+            marginBottom: '0.5rem'
           }}>
             {!isRecording && !recordedBuffer && (
               <button
@@ -526,7 +530,7 @@ export function RecordingModal({
                   padding: '0.625rem 1.25rem',
                   border: 'none',
                   borderRadius: '3px',
-                  backgroundColor: '#333',
+                  backgroundColor: 'var(--color-accent-primary)',
                   color: '#fff',
                   fontSize: '0.875rem',
                   fontWeight: '500',
@@ -538,17 +542,17 @@ export function RecordingModal({
                   gap: '0.5rem'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#555';
+                  e.currentTarget.style.backgroundColor = '#e63939';
                   e.currentTarget.style.transform = 'translateY(-1px)';
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#333';
+                  e.currentTarget.style.backgroundColor = 'var(--color-accent-primary)';
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                <i className="fas fa-microphone"></i>
+                <i className="fas fa-microphone" style={{ color: '#fff' }}></i>
                 start recording
               </button>
             )}
@@ -661,6 +665,18 @@ export function RecordingModal({
             )}
           </div>
 
+          {/* Maximum Recording Time Info */}
+          {!isRecording && !recordedBuffer && (
+            <div style={{ 
+              fontSize: '0.8rem', 
+              color: '#666',
+              textAlign: 'center',
+              marginBottom: '1.5rem'
+            }}>
+              maximum recording time: {maxDuration}s
+            </div>
+          )}
+
           {/* Waveform Display */}
           <div style={{ marginBottom: '1rem' }}>
             <canvas
@@ -692,16 +708,7 @@ export function RecordingModal({
             </div>
           )}
 
-          {/* Recording Info */}
-          <div style={{ 
-            fontSize: '0.8rem', 
-            color: '#666',
-            textAlign: 'center'
-          }}>
-            maximum recording time: {maxDuration}s
-            <br />
-            <small>devices: {devices.length}, selected: {selectedDeviceId}</small>
-          </div>
+
         </div>
 
         {/* Actions */}

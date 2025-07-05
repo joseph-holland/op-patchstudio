@@ -15,20 +15,27 @@ export function AppHeader() {
   const bottomPosition = isMobile ? '43%' : '45%';
 
   return (
-    <div style={{
+    <header 
+      role="banner"
+      style={{
       marginBottom: '2rem'
-    }}>
-      <div style={{
+      }}
+    >
+      <h1 style={{
         position: 'relative',
         display: 'inline-block',
         fontSize: titleFontSize,
         letterSpacing: '-0.05em',
         fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif',
         fontWeight: 300,
-        color: 'var(--color-text-primary)'
+        color: 'var(--color-text-primary)',
+        margin: 0,
+        lineHeight: 1
       }}>
         OP<span style={{ margin: '0 0.1em' }}>–</span>PatchStudio
-        <div style={{
+        <span 
+          aria-label="unofficial version"
+          style={{
           position: 'absolute',
           left: `calc(100% + ${badgeGap})`,
           bottom: bottomPosition,
@@ -45,10 +52,11 @@ export function AppHeader() {
           border: '1px solid var(--color-text-primary)',
           lineHeight: '1',
           whiteSpace: 'nowrap'
-        }}>
+          }}
+        >
           unofficial
-        </div>
-      </div>
-    </div>
+        </span>
+      </h1>
+    </header>
   );
 }

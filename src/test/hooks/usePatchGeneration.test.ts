@@ -38,7 +38,7 @@ const defaultMockState = {
       channels: 2,
       presetName: 'Test Kit',
       normalize: false,
-      normalizeLevel: 0,
+      normalizeLevel: -6.0,
       presetSettings: {
         playmode: 'poly' as const,
         transpose: 0,
@@ -53,8 +53,9 @@ const defaultMockState = {
       channels: 2,
       presetName: 'Test Multisample',
       normalize: false,
-      normalizeLevel: 0,
-      cutAtLoopEnd: false
+      normalizeLevel: -6.0,
+      cutAtLoopEnd: false,
+      gain: 0
     },
     notifications: [],
     importedDrumPreset: null,
@@ -155,7 +156,7 @@ describe('usePatchGeneration', () => {
           channels: 2,
           presetName: 'Test',
           normalize: false,
-          normalizeLevel: 0,
+          normalizeLevel: -6.0,
           presetSettings: {
             playmode: 'poly' as const,
             transpose: 0,
@@ -170,8 +171,9 @@ describe('usePatchGeneration', () => {
           channels: 2,
           presetName: 'Test',
           normalize: false,
-          normalizeLevel: 0,
-          cutAtLoopEnd: false
+          normalizeLevel: -6.0,
+          cutAtLoopEnd: false,
+          gain: 0
         },
         notifications: [],
         importedDrumPreset: null,

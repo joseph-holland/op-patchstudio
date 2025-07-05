@@ -146,128 +146,45 @@ export function DrumPresetSettings() {
   );
 
   return (
-    <>
-      <div style={{
-        marginBottom: '2rem'
-      }}>
+    <div style={{
+      background: 'var(--color-bg-primary)',
+      borderRadius: '15px',
+      boxShadow: '0 2px 8px var(--color-shadow-primary)',
+      border: '1px solid var(--color-border-subtle)',
+      overflow: 'hidden',
+      marginBottom: '2rem'
+    }}>
         {/* Header */}
         <div style={{
           display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          justifyContent: isMobile ? 'flex-start' : 'space-between',
-          alignItems: isMobile ? 'flex-start' : 'center',
-          gap: isMobile ? '1rem' : '0',
-          marginBottom: '1.5rem'
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: isMobile ? '0.5rem 1rem 0.5rem 1rem' : '0.7rem 1rem 0.5rem 1rem',
+          borderBottom: '1px solid var(--color-border-medium)',
+          backgroundColor: 'var(--color-bg-secondary)',
         }}>
-          <h3 style={{ 
-            margin: '0',
-            color: 'var(--color-text-primary)',
-            fontSize: '1.25rem',
-            fontWeight: '300',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            alignSelf: isMobile ? 'flex-start' : 'auto'
-          }}>
-            preset settings
-          </h3>
-          
-          <div style={{ 
-            display: 'flex', 
-            gap: '0.75rem',
-            alignSelf: isMobile ? 'center' : 'auto',
-            justifyContent: isMobile ? 'center' : 'flex-start'
-          }}>
-            <button
-              onClick={handleResetClick}
-              disabled={!hasPresetChanges}
-              style={{
-                padding: '0.625rem 1.25rem',
-                border: '1px solid var(--color-interactive-focus-ring)',
-                borderRadius: '3px',
-                backgroundColor: 'var(--color-bg-primary)',
-                color: hasPresetChanges ? 'var(--color-interactive-secondary)' : 'var(--color-border-medium)',
-                fontSize: '0.9rem',
-                fontWeight: '500',
-                cursor: hasPresetChanges ? 'pointer' : 'not-allowed',
-                transition: 'all 0.2s ease',
-                fontFamily: 'inherit',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                flex: isMobile ? '1' : 'none',
-                opacity: hasPresetChanges ? 1 : 0.6
-              }}
-              onMouseEnter={(e) => {
-                if (hasPresetChanges) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                  e.currentTarget.style.borderColor = 'var(--color-border-medium)';
-                  e.currentTarget.style.color = 'var(--color-interactive-dark)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (hasPresetChanges) {
-                  e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
-                  e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
-                  e.currentTarget.style.color = 'var(--color-interactive-secondary)';
-                }
-              }}
-            >
-              <i className="fas fa-undo" style={{ fontSize: '0.8rem' }} />
-              reset settings
-            </button>
-            
-            <button
-              onClick={handleImportClick}
-              style={{
-                padding: '0.625rem 1.25rem',
-                border: 'none',
-                borderRadius: '3px',
-                backgroundColor: 'var(--color-interactive-focus)',
-                color: 'var(--color-white)',
-                fontSize: '0.9rem',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                fontFamily: 'inherit',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                flex: isMobile ? '1' : 'none'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <i className="fas fa-upload" style={{ fontSize: '0.8rem' }} />
-              import settings
-            </button>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+            <h3 style={{
+              margin: 0,
+              color: '#222',
+              fontSize: '1.25rem',
+              fontWeight: 300,
+            }}>
+              preset settings
+            </h3>
           </div>
-          
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleFileImport}
-            style={{ display: 'none' }}
-          />
         </div>
 
-        {/* Settings Layout */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.5rem'
+        {/* Content */}
+        <div style={{ 
+          padding: isMobile ? '1rem' : '2rem',
         }}>
+          {/* Settings Layout */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem'
+          }}>
           {/* Playmode - Full Width */}
           <div style={{
             display: 'grid',
@@ -394,6 +311,99 @@ export function DrumPresetSettings() {
               </div>
             </div>
           </div>
+          
+          {/* Action Buttons Below Settings */}
+          <div style={{
+            display: 'flex',
+            gap: '1rem',
+            justifyContent: isMobile ? 'center' : 'flex-end',
+            flexDirection: isMobile ? 'column' : 'row',
+            marginTop: '2rem',
+            paddingTop: '1.5rem',
+            borderTop: '1px solid var(--color-border-light)',
+          }}>
+            <button
+              onClick={handleResetClick}
+              disabled={!hasPresetChanges}
+              style={{
+                minHeight: '44px',
+                minWidth: '44px',
+                padding: '0.75rem 1.5rem',
+                border: '1px solid var(--color-interactive-focus-ring)',
+                borderRadius: '6px',
+                backgroundColor: 'var(--color-bg-primary)',
+                color: hasPresetChanges ? 'var(--color-interactive-secondary)' : 'var(--color-border-medium)',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                cursor: hasPresetChanges ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s ease',
+                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem',
+                opacity: hasPresetChanges ? 1 : 0.6,
+                width: isMobile ? '100%' : 'auto',
+              }}
+              onMouseEnter={(e) => {
+                if (hasPresetChanges) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                  e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                  e.currentTarget.style.color = 'var(--color-interactive-dark)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (hasPresetChanges) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+                  e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
+                  e.currentTarget.style.color = 'var(--color-interactive-secondary)';
+                }
+              }}
+            >
+              <i className="fas fa-undo" style={{ fontSize: '1rem' }} />
+              reset settings
+            </button>
+            
+            <button
+              onClick={handleImportClick}
+              style={{
+                minHeight: '44px',
+                minWidth: '44px',
+                padding: '0.75rem 1.5rem',
+                border: 'none',
+                borderRadius: '6px',
+                backgroundColor: 'var(--color-interactive-focus)',
+                color: 'var(--color-white)',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem',
+                width: isMobile ? '100%' : 'auto',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
+              }}
+            >
+              <i className="fas fa-upload" style={{ fontSize: '1rem' }} />
+              import settings
+            </button>
+          </div>
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleFileImport}
+            style={{ display: 'none' }}
+          />
         </div>
       </div>
 
@@ -434,6 +444,6 @@ export function DrumPresetSettings() {
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
       />
-    </>
+    </div>
   );
 } 

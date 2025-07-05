@@ -231,7 +231,9 @@ export function DrumTool() {
     }}>
 
       {/* Always Visible Drum Keyboard Section with pinning */}
-      <div style={{ background: 'transparent', padding: isMobile ? '1rem 0.5rem' : '2rem' }}>
+      <div style={{
+        padding: isMobile ? '1rem 0.5rem' : '2rem 2rem',
+      }}>
         <DrumKeyboardContainer onFileUpload={handleFileUpload} />
       </div>
 
@@ -239,167 +241,191 @@ export function DrumTool() {
       <div style={{ 
         flex: 1,
         padding: isMobile ? '0 0.5rem' : '0 2rem',
-        marginBottom: '2rem'
+        marginBottom: '1rem'
       }}>
         {/* Sample Management Section */}
         <div style={{
           background: 'var(--color-bg-primary)',
           borderRadius: '15px',
-          padding: isMobile ? '1rem' : '2rem',
           boxShadow: '0 2px 8px var(--color-shadow-primary)',
-          border: '1px solid var(--color-border-subtle)'
+          border: '1px solid var(--color-border-subtle)',
+          overflow: 'hidden',
+          marginBottom: '1rem',
         }}>
+          {/* Header */}
           <div style={{
             display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
             justifyContent: 'space-between',
-            alignItems: isMobile ? 'flex-start' : 'flex-start',
-            marginBottom: '1.5rem',
-            gap: isMobile ? '1rem' : '0'
+            alignItems: 'center',
+            padding: isMobile ? '0.5rem 1rem 0.5rem 1rem' : '0.7rem 1rem 0.5rem 1rem',
+            borderBottom: '1px solid var(--color-border-medium)',
+            backgroundColor: 'var(--color-bg-secondary)',
           }}>
-            <h3 style={{ 
-              margin: '0',
-              color: 'var(--color-text-primary)',
-              fontSize: '1.25rem',
-              fontWeight: '300',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              sample management
-            </h3>
-                              <div style={{ 
-                display: 'flex', 
-                gap: '0.75rem', 
-                flexWrap: 'wrap',
-                justifyContent: isMobile ? 'center' : 'flex-start',
-                alignSelf: isMobile ? 'stretch' : 'auto'
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+              <h3 style={{
+                margin: 0,
+                color: '#222',
+                fontSize: '1.25rem',
+                fontWeight: 300,
               }}>
-                    <button
-                      onClick={handleClearAll}
-                      disabled={!hasLoadedSamples}
-                      style={{
-                        padding: '0.625rem 1.25rem',
-                        border: '1px solid var(--color-interactive-focus-ring)',
-                        borderRadius: '3px',
-                        backgroundColor: 'var(--color-bg-primary)',
-                        color: hasLoadedSamples ? 'var(--color-interactive-secondary)' : 'var(--color-border-medium)',
-                        fontSize: '0.9rem',
-                        fontWeight: '500',
-                        cursor: hasLoadedSamples ? 'pointer' : 'not-allowed',
-                        transition: 'all 0.2s ease',
-                        fontFamily: 'inherit',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        opacity: hasLoadedSamples ? 1 : 0.6,
-                        flex: isMobile ? '1' : 'none'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (hasLoadedSamples) {
-                          e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                          e.currentTarget.style.borderColor = 'var(--color-border-medium)';
-                          e.currentTarget.style.color = 'var(--color-interactive-dark)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (hasLoadedSamples) {
-                          e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
-                          e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
-                          e.currentTarget.style.color = 'var(--color-interactive-secondary)';
-                        }
-                      }}
-                    >
-                      <i className="fas fa-trash"></i>
-                      clear all
-                    </button>
-                    <button
-                      onClick={() => setBulkEditModal(true)}
-                      disabled={!hasMultipleLoadedSamples}
-                      style={{
-                        padding: '0.625rem 1.25rem',
-                        border: 'none',
-                        borderRadius: '3px',
-                        backgroundColor: hasMultipleLoadedSamples ? 'var(--color-interactive-focus)' : 'var(--color-border-medium)',
-                        color: 'var(--color-white)',
-                        fontSize: '0.9rem',
-                        fontWeight: '500',
-                        cursor: hasMultipleLoadedSamples ? 'pointer' : 'not-allowed',
-                        opacity: hasMultipleLoadedSamples ? 1 : 0.6,
-                        transition: 'all 0.2s ease',
-                        fontFamily: 'inherit',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        flex: isMobile ? '1' : 'none'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (hasMultipleLoadedSamples) {
-                          e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (hasMultipleLoadedSamples) {
-                          e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
-                        }
-                      }}
-                    >
-                      <i className="fas fa-pencil"></i>
-                      bulk edit
-                    </button>
-                  </div>
+                sample management
+              </h3>
+            </div>
           </div>
-          <DrumSampleTable 
-            onFileUpload={handleFileUpload}
-            onClearSample={handleClearSample}
-            onRecordSample={handleOpenRecording}
-          />
+
+          {/* Content */}
+          <div style={{ 
+            padding: isMobile ? '1rem' : '2rem',
+          }}>
+            <DrumSampleTable 
+              onFileUpload={handleFileUpload}
+              onClearSample={handleClearSample}
+              onRecordSample={handleOpenRecording}
+            />
+            
+            {/* Action Buttons Below Table */}
+            <div style={{
+              display: 'flex',
+              gap: '1rem',
+              justifyContent: isMobile ? 'center' : 'flex-end',
+              flexDirection: isMobile ? 'column' : 'row',
+              marginTop: '2rem',
+              paddingTop: '1.5rem',
+              borderTop: '1px solid var(--color-border-light)',
+            }}>
+              <button
+                onClick={handleClearAll}
+                disabled={!hasLoadedSamples}
+                style={{
+                  minHeight: '44px',
+                  minWidth: '44px',
+                  padding: '0.75rem 1.5rem',
+                  border: '1px solid var(--color-interactive-focus-ring)',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--color-bg-primary)',
+                  color: hasLoadedSamples ? 'var(--color-interactive-secondary)' : 'var(--color-border-medium)',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  cursor: hasLoadedSamples ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.75rem',
+                  opacity: hasLoadedSamples ? 1 : 0.6,
+                  width: isMobile ? '100%' : 'auto',
+                }}
+                onMouseEnter={(e) => {
+                  if (hasLoadedSamples) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                    e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                    e.currentTarget.style.color = 'var(--color-interactive-dark)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (hasLoadedSamples) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+                    e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
+                    e.currentTarget.style.color = 'var(--color-interactive-secondary)';
+                  }
+                }}
+              >
+                <i className="fas fa-trash" style={{ fontSize: '1rem' }}></i>
+                clear all samples
+              </button>
+              <button
+                onClick={() => setBulkEditModal(true)}
+                disabled={!hasMultipleLoadedSamples}
+                style={{
+                  minHeight: '44px',
+                  minWidth: '44px',
+                  padding: '0.75rem 1.5rem',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: hasMultipleLoadedSamples ? 'var(--color-interactive-focus)' : 'var(--color-border-medium)',
+                  color: 'var(--color-white)',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  cursor: hasMultipleLoadedSamples ? 'pointer' : 'not-allowed',
+                  opacity: hasMultipleLoadedSamples ? 1 : 0.6,
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.75rem',
+                  width: isMobile ? '100%' : 'auto',
+                }}
+                onMouseEnter={(e) => {
+                  if (hasMultipleLoadedSamples) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (hasMultipleLoadedSamples) {
+                    e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
+                  }
+                }}
+              >
+                <i className="fas fa-pencil" style={{ fontSize: '1rem' }}></i>
+                bulk edit samples
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Preset Settings Panel - Always Visible */}
       <div style={{
-        background: 'var(--color-bg-primary)',
-        borderTop: '1px solid var(--color-progress-track)',
-        padding: '1.5rem 2rem'
+        padding: isMobile ? '0 0.5rem' : '0 2rem',
+        marginTop: '0.25rem',
       }}>
         <DrumPresetSettings />
       </div>
 
       {/* Audio Processing */}
-      <AudioProcessingSection
-        type="drum"
-        sampleRate={state.drumSettings.sampleRate}
-        bitDepth={state.drumSettings.bitDepth}
-        channels={state.drumSettings.channels}
-        onSampleRateChange={handleSampleRateChange}
-        onBitDepthChange={handleBitDepthChange}
-        onChannelsChange={handleChannelsChange}
-        samples={state.drumSamples}
-        normalize={state.drumSettings.normalize}
-        normalizeLevel={state.drumSettings.normalizeLevel}
-        onNormalizeChange={handleNormalizeChange}
-        onNormalizeLevelChange={handleNormalizeLevelChange}
-        onResetAudioSettingsConfirm={handleResetAudioSettingsConfirm}
-      />
+      <div style={{
+        padding: isMobile ? '0 0.5rem' : '0 2rem',
+        marginTop: '0.25rem',
+      }}>
+        <AudioProcessingSection
+          type="drum"
+          sampleRate={state.drumSettings.sampleRate}
+          bitDepth={state.drumSettings.bitDepth}
+          channels={state.drumSettings.channels}
+          onSampleRateChange={handleSampleRateChange}
+          onBitDepthChange={handleBitDepthChange}
+          onChannelsChange={handleChannelsChange}
+          samples={state.drumSamples}
+          normalize={state.drumSettings.normalize}
+          normalizeLevel={state.drumSettings.normalizeLevel}
+          onNormalizeChange={handleNormalizeChange}
+          onNormalizeLevelChange={handleNormalizeLevelChange}
+          onResetAudioSettingsConfirm={handleResetAudioSettingsConfirm}
+        />
+      </div>
 
       {/* Footer - Generate Preset */}
-      <GeneratePresetSection
-        type="drum"
-        hasLoadedSamples={hasLoadedSamples}
-        hasPresetName={hasPresetName}
-        canGeneratePatch={canGeneratePatch}
-        loadedSamplesCount={state.drumSamples.filter(s => s.isLoaded).length}
-        editedSamplesCount={state.drumSamples.filter(s => s.hasBeenEdited).length}
-        presetName={state.drumSettings.presetName}
-        onPresetNameChange={handlePresetNameChange}
-        hasChangesFromDefaults={hasChangesFromDefaults}
-        onResetAll={handleResetAll}
-        onGeneratePatch={handleGeneratePatch}
-        inputId="preset-name"
-      />
+      <div style={{
+        padding: isMobile ? '0 0.5rem' : '0 2rem',
+        marginTop: '0.25rem',
+      }}>
+        <GeneratePresetSection
+          type="drum"
+          hasLoadedSamples={hasLoadedSamples}
+          hasPresetName={hasPresetName}
+          canGeneratePatch={canGeneratePatch}
+          loadedSamplesCount={state.drumSamples.filter(s => s.isLoaded).length}
+          editedSamplesCount={state.drumSamples.filter(s => s.hasBeenEdited).length}
+          presetName={state.drumSettings.presetName}
+          onPresetNameChange={handlePresetNameChange}
+          hasChangesFromDefaults={hasChangesFromDefaults}
+          onResetAll={handleResetAll}
+          onGeneratePatch={handleGeneratePatch}
+          inputId="preset-name"
+        />
+      </div>
 
       {/* Confirmation Modal */}
       <ConfirmationModal

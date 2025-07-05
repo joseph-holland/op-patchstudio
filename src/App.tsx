@@ -14,12 +14,15 @@ let pendingZoomCallback: (() => void) | null = null;
 
 // Export function to control overlay from other components
 export const triggerRotateOverlay = (zoomCallback?: () => void) => {
-  if (setShowRotateOverlayGlobal) {
-    setShowRotateOverlayGlobal(true);
-    if (zoomCallback) {
-      pendingZoomCallback = zoomCallback;
+  // Add a micro-delay to ensure proper state management timing
+  setTimeout(() => {
+    if (setShowRotateOverlayGlobal) {
+      setShowRotateOverlayGlobal(true);
+      if (zoomCallback) {
+        pendingZoomCallback = zoomCallback;
+      }
     }
-  }
+  }, 0);
 };
 
 export const hideRotateOverlay = () => {

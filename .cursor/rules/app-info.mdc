@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description: general info on op-patchstudio app
+globs:  ["**/*.ts", "**/*.tsx", "**/*.scss"]
 alwaysApply: false
 ---
 - app name: op-xy drum & multisample tool

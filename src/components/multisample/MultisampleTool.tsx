@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext';
+import { audioContextManager } from '../../utils/audioContext';
 import { ConfirmationModal } from '../common/ConfirmationModal';
 import { RecordingModal } from '../common/RecordingModal';
 import { AudioProcessingSection } from '../common/AudioProcessingSection';
@@ -106,6 +107,10 @@ export function MultisampleTool() {
     dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: level });
   };
 
+  const handleGainChange = (gain: number) => {
+    dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: gain });
+  };
+
   const handleCutAtLoopEndChange = (enabled: boolean) => {
     dispatch({ type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END', payload: enabled });
   };
@@ -119,8 +124,9 @@ export function MultisampleTool() {
         dispatch({ type: 'SET_MULTISAMPLE_BIT_DEPTH', payload: 0 });
         dispatch({ type: 'SET_MULTISAMPLE_CHANNELS', payload: 0 });
         dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE', payload: false });
-        dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: 0.0 });
+        dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: -6.0 });
         dispatch({ type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END', payload: false });
+        dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: 0 });
         setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
       }
     });
@@ -194,8 +200,9 @@ export function MultisampleTool() {
         
         // Reset normalize and cut settings
         dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE', payload: false });
-        dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: 0.0 });
+        dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: -6.0 });
         dispatch({ type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END', payload: false });
+        dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: 0 });
         
         setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
       }
@@ -253,7 +260,7 @@ export function MultisampleTool() {
   };
 
   // Handler for clicking an assigned key
-  const handleKeyClick = useCallback((midiNote: number) => {
+  const handleKeyClick = useCallback(async (midiNote: number) => {
     const zoneInfo = zoneMap.get(midiNote);
     if (!zoneInfo) return;
 
@@ -264,7 +271,7 @@ export function MultisampleTool() {
 
     if (rootSample && rootSample.audioBuffer) {
       try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const audioContext = await audioContextManager.getAudioContext();
         const source = audioContext.createBufferSource();
         source.buffer = rootSample.audioBuffer;
 
@@ -309,7 +316,7 @@ export function MultisampleTool() {
     state.multisampleSettings.bitDepth !== 0 ||
     state.multisampleSettings.channels !== 0 ||
     state.multisampleSettings.normalize !== false || // Normalize settings changed
-    state.multisampleSettings.normalizeLevel !== 0.0 ||
+    state.multisampleSettings.normalizeLevel !== -6.0 ||
     state.multisampleSettings.cutAtLoopEnd !== false // Cut at loop end changed
     // Note: Multisample preset settings are handled in MultisamplePresetSettings component
   );
@@ -335,8 +342,7 @@ export function MultisampleTool() {
 
       {/* Virtual MIDI Keyboard Section */}
       <div style={{
-        background: 'transparent',
-        padding: isMobile ? '1rem 0.5rem' : '2rem'
+        padding: isMobile ? '1rem 0.5rem' : '2rem 2rem',
       }}>
         <ErrorDisplay message={state.error || ''} />
 
@@ -357,122 +363,71 @@ export function MultisampleTool() {
       <div style={{ 
         flex: 1,
         padding: isMobile ? '0 0.5rem' : '0 2rem',
-        marginBottom: '2rem'
+        marginBottom: '1rem'
       }}>
         {/* Sample Management Section */}
         <div style={{
-          background: '#fff',
+          background: 'var(--color-bg-primary)',
           borderRadius: '15px',
-          padding: isMobile ? '1rem' : '2rem',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #f0f0f0'
+          boxShadow: '0 2px 8px var(--color-shadow-primary)',
+          border: '1px solid var(--color-border-subtle)',
+          overflow: 'hidden',
+          marginBottom: '1rem',
         }}>
+          {/* Header */}
           <div style={{
             display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
             justifyContent: 'space-between',
-            alignItems: isMobile ? 'flex-start' : 'flex-start',
-            marginBottom: '1.5rem',
-            gap: isMobile ? '1rem' : '0'
+            alignItems: 'center',
+            padding: isMobile ? '0.5rem 1rem 0.5rem 1rem' : '0.7rem 1rem 0.5rem 1rem',
+            borderBottom: '1px solid var(--color-border-medium)',
+            backgroundColor: 'var(--color-bg-secondary)',
           }}>
-            <h3 style={{ 
-              margin: '0',
-              color: '#222',
-              fontSize: '1.25rem',
-              fontWeight: '300',
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+              <h3 style={{
+                margin: 0,
+                color: '#222',
+                fontSize: '1.25rem',
+                fontWeight: 300,
+              }}>
+                sample management
+              </h3>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div style={{ 
+            padding: isMobile ? '1rem' : '2rem',
+          }}>
+            <MultisampleSampleTable 
+              onFileUpload={handleFileUpload}
+              onClearSample={handleClearSample}
+              onRecordSample={handleOpenRecording}
+              onFilesSelected={handleFilesSelected}
+              onBrowseFilesRef={browseFilesRef}
+            />
+            
+            {/* Action Buttons Below Table */}
+            <div style={{
               display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
+              gap: '1rem',
+              justifyContent: isMobile ? 'center' : 'flex-end',
+              flexDirection: isMobile ? 'column' : 'row',
+              marginTop: '2rem',
+              paddingTop: '1.5rem',
+              borderTop: '1px solid var(--color-border-light)',
             }}>
-              sample management
-            </h3>
-            <div style={{ 
-              display: 'flex', 
-              gap: '0.75rem', 
-              flexWrap: 'wrap',
-              justifyContent: isMobile ? 'center' : 'flex-start',
-              alignSelf: isMobile ? 'stretch' : 'auto'
-            }}>
-              <button
-                onClick={() => {
-                  // Trigger the browse files function from MultisampleSampleTable
-                  if (browseFilesRef.current) {
-                    browseFilesRef.current();
-                  }
-                }}
-                style={{
-                  padding: '0.625rem 1.25rem',
-                  border: 'none',
-                  borderRadius: '3px',
-                  backgroundColor: '#333',
-                  color: '#fff',
-                  fontSize: '0.9rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  flex: isMobile ? '1' : 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#555';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#333';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                <i className="fas fa-folder-open"></i>
-                browse files
-              </button>
-              <button
-                onClick={() => setRecordingModal({ isOpen: true, targetIndex: null })}
-                style={{
-                  padding: '0.625rem 1.25rem',
-                  border: 'none',
-                  borderRadius: '3px',
-                  backgroundColor: '#333',
-                  color: '#fff',
-                  fontSize: '0.9rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  flex: isMobile ? '1' : 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#555';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#333';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                <i className="fas fa-microphone"></i>
-                record sample
-              </button>
               <button
                 onClick={handleClearAll}
                 disabled={!hasLoadedSamples}
                 style={{
-                  padding: '0.625rem 1.25rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '3px',
-                  backgroundColor: '#fff',
-                  color: hasLoadedSamples ? '#6b7280' : '#9ca3af',
+                  minHeight: '44px',
+                  minWidth: '44px',
+                  padding: '0.75rem 1.5rem',
+                  border: '1px solid var(--color-interactive-focus-ring)',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--color-bg-primary)',
+                  color: hasLoadedSamples ? 'var(--color-interactive-secondary)' : 'var(--color-border-medium)',
                   fontSize: '0.9rem',
                   fontWeight: '500',
                   cursor: hasLoadedSamples ? 'pointer' : 'not-allowed',
@@ -481,83 +436,158 @@ export function MultisampleTool() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.5rem',
+                  gap: '0.75rem',
                   opacity: hasLoadedSamples ? 1 : 0.6,
-                  flex: isMobile ? '1' : 'none'
+                  width: isMobile ? '100%' : 'auto',
                 }}
                 onMouseEnter={(e) => {
                   if (hasLoadedSamples) {
-                    e.currentTarget.style.backgroundColor = '#f9fafb';
-                    e.currentTarget.style.borderColor = '#9ca3af';
-                    e.currentTarget.style.color = '#374151';
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                    e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                    e.currentTarget.style.color = 'var(--color-interactive-dark)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (hasLoadedSamples) {
-                    e.currentTarget.style.backgroundColor = '#fff';
-                    e.currentTarget.style.borderColor = '#d1d5db';
-                    e.currentTarget.style.color = '#6b7280';
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+                    e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
+                    e.currentTarget.style.color = 'var(--color-interactive-secondary)';
                   }
                 }}
               >
-                <i className="fas fa-trash"></i>
-                clear all
+                <i className="fas fa-trash" style={{ fontSize: '1rem' }}></i>
+                clear all samples
+              </button>
+              <button
+                onClick={() => setRecordingModal({ isOpen: true, targetIndex: null })}
+                style={{
+                  minHeight: '44px',
+                  minWidth: '44px',
+                  padding: '0.75rem 1.5rem',
+                  border: '1px solid var(--color-interactive-focus-ring)',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--color-bg-primary)',
+                  color: 'var(--color-interactive-secondary)',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.75rem',
+                  width: isMobile ? '100%' : 'auto',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                  e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                  e.currentTarget.style.color = 'var(--color-interactive-dark)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+                  e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
+                  e.currentTarget.style.color = 'var(--color-interactive-secondary)';
+                }}
+              >
+                <i className="fas fa-microphone" style={{ fontSize: '1rem' }}></i>
+                record sample
+              </button>
+              <button
+                onClick={() => {
+                  // Trigger the browse files function from MultisampleSampleTable
+                  if (browseFilesRef.current) {
+                    browseFilesRef.current();
+                  }
+                }}
+                style={{
+                  minHeight: '44px',
+                  minWidth: '44px',
+                  padding: '0.75rem 1.5rem',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--color-interactive-focus)',
+                  color: 'var(--color-white)',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.75rem',
+                  width: isMobile ? '100%' : 'auto',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
+                }}
+              >
+                <i className="fas fa-folder-open" style={{ fontSize: '1rem' }}></i>
+                browse files
               </button>
             </div>
           </div>
-          <MultisampleSampleTable 
-            onFileUpload={handleFileUpload}
-            onClearSample={handleClearSample}
-            onRecordSample={handleOpenRecording}
-            onFilesSelected={handleFilesSelected}
-            onBrowseFilesRef={browseFilesRef}
-          />
         </div>
       </div>
 
       {/* Preset Settings Panel - Always Visible */}
       <div style={{
-        background: '#fff',
-        borderTop: '1px solid #e0e0e0',
-        padding: '1.5rem 2rem'
+        padding: isMobile ? '0 0.5rem' : '0 2rem',
+        marginTop: '0.25rem',
       }}>
         <MultisamplePresetSettings />
       </div>
 
       {/* Audio Processing */}
-      <AudioProcessingSection
-        type="multisample"
-        sampleRate={state.multisampleSettings.sampleRate}
-        bitDepth={state.multisampleSettings.bitDepth}
-        channels={state.multisampleSettings.channels}
-        onSampleRateChange={handleSampleRateChange}
-        onBitDepthChange={handleBitDepthChange}
-        onChannelsChange={handleChannelsChange}
-        samples={state.multisampleFiles}
-        normalize={state.multisampleSettings.normalize}
-        normalizeLevel={state.multisampleSettings.normalizeLevel}
-        onNormalizeChange={handleNormalizeChange}
-        onNormalizeLevelChange={handleNormalizeLevelChange}
-        cutAtLoopEnd={state.multisampleSettings.cutAtLoopEnd}
-        onCutAtLoopEndChange={handleCutAtLoopEndChange}
-        onResetAudioSettingsConfirm={handleResetAudioSettingsConfirm}
-      />
+      <div style={{
+        padding: isMobile ? '0 0.5rem' : '0 2rem',
+        marginTop: '0.25rem',
+      }}>
+        <AudioProcessingSection
+          type="multisample"
+          sampleRate={state.multisampleSettings.sampleRate}
+          bitDepth={state.multisampleSettings.bitDepth}
+          channels={state.multisampleSettings.channels}
+          onSampleRateChange={handleSampleRateChange}
+          onBitDepthChange={handleBitDepthChange}
+          onChannelsChange={handleChannelsChange}
+          samples={state.multisampleFiles}
+          normalize={state.multisampleSettings.normalize}
+          normalizeLevel={state.multisampleSettings.normalizeLevel}
+          onNormalizeChange={handleNormalizeChange}
+          onNormalizeLevelChange={handleNormalizeLevelChange}
+          gain={state.multisampleSettings.gain}
+          onGainChange={handleGainChange}
+          cutAtLoopEnd={state.multisampleSettings.cutAtLoopEnd}
+          onCutAtLoopEndChange={handleCutAtLoopEndChange}
+          onResetAudioSettingsConfirm={handleResetAudioSettingsConfirm}
+        />
+      </div>
 
       {/* Footer - Generate Preset */}
-      <GeneratePresetSection
-        type="multisample"
-        hasLoadedSamples={hasLoadedSamples}
-        hasPresetName={hasPresetName}
-        canGeneratePatch={canGeneratePatch}
-        loadedSamplesCount={state.multisampleFiles.length}
-        editedSamplesCount={0} // Multisample doesn't have individual sample editing yet
-        presetName={state.multisampleSettings.presetName}
-        onPresetNameChange={handlePresetNameChange}
-        hasChangesFromDefaults={hasChangesFromDefaults}
-        onResetAll={handleResetAll}
-        onGeneratePatch={handleGeneratePatch}
-        inputId="preset-name-multi"
-      />
+      <div style={{
+        padding: isMobile ? '0 0.5rem' : '0 2rem',
+        marginTop: '0.25rem',
+      }}>
+        <GeneratePresetSection
+          type="multisample"
+          hasLoadedSamples={hasLoadedSamples}
+          hasPresetName={hasPresetName}
+          canGeneratePatch={canGeneratePatch}
+          loadedSamplesCount={state.multisampleFiles.length}
+          editedSamplesCount={0} // Multisample doesn't have individual sample editing yet
+          presetName={state.multisampleSettings.presetName}
+          onPresetNameChange={handlePresetNameChange}
+          hasChangesFromDefaults={hasChangesFromDefaults}
+          onResetAll={handleResetAll}
+          onGeneratePatch={handleGeneratePatch}
+          inputId="preset-name-multi"
+        />
+      </div>
 
       {/* Confirmation Modal */}
       <ConfirmationModal

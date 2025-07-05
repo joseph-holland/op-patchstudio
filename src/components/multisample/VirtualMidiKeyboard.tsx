@@ -37,6 +37,7 @@ export function VirtualMidiKeyboard({
   // Keyboard control state
   const [activeOctave, setActiveOctave] = useState(4); // Default to middle C (C4)
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
+  const [mousePressedKey, setMousePressedKey] = useState<number | null>(null);
   
   // Keyboard mapping - white keys (bottom row) and black keys (top row)
   const keyboardMapping = {
@@ -59,8 +60,8 @@ export function VirtualMidiKeyboard({
   // Octave control functions
   const changeOctave = useCallback((direction: 'up' | 'down') => {
     setActiveOctave(prev => {
-      if (direction === 'up' && prev < 9) return prev + 1;
-      if (direction === 'down' && prev > -1) return prev - 1;
+      if (direction === 'up' && prev < 8) return prev + 1;
+      if (direction === 'down' && prev > -2) return prev - 1;
       return prev;
     });
   }, []);
@@ -111,10 +112,12 @@ export function VirtualMidiKeyboard({
       
       // Handle octave switching
       if (key === 'z') {
+        setPressedKeys(prev => new Set([...prev, key]));
         changeOctave('down');
         return;
       }
       if (key === 'x') {
+        setPressedKeys(prev => new Set([...prev, key]));
         changeOctave('up');
         return;
       }
@@ -144,7 +147,7 @@ export function VirtualMidiKeyboard({
       }
       
       const key = e.key.toLowerCase();
-      if (key in keyboardMapping) {
+      if (key in keyboardMapping || key === 'z' || key === 'x') {
         setPressedKeys(prev => {
           const newSet = new Set(prev);
           newSet.delete(key);
@@ -166,6 +169,14 @@ export function VirtualMidiKeyboard({
   useEffect(() => {
     centerActiveOctave();
   }, [activeOctave, centerActiveOctave]);
+
+  // Handle unpinning while stuck - reset stuck state without scrolling
+  useEffect(() => {
+    if (!isPinned && isStuck) {
+      setDynamicStyles({});
+      setIsStuck(false);
+    }
+  }, [isPinned, isStuck]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -248,7 +259,7 @@ export function VirtualMidiKeyboard({
 
 
   // Helper function to get computer key for a MIDI note in the active octave
-  const getComputerKeyForNote = (midiNote: number): string | null => {
+  const getComputerKeyForNote = useCallback((midiNote: number): string | null => {
     // Fix: Use C3 = 60 convention. C3 is octave 3, so C0 = 60 - (3 * 12) = 24
     const noteOctave = Math.floor((midiNote - 24) / 12);
     if (noteOctave !== activeOctave) return null;
@@ -262,17 +273,28 @@ export function VirtualMidiKeyboard({
       }
     }
     return null;
-  };
+  }, [activeOctave, keyboardMapping]);
 
   const handleKeyClick = useCallback((midiNote: number) => {
     const isAssigned = assignedNotes.includes(midiNote);
-    
+    // Find the computer key for this midiNote in the current octave
+    const computerKey = getComputerKeyForNote(midiNote);
+    if (computerKey) {
+      setPressedKeys(prev => new Set([...prev, computerKey.toLowerCase()]));
+      setTimeout(() => {
+        setPressedKeys(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(computerKey.toLowerCase());
+          return newSet;
+        });
+      }, 150);
+    }
     if (isAssigned) {
       onKeyClick?.(midiNote);
     } else {
       onUnassignedKeyClick?.(midiNote);
     }
-  }, [assignedNotes, onKeyClick, onUnassignedKeyClick]);
+  }, [assignedNotes, onKeyClick, onUnassignedKeyClick, getComputerKeyForNote]);
 
   const handleKeyMouseEnter = useCallback((midiNote: number) => {
     setHoveredKey(midiNote);
@@ -333,13 +355,13 @@ export function VirtualMidiKeyboard({
         const isHovered = hoveredKey === midiNote;
         const isDragOver = dragOverKey === midiNote;
         const computerKey = getComputerKeyForNote(midiNote);
-        const isPressed = computerKey && pressedKeys.has(computerKey.toLowerCase());
+        const isPressed = (computerKey && pressedKeys.has(computerKey.toLowerCase())) || mousePressedKey === midiNote;
         
         // Define key colors based on state
         const whiteKeyColors = {
           base: isAssigned ? 'var(--color-bg-primary)' : 'var(--color-key-inactive-white-bg)',
           hover: 'var(--color-surface-secondary)',
-          pressed: 'var(--color-interactive-secondary)',
+          pressed: isPressed ? 'linear-gradient(to top, var(--color-border-subtle) 0%, var(--color-bg-primary) 70%, var(--color-bg-primary) 100%)' : 'var(--color-interactive-secondary)',
           dragOver: 'var(--color-interactive-focus-ring)',
         };
         
@@ -351,7 +373,15 @@ export function VirtualMidiKeyboard({
               position: 'relative',
               width: '24px',
               height: '120px',
-              backgroundColor: isDragOver ? whiteKeyColors.dragOver : isPressed ? whiteKeyColors.pressed : isHovered ? whiteKeyColors.hover : whiteKeyColors.base,
+              ...(isDragOver
+                ? { backgroundColor: whiteKeyColors.dragOver }
+                : isPressed && whiteKeyColors.pressed.startsWith('linear-gradient')
+                  ? { background: whiteKeyColors.pressed }
+                  : isPressed
+                    ? { backgroundColor: whiteKeyColors.pressed }
+                    : isHovered
+                      ? { backgroundColor: whiteKeyColors.hover }
+                      : { backgroundColor: whiteKeyColors.base }),
               border: isDragOver ? '2px solid var(--color-text-secondary)' : `1px solid ${isAssigned ? 'var(--color-black)' : 'var(--color-key-inactive-border)'}`,
               borderRadius: '0 0 4px 4px',
               cursor: 'pointer',
@@ -364,12 +394,13 @@ export function VirtualMidiKeyboard({
               padding: '2px',
               transition: 'all 0.1s ease',
               userSelect: 'none',
-              boxShadow: isHovered ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-              transform: isHovered ? 'translateY(-1px)' : 'none'
+              boxShadow: isHovered ? '0 2px 4px rgba(0,0,0,0.1)' : '0 2px 6px rgba(0,0,0,0.3)',
             }}
+            onMouseDown={() => setMousePressedKey(midiNote)}
+            onMouseUp={() => setMousePressedKey(null)}
+            onMouseLeave={() => { setMousePressedKey(null); handleKeyMouseLeave(); }}
             onClick={() => handleKeyClick(midiNote)}
             onMouseEnter={() => handleKeyMouseEnter(midiNote)}
-            onMouseLeave={handleKeyMouseLeave}
             onDragOver={(e) => handleKeyDragOver(e, midiNote)}
             onDragLeave={handleKeyDragLeave}
             onDrop={(e) => handleKeyDrop(e, midiNote)}
@@ -377,7 +408,7 @@ export function VirtualMidiKeyboard({
             {/* Octave marker for C notes - always visible, color changes */}
             {noteInOctave === 0 && (
               <span style={{ 
-                fontSize: '9px', 
+                fontSize: '10px', 
                 fontWeight: '600',
                 color: isAssigned ? 'var(--color-black)' : 'var(--color-text-secondary)'
               }}>
@@ -407,13 +438,13 @@ export function VirtualMidiKeyboard({
         const isHovered = hoveredKey === midiNote;
         const isDragOver = dragOverKey === midiNote;
         const computerKey = getComputerKeyForNote(midiNote);
-        const isPressed = computerKey && pressedKeys.has(computerKey.toLowerCase());
+        const isPressed = (computerKey && pressedKeys.has(computerKey.toLowerCase())) || mousePressedKey === midiNote;
         
         // Define key colors based on state
         const blackKeyColors = {
           base: isAssigned ? 'var(--color-interactive-dark)' : 'var(--color-key-inactive-black-bg)',
           hover: 'var(--color-interactive-dark)',
-          pressed: 'var(--color-interactive-secondary)',
+          pressed: isPressed ? 'linear-gradient(to top, var(--color-key-inactive-black-bg) 0%, var(--color-interactive-dark) 70%, var(--color-interactive-dark) 100%)' : 'var(--color-interactive-secondary)',
           dragOver: 'var(--color-interactive-secondary)',
         };
         
@@ -427,19 +458,27 @@ export function VirtualMidiKeyboard({
               top: '0',
               width: '14px',
               height: '75px',
-              backgroundColor: isDragOver ? blackKeyColors.dragOver : isPressed ? blackKeyColors.pressed : isHovered ? blackKeyColors.hover : blackKeyColors.base,
+              ...(isDragOver
+                ? { backgroundColor: blackKeyColors.dragOver }
+                : isPressed && blackKeyColors.pressed.startsWith('linear-gradient')
+                  ? { background: blackKeyColors.pressed }
+                  : isPressed
+                    ? { backgroundColor: blackKeyColors.pressed }
+                    : isHovered
+                      ? { backgroundColor: blackKeyColors.hover }
+                      : { backgroundColor: blackKeyColors.base }),
               border: isDragOver ? '2px solid var(--color-text-secondary)' : `1px solid ${isAssigned ? 'var(--color-interactive-focus)' : 'var(--color-key-inactive-border)'}`,
               borderRadius: '0 0 2px 2px',
               cursor: 'pointer',
               zIndex: 2,
-              transition: 'all 0.1s ease',
               userSelect: 'none',
-              boxShadow: isHovered ? '0 2px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.2)',
-              transform: isHovered ? 'translateY(-1px)' : 'none'
+              boxShadow: isHovered ? '0 3px 8px rgba(0,0,0,0.5)' : '0 2px 4px rgba(0,0,0,0.3)',
             }}
+            onMouseDown={() => setMousePressedKey(midiNote)}
+            onMouseUp={() => setMousePressedKey(null)}
+            onMouseLeave={() => { setMousePressedKey(null); handleKeyMouseLeave(); }}
             onClick={() => handleKeyClick(midiNote)}
             onMouseEnter={() => handleKeyMouseEnter(midiNote)}
-            onMouseLeave={handleKeyMouseLeave}
             onDragOver={(e) => handleKeyDragOver(e, midiNote)}
             onDragLeave={handleKeyDragLeave}
             onDrop={(e) => handleKeyDrop(e, midiNote)}
@@ -608,230 +647,310 @@ export function VirtualMidiKeyboard({
             {renderKeys()}
 
             {/* Compact Indicator Strip Over Keyboard - hidden on mobile */}
-            {!isMobile && (
-            <div style={{
-              position: 'absolute',
-              left: `${(activeOctave + 1) * 168}px`, // Each octave is 7 keys * 24px = 168px
-              top: '10px', // Position near the top of the keys
-              width: activeOctave === 9 ? '120px' : '168px', // Shorter for top octave
-              height: '24px',
-              backgroundColor: 'rgba(102, 102, 102, 0.8)', // #666 with 0.8 opacity
-              borderRadius: '3px',
-              zIndex: 15, // Ensure it's on top of keys and fades
-              pointerEvents: 'none', // Make it non-interactive
-              transition: 'left 0.3s ease-in-out, width 0.3s ease-in-out' // Smooth transition for position and size
-            }}>
-              {/* Position letters exactly centered on their corresponding keys */}
-              
-              {/* C key - A (white key 0-24px, center at 12px) */}
-              <div style={{
-                position: 'absolute',
-                left: '9px',
-                top: '65%', // Adjusted to be in lower part of rect
-                transform: 'translate(-50%, -50%)',
-                fontSize: '9px',
-                fontWeight: '600',
-                color: pressedKeys.has('a') ? '#ffd700' : '#fff',
-                letterSpacing: '0.5px',
-                lineHeight: '1',
-                textShadow: pressedKeys.has('a') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                transition: 'all 0.1s ease'
-              }}>
-                A
-              </div>
-              
-              {/* C# key - W (black key at 17px, width 14px, center at 17+7=24px) */}
-              <div style={{
-                position: 'absolute',
-                left: '24px',
-                top: '35%', // Adjusted to be in upper part of rect
-                transform: 'translate(-50%, -50%)',
-                fontSize: '9px',
-                fontWeight: '600',
-                color: pressedKeys.has('w') ? '#ffd700' : '#fff',
-                letterSpacing: '0.5px',
-                lineHeight: '1',
-                textShadow: pressedKeys.has('w') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                transition: 'all 0.1s ease'
-              }}>
-                W
-              </div>
-              
-              {/* D key - S (white key 24-48px, center at 36px) */}
-              <div style={{
-                position: 'absolute',
-                left: '36px',
-                top: '65%', // Adjusted to be in lower part of rect
-                transform: 'translate(-50%, -50%)',
-                fontSize: '9px',
-                fontWeight: '600',
-                color: pressedKeys.has('s') ? '#ffd700' : '#fff',
-                letterSpacing: '0.5px',
-                lineHeight: '1',
-                textShadow: pressedKeys.has('s') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                transition: 'all 0.1s ease'
-              }}>
-                S
-              </div>
-              
-              {/* D# key - E (black key at 41px, width 14px, center at 41+7=48px) */}
-              <div style={{
-                position: 'absolute',
-                left: '48px',
-                top: '35%', // Adjusted to be in upper part of rect
-                transform: 'translate(-50%, -50%)',
-                fontSize: '9px',
-                fontWeight: '600',
-                color: pressedKeys.has('e') ? '#ffd700' : '#fff',
-                letterSpacing: '0.5px',
-                lineHeight: '1',
-                textShadow: pressedKeys.has('e') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                transition: 'all 0.1s ease'
-              }}>
-                E
-              </div>
-              
-              {/* E key - D (white key 48-72px, center at 60px) */}
-              <div style={{
-                position: 'absolute',
-                left: '63px',
-                top: '65%', // Adjusted to be in lower part of rect
-                transform: 'translate(-50%, -50%)',
-                fontSize: '9px',
-                fontWeight: '600',
-                color: pressedKeys.has('d') ? '#ffd700' : '#fff',
-                letterSpacing: '0.5px',
-                lineHeight: '1',
-                textShadow: pressedKeys.has('d') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                transition: 'all 0.1s ease'
-              }}>
-                D
-              </div>
-              
-              {/* F key - F (white key 72-96px, center at 84px) */}
-              <div style={{
-                position: 'absolute',
-                left: '81px',
-                top: '65%', // Adjusted to be in lower part of rect
-                transform: 'translate(-50%, -50%)',
-                fontSize: '9px',
-                fontWeight: '600',
-                color: pressedKeys.has('f') ? '#ffd700' : '#fff',
-                letterSpacing: '0.5px',
-                lineHeight: '1',
-                textShadow: pressedKeys.has('f') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                transition: 'all 0.1s ease'
-              }}>
-                F
-              </div>
-              
-              {/* F# key - T (black key at 89px, width 14px, center at 89+7=96px) */}
-              <div style={{
-                position: 'absolute',
-                left: '96px',
-                top: '35%', // Adjusted to be in upper part of rect
-                transform: 'translate(-50%, -50%)',
-                fontSize: '9px',
-                fontWeight: '600',
-                color: pressedKeys.has('t') ? '#ffd700' : '#fff',
-                letterSpacing: '0.5px',
-                lineHeight: '1',
-                textShadow: pressedKeys.has('t') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                transition: 'all 0.1s ease'
-              }}>
-                T
-              </div>
-              
-              {/* G key - G (white key 96-120px, center at 108px) */}
-              <div style={{
-                position: 'absolute',
-                left: activeOctave === 9 ? '111px' : '108px',
-                top: '65%', // Adjusted to be in lower part of rect
-                transform: 'translate(-50%, -50%)',
-                fontSize: '9px',
-                fontWeight: '600',
-                color: pressedKeys.has('g') ? '#ffd700' : '#fff',
-                letterSpacing: '0.5px',
-                lineHeight: '1',
-                textShadow: pressedKeys.has('g') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                transition: 'all 0.1s ease'
-              }}>
-                G
-              </div>
-              
-              {activeOctave !== 9 && (
-                <>
-                  {/* G# key - Y (black key at 113px, width 14px, center at 113+7=120px) */}
+            {!isMobile && (() => {
+              const octaveWidth = 168;
+              const indicatorPadding = 24;
+              const firstOctave = -2;
+              const lastOctaveWithKeys = 8;
+              const lastOctaveKeysWidth = 120; // Keys only render up to G8
+
+              let indicatorLeft, indicatorWidth;
+              let letterContainerLeft, letterContainerWidth;
+
+              if (activeOctave === firstOctave) {
+                // Lowest octave: flush left, padding on right for 'X'
+                indicatorLeft = 0;
+                indicatorWidth = octaveWidth + indicatorPadding;
+                letterContainerLeft = 0;
+                letterContainerWidth = octaveWidth;
+              } else if (activeOctave >= lastOctaveWithKeys) {
+                // Highest octave(s): padding on left for 'Z', width of last keys
+                indicatorLeft = (lastOctaveWithKeys + 2) * octaveWidth - indicatorPadding;
+                indicatorWidth = lastOctaveKeysWidth + indicatorPadding;
+                letterContainerLeft = indicatorPadding;
+                letterContainerWidth = lastOctaveKeysWidth;
+              } else {
+                // Middle octaves: padding on both sides
+                indicatorLeft = (activeOctave + 2) * octaveWidth - indicatorPadding;
+                indicatorWidth = octaveWidth + (2 * indicatorPadding);
+                letterContainerLeft = indicatorPadding;
+                letterContainerWidth = octaveWidth;
+              }
+
+              return (
+                <div style={{
+                  position: 'absolute',
+                  left: `${indicatorLeft}px`,
+                  top: '10px',
+                  width: `${indicatorWidth}px`,
+                  height: '24px',
+                  backgroundColor: '#fff',
+                  border: '2px solid #000',
+                  borderRadius: '3px',
+                  boxShadow: '0 6px 12px rgba(0, 0, 0, 0.4)',
+                  zIndex: 15,
+                  pointerEvents: 'none',
+                  opacity: loadedSamplesCount > 0 ? 1 : 0,
+                  transition: 'left 0.3s ease-in-out, width 0.3s ease-in-out, opacity 0.75s ease-in-out'
+                }}>
+                  {/* Letter keys container */}
                   <div style={{
                     position: 'absolute',
-                    left: '120px',
-                    top: '35%', // Adjusted to be in upper part of rect
-                    transform: 'translate(-50%, -50%)',
-                    fontSize: '9px',
-                    fontWeight: '600',
-                    color: pressedKeys.has('y') ? '#ffd700' : '#fff',
-                    letterSpacing: '0.5px',
-                    lineHeight: '1',
-                    textShadow: pressedKeys.has('y') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                    transition: 'all 0.1s ease'
+                    left: `${letterContainerLeft}px`,
+                    width: `${letterContainerWidth}px`,
+                    height: '100%'
                   }}>
-                    Y
-                  </div>
-                  
-                  {/* A key - H (white key 120-144px, center at 132px) */}
+                                      {/* C key - A (white key 0-24px, center at 12px) */}
                   <div style={{
                     position: 'absolute',
-                    left: '132px',
+                    left: '9px',
                     top: '65%', // Adjusted to be in lower part of rect
                     transform: 'translate(-50%, -50%)',
-                    fontSize: '9px',
-                    fontWeight: '600',
-                    color: pressedKeys.has('h') ? '#ffd700' : '#fff',
+                    fontSize: '10px',
+                    fontWeight: pressedKeys.has('a') ? '700' : '600',
+                    color: pressedKeys.has('a') ? 'var(--color-interactive-secondary)' : '#000',
                     letterSpacing: '0.5px',
                     lineHeight: '1',
-                    textShadow: pressedKeys.has('h') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                    transition: 'all 0.1s ease'
+                    textShadow: pressedKeys.has('a') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
-                    H
+                    A
                   </div>
                   
-                  {/* A# key - U (black key at 137px, width 14px, center at 137+7=144px) */}
+                  {/* C# key - W (black key at 17px, width 14px, center at 17+7=24px) */}
                   <div style={{
                     position: 'absolute',
-                    left: '144px',
+                    left: '24px',
                     top: '35%', // Adjusted to be in upper part of rect
                     transform: 'translate(-50%, -50%)',
-                    fontSize: '9px',
-                    fontWeight: '600',
-                    color: pressedKeys.has('u') ? '#ffd700' : '#fff',
+                    fontSize: '10px',
+                    fontWeight: pressedKeys.has('w') ? '700' : '600',
+                    color: pressedKeys.has('w') ? 'var(--color-interactive-secondary)' : '#000',
                     letterSpacing: '0.5px',
                     lineHeight: '1',
-                    textShadow: pressedKeys.has('u') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                    transition: 'all 0.1s ease'
+                    textShadow: pressedKeys.has('w') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
-                    U
+                    W
                   </div>
                   
-                  {/* B key - J (white key 144-168px, center at 159px) */}
+                  {/* D key - S (white key 24-48px, center at 36px) */}
                   <div style={{
                     position: 'absolute',
-                    left: '159px',
+                    left: '36px',
                     top: '65%', // Adjusted to be in lower part of rect
                     transform: 'translate(-50%, -50%)',
-                    fontSize: '9px',
-                    fontWeight: '600',
-                    color: pressedKeys.has('j') ? '#ffd700' : '#fff',
+                    fontSize: '10px',
+                    fontWeight: pressedKeys.has('s') ? '700' : '600',
+                    color: pressedKeys.has('s') ? 'var(--color-interactive-secondary)' : '#000',
                     letterSpacing: '0.5px',
                     lineHeight: '1',
-                    textShadow: pressedKeys.has('j') ? '0 0 2px rgba(255, 215, 0, 0.8)' : 'none',
-                    transition: 'all 0.1s ease'
+                    textShadow: pressedKeys.has('s') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
                   }}>
-                    J
+                    S
                   </div>
-                </>
-              )}
-            </div>
-            )}
+                  
+                  {/* D# key - E (black key at 41px, width 14px, center at 41+7=48px) */}
+                  <div style={{
+                    position: 'absolute',
+                    left: '48px',
+                    top: '35%', // Adjusted to be in upper part of rect
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: '10px',
+                    fontWeight: pressedKeys.has('e') ? '700' : '600',
+                    color: pressedKeys.has('e') ? 'var(--color-interactive-secondary)' : '#000',
+                    letterSpacing: '0.5px',
+                    lineHeight: '1',
+                    textShadow: pressedKeys.has('e') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
+                  }}>
+                    E
+                  </div>
+                  
+                  {/* E key - D (white key 48-72px, center at 60px) */}
+                  <div style={{
+                    position: 'absolute',
+                    left: '63px',
+                    top: '65%', // Adjusted to be in lower part of rect
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: '10px',
+                    fontWeight: pressedKeys.has('d') ? '700' : '600',
+                    color: pressedKeys.has('d') ? 'var(--color-interactive-secondary)' : '#000',
+                    letterSpacing: '0.5px',
+                    lineHeight: '1',
+                    textShadow: pressedKeys.has('d') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
+                  }}>
+                    D
+                  </div>
+                  
+                  {/* F key - F (white key 72-96px, center at 84px) */}
+                  <div style={{
+                    position: 'absolute',
+                    left: '81px',
+                    top: '65%', // Adjusted to be in lower part of rect
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: '10px',
+                    fontWeight: pressedKeys.has('f') ? '700' : '600',
+                    color: pressedKeys.has('f') ? 'var(--color-interactive-secondary)' : '#000',
+                    letterSpacing: '0.5px',
+                    lineHeight: '1',
+                    textShadow: pressedKeys.has('f') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
+                  }}>
+                    F
+                  </div>
+                  
+                  {/* F# key - T (black key at 89px, width 14px, center at 89+7=96px) */}
+                  <div style={{
+                    position: 'absolute',
+                    left: '96px',
+                    top: '35%', // Adjusted to be in upper part of rect
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: '10px',
+                    fontWeight: pressedKeys.has('t') ? '700' : '600',
+                    color: pressedKeys.has('t') ? 'var(--color-interactive-secondary)' : '#000',
+                    letterSpacing: '0.5px',
+                    lineHeight: '1',
+                    textShadow: pressedKeys.has('t') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
+                  }}>
+                    T
+                  </div>
+                  
+                  {/* G key - G (white key 96-120px, center at 108px) */}
+                  <div style={{
+                    position: 'absolute',
+                    left: '108px',
+                    top: '65%',
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: '10px',
+                    fontWeight: pressedKeys.has('g') ? '700' : '600',
+                    color: pressedKeys.has('g') ? 'var(--color-interactive-secondary)' : '#000',
+                    letterSpacing: '0.5px',
+                    lineHeight: '1',
+                    textShadow: pressedKeys.has('g') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                    transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
+                  }}>
+                    G
+                  </div>
+                  
+                  {/* Hide subsequent keys on the last octave */}
+                  {activeOctave < lastOctaveWithKeys && (
+                    <>
+                      {/* G# key - Y (black key at 113px, width 14px, center at 113+7=120px) */}
+                      <div style={{
+                        position: 'absolute',
+                        left: '120px',
+                        top: '35%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: '10px',
+                        fontWeight: pressedKeys.has('y') ? '700' : '600',
+                        color: pressedKeys.has('y') ? 'var(--color-interactive-secondary)' : '#000',
+                        letterSpacing: '0.5px',
+                        lineHeight: '1',
+                        textShadow: pressedKeys.has('y') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                        transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
+                      }}>
+                        Y
+                      </div>
+                      
+                      {/* A key - H (white key 120-144px, center at 132px) */}
+                      <div style={{
+                        position: 'absolute',
+                        left: '132px',
+                        top: '65%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: '10px',
+                        fontWeight: pressedKeys.has('h') ? '700' : '600',
+                        color: pressedKeys.has('h') ? 'var(--color-interactive-secondary)' : '#000',
+                        letterSpacing: '0.5px',
+                        lineHeight: '1',
+                        textShadow: pressedKeys.has('h') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                        transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
+                      }}>
+                        H
+                      </div>
+                      
+                      {/* A# key - U (black key at 137px, width 14px, center at 137+7=144px) */}
+                      <div style={{
+                        position: 'absolute',
+                        left: '144px',
+                        top: '35%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: '10px',
+                        fontWeight: pressedKeys.has('u') ? '700' : '600',
+                        color: pressedKeys.has('u') ? 'var(--color-interactive-secondary)' : '#000',
+                        letterSpacing: '0.5px',
+                        lineHeight: '1',
+                        textShadow: pressedKeys.has('u') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                        transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
+                      }}>
+                        U
+                      </div>
+                      
+                      {/* B key - J (white key 144-168px, center at 159px) */}
+                      <div style={{
+                        position: 'absolute',
+                        left: '159px',
+                        top: '65%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: '10px',
+                        fontWeight: pressedKeys.has('j') ? '700' : '600',
+                        color: pressedKeys.has('j') ? 'var(--color-interactive-secondary)' : '#000',
+                        letterSpacing: '0.5px',
+                        lineHeight: '1',
+                        textShadow: pressedKeys.has('j') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                        transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
+                      }}>
+                        J
+                      </div>
+                    </>
+                  )}
+                  </div> {/* End of letter keys container */}
+                  
+                  {/* Octave switching controls */}
+                  {/* Z key (octave down) - only show on left side if not at lowest octave */}
+                  {activeOctave > -2 && (
+                    <div style={{
+                      position: 'absolute',
+                      left: '4px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      fontSize: '10px',
+                      fontWeight: pressedKeys.has('z') ? '700' : '600',
+                      color: pressedKeys.has('z') ? 'var(--color-interactive-secondary)' : '#000',
+                      letterSpacing: '-0.5px',
+                      lineHeight: '1',
+                      textShadow: pressedKeys.has('z') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                      transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
+                    }}>
+                      Z ◀
+                    </div>
+                  )}
+                  
+                  {/* X key (octave up) - only show on right side if not at highest octave */}
+                  {activeOctave < 8 && (
+                    <div style={{
+                      position: 'absolute',
+                      right: '4px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      fontSize: '10px',
+                      fontWeight: pressedKeys.has('x') ? '700' : '600',
+                      color: pressedKeys.has('x') ? 'var(--color-interactive-secondary)' : '#000',
+                      letterSpacing: '-0.5px',
+                      lineHeight: '1',
+                      textShadow: pressedKeys.has('x') ? '0 0 2px rgba(51, 51, 51, 0.8)' : 'none',
+                      transition: 'all 0.1s ease, opacity 1.5s ease-in-out'
+                    }}>
+                      ▶ X
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
