@@ -38,7 +38,8 @@ export function SmallWaveform({
   const isMobilePortrait = () => {
     const mobileOrTablet = isMobile || isTablet;
     const isPortraitMode = window.innerHeight > window.innerWidth;
-    return mobileOrTablet && isPortraitMode;
+    const isSmallScreen = window.innerWidth < 768; // Additional check for small screens
+    return (mobileOrTablet || isSmallScreen) && isPortraitMode;
   };
 
   // Theme colors
@@ -298,15 +299,21 @@ export function SmallWaveform({
   const handleZoomClick = () => {
     if (!onZoomEdit) return;
 
-    // Check if we're on mobile in portrait mode
-    if (isMobilePortrait()) {
-      // Show rotate overlay instead of zoom modal
-      triggerRotateOverlay(onZoomEdit);
-      return;
+    try {
+      // Check if we're on mobile in portrait mode
+      if (isMobilePortrait()) {
+        // Show rotate overlay instead of zoom modal
+        triggerRotateOverlay(onZoomEdit);
+        return;
+      }
+      
+      // Otherwise, proceed with normal zoom functionality
+      onZoomEdit();
+    } catch (error) {
+      console.error('Error in handleZoomClick:', error);
+      // Fallback to direct zoom modal if overlay fails
+      onZoomEdit();
     }
-    
-    // Otherwise, proceed with normal zoom functionality
-    onZoomEdit();
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -321,6 +328,29 @@ export function SmallWaveform({
     }
 
     // If onZoomEdit is provided, the waveform is clickable for zooming
+    handleZoomClick();
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Prevent default to avoid double-tap zoom on mobile
+    e.preventDefault();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // Handle touch as a click for zoom functionality
+    if (!onZoomEdit) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const touch = e.changedTouches[0];
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    // Check if touch is in top-right corner (zoom icon area)
+    if (x > rect.width - 30 && y < 30) {
+      return;
+    }
+
+    // If onZoomEdit is provided, the waveform is touchable for zooming
     handleZoomClick();
   };
 
@@ -348,6 +378,15 @@ export function SmallWaveform({
       {audioBuffer && onZoomEdit && (
         <button
           onClick={handleZoomClick}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleZoomClick();
+          }}
           style={{
             position: 'absolute',
             top: '2px',
@@ -387,6 +426,8 @@ export function SmallWaveform({
         onMouseUp={!onZoomEdit ? handleMouseUp : undefined}
         onMouseLeave={!onZoomEdit ? handleMouseUp : undefined}
         onClick={handleCanvasClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       />
     </div>
   );

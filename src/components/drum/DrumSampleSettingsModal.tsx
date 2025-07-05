@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
-import { WaveformEditor } from '../common/WaveformEditor';
+import { EnhancedWaveformEditor } from '../common/EnhancedWaveformEditor';
 import { Slider } from '@carbon/react';
 import React from 'react';
+import { WaveformZoomModal } from '../common/WaveformZoomModal';
 
 interface DrumSampleSettingsModalProps {
   isOpen: boolean;
@@ -35,6 +36,9 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
   // Add local state for marker positions
   const [localInPoint, setLocalInPoint] = useState<number | null>(null);
   const [localOutPoint, setLocalOutPoint] = useState<number | null>(null);
+
+  // Add local state for showZoomModal
+  const [showZoomModal, setShowZoomModal] = useState(false);
 
   // Initialize settings and markers from sample data when modal opens
   useEffect(() => {
@@ -87,16 +91,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
     return sampleIndex / sample.audioBuffer.sampleRate;
   };
 
-  // Use local marker state for percentage display
-  const getInPointPercentage = () => {
-    if (!sample?.audioBuffer) return 0;
-    return Math.round(((localInPoint !== null ? localInPoint : sample.inPoint || 0) / sample.audioBuffer.duration) * 100);
-  };
 
-  const getOutPointPercentage = () => {
-    if (!sample?.audioBuffer) return 0;
-    return Math.round(((localOutPoint !== null ? localOutPoint : sample.outPoint || sample.audioBuffer.duration) / sample.audioBuffer.duration) * 100);
-  };
 
   // Save local marker state to global state on save
   const handleSave = () => {
@@ -215,6 +210,8 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
         justifyContent: 'center',
         zIndex: 1050,
         fontFamily: 'inherit',
+        padding: '0.5rem',
+        boxSizing: 'border-box',
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) handleCancel();
@@ -224,21 +221,24 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
         background: c.bg,
         borderRadius: '15px',
         boxShadow: `0 2px 8px ${c.shadow}`,
-        width: '95%',
+        width: '100%',
         maxWidth: '500px',
-        maxHeight: '90vh',
-        overflow: 'auto',
+        maxHeight: 'calc(100vh - 1rem)',
+        minHeight: 'auto',
+        overflow: 'hidden',
         border: `1px solid ${c.border}`,
         display: 'flex',
         flexDirection: 'column',
+        position: 'relative',
       }}>
         {/* Header */}
         <div style={{
-          padding: '1.25rem 1.5rem 1rem 1.5rem',
+          padding: '1rem 1.5rem 0.75rem 1.5rem',
           borderBottom: `1px solid ${c.border}`,
           display: 'flex',
           alignItems: 'center',
           gap: '0.5rem',
+          flexShrink: 0,
         }}>
           <i className="fas fa-cog" style={{ color: c.textSecondary, fontSize: '1.25rem' }}></i>
           <h3 style={{
@@ -252,14 +252,19 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
             sample options
           </h3>
         </div>
-        {/* Body */}
-        <div style={{ padding: '1.5rem', background: c.bg }}>
+        {/* Body - Make scrollable */}
+        <div style={{ 
+          padding: '1rem', 
+          background: c.bg,
+          overflowY: 'auto',
+          flex: 1,
+          minHeight: 0,
+        }}>
           {/* Playmode */}
-          <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center' }}>
+          <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
             <label style={{
-              minWidth: '90px',
+              minWidth: '80px',
               margin: 0,
-              marginRight: '0.5rem',
               fontSize: '0.9rem',
               fontWeight: 500,
               color: c.text,
@@ -269,9 +274,8 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
             </label>
             <select
               style={{
-                width: 'auto',
-                display: 'inline-block',
-                maxWidth: '350px',
+                flex: 1,
+                minWidth: '180px',
                 padding: '0.25rem 0.5rem',
                 border: `1px solid ${c.border}`,
                 borderRadius: '6px',
@@ -289,18 +293,17 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               <option value="gate">key - play while held</option>
             </select>
           </div>
-          {/* Playback Direction */}
-          <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center' }}>
+          {/* Direction */}
+          <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
             <label style={{
-              minWidth: '90px',
+              minWidth: '80px',
               margin: 0,
-              marginRight: '0.5rem',
               fontSize: '0.9rem',
               fontWeight: 500,
               color: c.text,
               textTransform: 'lowercase',
             }}>
-              playback direction
+              direction
             </label>
             <button
               type="button"
@@ -328,33 +331,59 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               <span style={{ marginLeft: '0.5rem', textTransform: 'lowercase' }}>{settings.reverse ? 'reverse' : 'forward'}</span>
             </button>
           </div>
-          {/* Waveform Display */}
+          {/* Enhanced Waveform Display */}
           {sample?.audioBuffer && (
-            <div style={{ marginBottom: '1.5rem', background: c.bgAlt, borderRadius: '6px', padding: '0.5rem' }}>
-              <WaveformEditor
+            <div style={{ position: 'relative', marginBottom: '1rem', padding: '0.5rem' }}>
+              <EnhancedWaveformEditor
                 audioBuffer={sample.audioBuffer}
                 inPoint={getInPointSampleIndex()}
                 outPoint={getOutPointSampleIndex()}
-                onMarkersChange={(markers) => {
+                onMarkersChange={(markers: { inPoint: number; outPoint: number }) => {
                   if (sample?.audioBuffer) {
                     setLocalInPoint(sampleIndexToTime(markers.inPoint));
                     setLocalOutPoint(sampleIndexToTime(markers.outPoint));
                   }
                 }}
-                height={80}
+                height={60}
                 className="sample-waveform"
+                showSnapToZero={false}
+                showFrameDisplay={false}
+                defaultSnapToZero={true}
               />
-              {/* Marker Position Display */}
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                marginTop: '0.5rem',
-                fontSize: '0.75rem',
-                color: c.textSecondary
-              }}>
-                <span>start: {getInPointPercentage()}%</span>
-                <span>end: {getOutPointPercentage()}%</span>
-              </div>
+              <button
+                type="button"
+                aria-label="zoom waveform"
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  background: 'none',
+                  border: 'none',
+                  color: c.textSecondary,
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  zIndex: 2,
+                  padding: 0,
+                  lineHeight: 1
+                }}
+                onClick={() => setShowZoomModal(true)}
+              >
+                <i className="fa fa-search-plus" />
+              </button>
+              {showZoomModal && (
+                <WaveformZoomModal
+                  isOpen={showZoomModal}
+                  onClose={() => setShowZoomModal(false)}
+                  audioBuffer={sample.audioBuffer}
+                  initialInPoint={localInPoint !== null ? localInPoint : sample.inPoint || 0}
+                  initialOutPoint={localOutPoint !== null ? localOutPoint : sample.outPoint || (sample.audioBuffer.duration || 0)}
+                  onSave={(inPoint, outPoint) => {
+                    setLocalInPoint(inPoint);
+                    setLocalOutPoint(outPoint);
+                    setShowZoomModal(false);
+                  }}
+                />
+              )}
             </div>
           )}
           {/* Tuning */}
@@ -368,7 +397,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
             }}>
               tuning: {settings.tune} semitones
             </div>
-            <div style={{ width: '100%' }}>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: 0, margin: 0 }}>
               <Slider
                 id="sample-tuning"
                 min={-48}
@@ -377,6 +406,8 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
                 value={settings.tune}
                 onChange={({ value }) => setSettings({ ...settings, tune: value })}
                 hideTextInput
+                style={{ width: '100%', maxWidth: '100%' }}
+                className="full-width-slider"
               />
             </div>
           </div>
@@ -391,7 +422,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
             }}>
               gain: {settings.gain} db
             </div>
-            <div style={{ width: '100%' }}>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: 0, margin: 0 }}>
               <Slider
                 id="sample-gain"
                 min={-30}
@@ -400,21 +431,22 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
                 value={settings.gain}
                 onChange={({ value }) => setSettings({ ...settings, gain: value })}
                 hideTextInput
+                style={{ width: '100%', maxWidth: '100%' }}
+                className="full-width-slider"
               />
             </div>
           </div>
           {/* Pan */}
-          <div style={{ marginBottom: '1rem' }}>
+          <div>
             <div style={{
               fontSize: '0.9rem',
               fontWeight: 500,
               color: c.text,
-              marginBottom: '0.5rem',
               textTransform: 'lowercase',
             }}>
               pan: {settings.pan}
             </div>
-            <div style={{ width: '100%' }}>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: 0, margin: 0 }}>
               <Slider
                 id="sample-pan"
                 min={-100}
@@ -423,33 +455,37 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
                 value={settings.pan}
                 onChange={({ value }) => setSettings({ ...settings, pan: value })}
                 hideTextInput
+                style={{ width: '100%', maxWidth: '100%' }}
+                className="full-width-slider"
               />
             </div>
           </div>
         </div>
         {/* Footer/Actions */}
         <div style={{
-          padding: '1rem 1.5rem 1.5rem 1.5rem',
+          padding: '0.75rem 1.5rem 1rem 1.5rem',
           display: 'flex',
-          gap: '0.75rem',
+          gap: '0.5rem',
           justifyContent: 'flex-end',
           borderTop: `1px solid ${c.border}`,
           background: c.bg,
+          flexShrink: 0,
+          flexWrap: 'wrap',
         }}>
           <button
             type="button"
             style={{
-              padding: '0.625rem 1.25rem',
+              padding: '0.5rem 1rem',
               border: `1px solid ${c.border}`,
               borderRadius: '6px',
               backgroundColor: c.bg,
               color: c.textSecondary,
-              fontSize: '0.875rem',
+              fontSize: '0.8rem',
               fontWeight: 500,
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               fontFamily: 'inherit',
-              minWidth: '80px',
+              minWidth: '70px',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
@@ -472,17 +508,17 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
           <button
             type="button"
             style={{
-              padding: '0.625rem 1.25rem',
+              padding: '0.5rem 1rem',
               border: 'none',
               borderRadius: '6px',
               backgroundColor: c.text,
               color: c.white,
-              fontSize: '0.875rem',
+              fontSize: '0.8rem',
               fontWeight: '500',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               fontFamily: 'inherit',
-              minWidth: '80px',
+              minWidth: '70px',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
@@ -522,22 +558,22 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
             }}
           >
             <i className="fa fa-play" style={{ marginRight: '0.25rem' }}></i>
-            {settings.playmode === 'gate' ? 'hold to play' : 'play'}
+            play (P)
           </button>
           <button
             type="button"
             style={{
-              padding: '0.625rem 1.25rem',
+              padding: '0.5rem 1rem',
               border: 'none',
               borderRadius: '6px',
               backgroundColor: c.action,
               color: c.white,
-              fontSize: '0.875rem',
+              fontSize: '0.8rem',
               fontWeight: 500,
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               fontFamily: 'inherit',
-              minWidth: '80px',
+              minWidth: '70px',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',

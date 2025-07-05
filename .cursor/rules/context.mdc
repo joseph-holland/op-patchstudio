@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description: info on managing state
+globs: ["**/*.ts", "**/*.tsx", "**/*.scss"]
 alwaysApply: false
 ---
 - global state lives exclusively in `AppContext` (React context + reducer) – do not introduce other global state libraries (redux, recoil, zustand, etc.)

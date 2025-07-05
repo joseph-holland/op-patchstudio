@@ -52,7 +52,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
   const [pendingUploadIndex, setPendingUploadIndex] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
-  const { playAudioBuffer } = useAudioPlayer();
+  const { play } = useAudioPlayer();
   
   // Touch/swipe handling for mobile
   const touchStartX = useRef<number | null>(null);
@@ -145,7 +145,14 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
     if (!sample?.isLoaded || !sample.audioBuffer) return;
 
     try {
-      await playAudioBuffer(sample.audioBuffer);
+      await play(sample.audioBuffer, {
+        inFrame: sample.inPoint !== undefined ? Math.floor(sample.inPoint * sample.audioBuffer.sampleRate) : 0,
+        outFrame: sample.outPoint !== undefined ? Math.floor(sample.outPoint * sample.audioBuffer.sampleRate) : sample.audioBuffer.length,
+        playbackRate: Math.pow(2, (sample.tune || 0) / 12),
+        gain: sample.gain || 0,
+        pan: sample.pan || 0,
+        reverse: sample.reverse || false,
+      });
     } catch (error) {
       console.error('Error playing sample:', error);
     }

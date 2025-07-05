@@ -192,25 +192,7 @@ export function WaveformZoomModal({
     ctx.lineTo(width, height / 2);
     ctx.stroke();
 
-    // Draw zero crossing indicators (subtle dotted lines)
-    if (snapToZero) {
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([2, 4]);
-      
-      // Find and draw zero crossings every ~1000 samples
-      const stepSize = Math.max(1000, Math.floor(data.length / 50));
-      for (let i = 0; i < data.length; i += stepSize) {
-        if (Math.abs(data[i]) < 0.05) {
-          const x = sampleToPixel(i);
-          ctx.beginPath();
-          ctx.moveTo(x, 0);
-          ctx.lineTo(x, height);
-          ctx.stroke();
-        }
-      }
-      ctx.setLineDash([]);
-    }
+
   }, [audioBuffer, inFrame, outFrame, snapToZero]);
 
   const drawMarkers = useCallback(() => {
@@ -523,7 +505,10 @@ export function WaveformZoomModal({
     if (!audioBuffer) return;
     
     try {
-      await play(audioBuffer, inFrame, outFrame);
+      await play(audioBuffer, {
+        inFrame,
+        outFrame
+      });
     } catch (error) {
       console.error('Error playing selection:', error);
     }

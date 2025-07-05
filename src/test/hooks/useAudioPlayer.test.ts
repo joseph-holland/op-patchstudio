@@ -79,7 +79,7 @@ describe('useAudioPlayer', () => {
     } as AudioBuffer;
 
     await act(async () => {
-      const success = await result.current.playAudioBuffer(mockBuffer);
+      const success = await result.current.play(mockBuffer);
       expect(success).toBe(true);
     });
 
@@ -109,7 +109,7 @@ describe('useAudioPlayer', () => {
     const outFrame = 44100; // 1.0 seconds
 
     await act(async () => {
-      const success = await result.current.playSelection(mockBuffer, inFrame, outFrame);
+      const success = await result.current.play(mockBuffer, { inFrame, outFrame });
       expect(success).toBe(true);
     });
 
@@ -131,7 +131,7 @@ describe('useAudioPlayer', () => {
 
     // Start playback
     await act(async () => {
-      await result.current.playAudioBuffer(mockBuffer);
+      await result.current.play(mockBuffer);
     });
 
     // Stop playback
@@ -158,7 +158,7 @@ describe('useAudioPlayer', () => {
     } as AudioBuffer;
 
     await act(async () => {
-      await result.current.playAudioBuffer(mockBuffer, {
+      await result.current.play(mockBuffer, {
         playbackRate: 2.0,
         gain: -6, // -6dB
         pan: 50, // 50% right

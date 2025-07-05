@@ -76,6 +76,28 @@ interface MultisampleJson {
   version: number;
 }
 
+// Utility function to validate frame counts and log warnings
+function validateFrameCount(
+  sampleName: string,
+  expectedFramecount: number,
+  actualFramecount: number,
+  region: any
+): void {
+  if (actualFramecount !== expectedFramecount) {
+    console.warn(`Frame count mismatch for ${sampleName}:`, {
+      expected: expectedFramecount,
+      actual: actualFramecount,
+      difference: actualFramecount - expectedFramecount
+    });
+    
+    // Update the region with the actual frame count
+    region.framecount = actualFramecount;
+    if (region["sample.end"] !== undefined) {
+      region["sample.end"] = actualFramecount;
+    }
+  }
+}
+
 // Generate drum patch ZIP file
 export async function generateDrumPatch(
   state: AppState, 
@@ -126,10 +148,11 @@ export async function generateDrumPatch(
 
     // Create region object in correct OP-XY format
     const midiNote = midiNoteCounter++;
+    const calculatedFramecount = Math.floor(duration * (targetSampleRate || sampleRate));
     const region: DrumRegion = {
       "fade.in": 0,
       "fade.out": 0,
-      framecount: Math.floor(duration * (targetSampleRate || sampleRate)),
+      framecount: calculatedFramecount,
       hikey: midiNote,
       lokey: midiNote,
       pan: 0, // TODO: Get from advanced settings when implemented
@@ -139,6 +162,8 @@ export async function generateDrumPatch(
       sample: outputName,
       transpose: 0,
       tune: 0, // TODO: Get from advanced settings when implemented
+      "sample.start": 0,
+      "sample.end": calculatedFramecount,
     };
 
     // Handle audio conversions if needed
@@ -156,6 +181,11 @@ export async function generateDrumPatch(
               bitDepth: targetBitDepth || sample.originalBitDepth || 16,
               channels: targetChannels === "mono" ? 1 : sample.audioBuffer!.numberOfChannels
             });
+            
+            // Validate that converted buffer frame count matches our calculation
+            const expectedFramecount = Math.floor(duration * (targetSampleRate || sampleRate));
+            validateFrameCount(sample.name, expectedFramecount, convertedBuffer.length, region);
+            
             // Convert to WAV blob
             const { audioBufferToWav } = await import('./audio');
             const wavBlob = audioBufferToWav(convertedBuffer, targetBitDepth || 16);
@@ -252,25 +282,42 @@ export async function generateMultisamplePatch(
     const outputName = sanitizeName(sample.file.name);
     const sampleRate = sample.audioBuffer.sampleRate;
     const duration = sample.audioBuffer.duration;
-    const framecount = sample.audioBuffer.length;
     const sampleNote = sample.rootNote >= 0 ? sample.rootNote : 60 + sample.originalIndex;
 
     // Create region data for multisample using correct OP-XY format
+    const calculatedFramecount = Math.floor(duration * (targetSampleRate || sampleRate));
+    
+    // Calculate loop points and validate they stay within bounds
+    const loopStart = Math.floor((sample.loopStart || 0) / duration * calculatedFramecount);
+    const loopEnd = Math.floor((sample.loopEnd || duration) / duration * calculatedFramecount);
+    
+    // Validate and clamp loop points to sample boundaries
+    const validatedLoopStart = Math.max(0, Math.min(loopStart, calculatedFramecount - 1));
+    const validatedLoopEnd = Math.max(validatedLoopStart + 1, Math.min(loopEnd, calculatedFramecount));
+    
+    // Calculate and validate sample boundaries
+    const sampleStart = Math.floor((sample.inPoint || 0) / duration * calculatedFramecount);
+    const sampleEnd = Math.floor((sample.outPoint || duration) / duration * calculatedFramecount);
+    
+    // Validate and clamp sample points to frame boundaries
+    const validatedSampleStart = Math.max(0, Math.min(sampleStart, calculatedFramecount - 1));
+    const validatedSampleEnd = Math.max(validatedSampleStart + 1, Math.min(sampleEnd, calculatedFramecount));
+    
     const region: MultisampleRegion = {
-      framecount: Math.floor(duration * (targetSampleRate || sampleRate)),
+      framecount: calculatedFramecount,
       gain: multisampleGain || 0,
       hikey: sample.hikey || 127,
       lokey: sample.lokey || 0,
       "loop.crossfade": 0,
-      "loop.end": Math.floor((sample.loopEnd || duration) / duration * framecount),
+      "loop.end": validatedLoopEnd,
       "loop.onrelease": false, // TODO: Get from advanced settings
       "loop.enabled": false, // TODO: Get from advanced settings
-      "loop.start": Math.floor((sample.loopStart || 0) / duration * framecount),
+      "loop.start": validatedLoopStart,
       "pitch.keycenter": sampleNote,
       reverse: false,
       sample: outputName,
-      "sample.end": Math.floor((sample.outPoint || duration) / duration * framecount),
-      "sample.start": Math.floor((sample.inPoint || 0) / duration * framecount),
+      "sample.end": validatedSampleEnd,
+      "sample.start": validatedSampleStart,
       tune: 0,
     };
 
@@ -289,6 +336,11 @@ export async function generateMultisamplePatch(
               bitDepth: targetBitDepth || sample.originalBitDepth || 16,
               channels: targetChannels === "mono" ? 1 : sample.audioBuffer!.numberOfChannels
             });
+            
+            // Validate that converted buffer frame count matches our calculation
+            const expectedFramecount = Math.floor(duration * (targetSampleRate || sampleRate));
+            validateFrameCount(sample.name, expectedFramecount, convertedBuffer.length, region);
+            
             // Convert to WAV blob
             const { audioBufferToWav } = await import('./audio');
             const wavBlob = audioBufferToWav(convertedBuffer, targetBitDepth || 16);

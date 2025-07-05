@@ -1,3 +1,9 @@
+---
+description: rules for midi note mapping
+globs: ["**/*.ts", "**/*.tsx", "**/*.scss"]
+alwaysApply: true
+---
+
 # MIDI Note Number Mapping (C3 = 60)
 
 **This project uses the 'C3 = 60' convention (Yamaha/OP-1/OP-Z style), not the General MIDI standard.**

@@ -1,12 +1,11 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { audioContextManager } from '../../utils/audioContext';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 
 import { SmallWaveform } from '../common/SmallWaveform';
 import { WaveformZoomModal } from '../common/WaveformZoomModal';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
-import { DrumSampleSettingsModal, useDrumSampleSettingsKeyboard } from './DrumSampleSettingsModal';
+import { DrumSampleSettingsModal } from './DrumSampleSettingsModal';
 
 interface DrumSampleTableProps {
   onFileUpload: (index: number, file: File) => void;
@@ -57,7 +56,7 @@ const actionButtonStyle: React.CSSProperties = {
 
 export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }: DrumSampleTableProps) {
   const { state, dispatch } = useAppContext();
-  const { playAudioBuffer } = useAudioPlayer();
+  const { play } = useAudioPlayer();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -89,7 +88,14 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
     if (!sample?.isLoaded || !sample.audioBuffer) return;
 
     try {
-      await playAudioBuffer(sample.audioBuffer);
+      await play(sample.audioBuffer, {
+        inFrame: sample.inPoint !== undefined ? Math.floor(sample.inPoint * sample.audioBuffer.sampleRate) : 0,
+        outFrame: sample.outPoint !== undefined ? Math.floor(sample.outPoint * sample.audioBuffer.sampleRate) : sample.audioBuffer.length,
+        playbackRate: Math.pow(2, (sample.tune || 0) / 12),
+        gain: sample.gain || 0,
+        pan: sample.pan || 0,
+        reverse: sample.reverse || false,
+      });
     } catch (error) {
       console.error('Error playing sample:', error);
     }
@@ -158,11 +164,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
     closeZoomModal();
   };
 
-  const playSelectedSample = () => {
-    playSample(selectedSampleIndex).catch(error => {
-      console.error('Error playing sample:', error);
-    });
-  };
+
 
   if (isMobile) {
     // Mobile Card Layout
