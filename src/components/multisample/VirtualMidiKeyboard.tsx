@@ -259,7 +259,7 @@ export function VirtualMidiKeyboard({
 
 
   // Helper function to get computer key for a MIDI note in the active octave
-  const getComputerKeyForNote = (midiNote: number): string | null => {
+  const getComputerKeyForNote = useCallback((midiNote: number): string | null => {
     // Fix: Use C3 = 60 convention. C3 is octave 3, so C0 = 60 - (3 * 12) = 24
     const noteOctave = Math.floor((midiNote - 24) / 12);
     if (noteOctave !== activeOctave) return null;
@@ -273,7 +273,7 @@ export function VirtualMidiKeyboard({
       }
     }
     return null;
-  };
+  }, [activeOctave, keyboardMapping]);
 
   const handleKeyClick = useCallback((midiNote: number) => {
     const isAssigned = assignedNotes.includes(midiNote);
