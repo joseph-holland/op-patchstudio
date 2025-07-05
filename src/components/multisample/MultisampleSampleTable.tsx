@@ -633,8 +633,9 @@ export function MultisampleSampleTable({
                             loopStart={Math.floor((sample.loopStart || 0) * sample.audioBuffer.sampleRate)}
                             loopEnd={Math.floor((sample.loopEnd || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
                             onMarkersChange={(markers: { inPoint: number; outPoint: number; loopStart?: number; loopEnd?: number }) => {
-                              if (!sample.audioBuffer) return;
-                              const toSeconds = (frame: number) => frame / sample.audioBuffer.sampleRate;
+                              const audioBuffer = sample.audioBuffer;
+                              if (!audioBuffer) return;
+                              const toSeconds = (frame: number) => frame / audioBuffer.sampleRate;
                               dispatch({
                                 type: 'UPDATE_MULTISAMPLE_FILE',
                                 payload: {
@@ -643,7 +644,7 @@ export function MultisampleSampleTable({
                                     inPoint: toSeconds(markers.inPoint),
                                     outPoint: toSeconds(markers.outPoint),
                                     loopStart: toSeconds(markers.loopStart || 0),
-                                    loopEnd: toSeconds(markers.loopEnd || sample.audioBuffer.duration),
+                                    loopEnd: toSeconds(markers.loopEnd || audioBuffer.duration),
                                   },
                                 },
                               });
@@ -927,8 +928,9 @@ export function MultisampleSampleTable({
                             loopStart={Math.floor((sample.loopStart || 0) * sample.audioBuffer.sampleRate)}
                             loopEnd={Math.floor((sample.loopEnd || sample.audioBuffer.duration) * sample.audioBuffer.sampleRate)}
                             onMarkersChange={(markers: { inPoint: number; outPoint: number; loopStart?: number; loopEnd?: number }) => {
-                              if (!sample.audioBuffer) return;
-                              const toSeconds = (frame: number) => frame / sample.audioBuffer.sampleRate;
+                              const audioBuffer = sample.audioBuffer;
+                              if (!audioBuffer) return;
+                              const toSeconds = (frame: number) => frame / audioBuffer.sampleRate;
                               dispatch({
                                 type: 'UPDATE_MULTISAMPLE_FILE',
                                 payload: {
@@ -937,7 +939,7 @@ export function MultisampleSampleTable({
                                     inPoint: toSeconds(markers.inPoint),
                                     outPoint: toSeconds(markers.outPoint),
                                     loopStart: toSeconds(markers.loopStart || 0),
-                                    loopEnd: toSeconds(markers.loopEnd || sample.audioBuffer.duration),
+                                    loopEnd: toSeconds(markers.loopEnd || audioBuffer.duration),
                                   },
                                 },
                               });

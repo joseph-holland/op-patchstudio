@@ -233,8 +233,6 @@ export function WaveformZoomModal({
     ctx.fillStyle = '#333333';
     const sampleTriangleSize = 10;
     const squareSize = sampleTriangleSize; // Square width matches triangle base
-    const margin = 2; // margin from bottom
-    const bottomHandleY = height - (squareSize + margin);
     
     // Sample start marker (triangle above square, triangle pointing up)
     const squareY = height - squareSize;
@@ -553,10 +551,7 @@ export function WaveformZoomModal({
     if (!audioBuffer) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
     // Reuse mouse logic
     handleMouseDown({
       ...e,
@@ -572,9 +567,7 @@ export function WaveformZoomModal({
     if (!dragging || !audioBuffer) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    const x = touch.clientX - rect.left;
     // Reuse mouse logic
     handleMouseMove({
       ...e,
@@ -586,7 +579,7 @@ export function WaveformZoomModal({
     } as any);
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchEnd = () => {
     handleMouseUp();
   };
 

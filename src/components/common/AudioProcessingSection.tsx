@@ -59,9 +59,7 @@ export function AudioProcessingSection({
     (type === 'multisample' && cutAtLoopEnd !== false)
   );
 
-  // Padding values to match keyboard section header
-  const sectionPaddingY = isMobile ? '1.25rem' : '2rem';
-  const sectionPaddingX = isMobile ? '1rem' : '2rem';
+
 
   return (
     <div style={{

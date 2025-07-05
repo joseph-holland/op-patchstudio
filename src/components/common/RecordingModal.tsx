@@ -271,50 +271,7 @@ export function RecordingModal({
     }
   };
 
-  const drawStaticWaveform = (audioBuffer: AudioBuffer) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    const width = canvas.width;
-    const height = canvas.height;
-    const data = audioBuffer.getChannelData(0);
-    const samples = data.length;
-    const samplesPerPixel = samples / width;
-    
-    ctx.fillStyle = '#f8f9fa';
-    ctx.fillRect(0, 0, width, height);
-    
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    
-    const centerY = height / 2;
-    
-    for (let x = 0; x < width; x++) {
-      const startSample = Math.floor(x * samplesPerPixel);
-      const endSample = Math.floor((x + 1) * samplesPerPixel);
-      
-      let min = 0;
-      let max = 0;
-      
-      for (let i = startSample; i < endSample && i < samples; i++) {
-        const value = data[i];
-        if (value < min) min = value;
-        if (value > max) max = value;
-      }
-      
-      const minY = centerY - (min * centerY);
-      const maxY = centerY - (max * centerY);
-      
-      ctx.moveTo(x, minY);
-      ctx.lineTo(x, maxY);
-    }
-    
-    ctx.stroke();
-  };
+
 
   const drawHighQualityWaveform = (audioBuffer: AudioBuffer) => {
     const canvas = canvasRef.current;
