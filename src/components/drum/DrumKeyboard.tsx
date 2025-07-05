@@ -51,6 +51,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingUploadIndex, setPendingUploadIndex] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
   
   // Touch/swipe handling for mobile
   const touchStartX = useRef<number | null>(null);
@@ -60,6 +61,20 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
   // Responsive scaling for mobile keyboard
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+
+  // Check if user has seen swipe hint before
+  useEffect(() => {
+    const hasSeenSwipeHint = localStorage.getItem('drum-keyboard-swipe-hint-seen');
+    if (!hasSeenSwipeHint && isMobile) {
+      setShowSwipeHint(true);
+      // Auto-hide after 3 seconds
+      const timer = setTimeout(() => {
+        setShowSwipeHint(false);
+        localStorage.setItem('drum-keyboard-swipe-hint-seen', 'true');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -465,88 +480,210 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
       
       {/* Mobile Layout - Single Octave with Swipe */}
       {isMobile ? (
-        <div 
-          style={{
-            padding: '3px',
-            background: 'transparent',
-            border: '1px solid #ddd',
-            borderRadius: '6px',
-            boxSizing: 'border-box',
-            width: '100%',
-            boxShadow: '0 2px 8px var(--color-shadow-primary)'
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          {/* Viewport for clipping */}
+        <>
           <div 
-            ref={containerRef}
             style={{
-              position: 'relative',
-              overflow: 'hidden',
+              padding: '3px',
+              background: 'transparent',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              boxSizing: 'border-box',
               width: '100%',
-              background: 'transparent'
-            }}>
-            {/* Sliding track */}
-            <div style={{
-              display: 'flex',
-              width: '200%',
-              transform: `translateX(${currentOctave === 0 ? '0' : '-50%'})`,
-              transition: 'transform 0.3s ease-out'
-            }}>
-              {/* Octave 0 Panel */}
-              <div style={{ width: '50%', flexShrink: 0 }}>
+              boxShadow: '0 2px 8px var(--color-shadow-primary)',
+              position: 'relative',
+              marginBottom: '8px' // even less space for dots below
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Swipe Hint Overlay */}
+            {showSwipeHint && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.7)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 20,
+                borderRadius: '6px'
+              }}>
                 <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '1px'
+                  background: 'var(--color-bg-primary)',
+                  padding: '16px',
+                  borderRadius: '6px',
+                  textAlign: 'center',
+                  maxWidth: '280px',
+                  margin: '0 16px'
                 }}>
-                  {/* Top row */}
-                  <div style={{ display: 'flex', gap: '1px' }}>
-                    <OPXYKey keyChar="W" mapping={drumKeyMap[0].W} isPressed={currentOctave === 0 && pressedKeys.has('W')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true} keyWidth={keyWidth}/>
-                    <OPXYKey keyChar="E" mapping={drumKeyMap[0].E} isPressed={currentOctave === 0 && pressedKeys.has('E')} isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true} keyWidth={keyWidth}/>
-                    <OPXYKey keyChar="R" mapping={drumKeyMap[0].R} isPressed={currentOctave === 0 && pressedKeys.has('R')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true} keyWidth={keyWidth}/>
-                    <OPXYKey keyChar="Y" mapping={drumKeyMap[0].Y} isPressed={currentOctave === 0 && pressedKeys.has('Y')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true} keyWidth={keyWidth}/>
-                    <OPXYKey keyChar="U" mapping={drumKeyMap[0].U} isPressed={currentOctave === 0 && pressedKeys.has('U')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true} keyWidth={keyWidth}/>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    marginBottom: '12px'
+                  }}>
+                    <i className="fas fa-arrow-left" style={{ color: 'var(--color-text-secondary)', fontSize: '1rem' }}></i>
+                    <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>swipe to change octaves</span>
+                    <i className="fas fa-arrow-right" style={{ color: 'var(--color-text-secondary)', fontSize: '1rem' }}></i>
                   </div>
-                  {/* Bottom row */}
-                  <div style={{ display: 'flex', gap: '1px' }}>
-                    {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
-                      <OPXYKey key={`octave0-mobile-${key}`} keyChar={key} mapping={drumKeyMap[0][key as keyof typeof drumKeyMap[0]]} isPressed={currentOctave === 0 && pressedKeys.has(key)} isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true} keyWidth={keyWidth}/>
-                    ))}
-                  </div>
+                  <button
+                    onClick={() => {
+                      setShowSwipeHint(false);
+                      localStorage.setItem('drum-keyboard-swipe-hint-seen', 'true');
+                    }}
+                    style={{
+                      background: 'var(--color-interactive-focus)',
+                      color: 'var(--color-bg-primary)',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '3px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    got it
+                  </button>
                 </div>
               </div>
+            )}
 
-              {/* Octave 1 Panel */}
-              <div style={{ width: '50%', flexShrink: 0 }}>
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '1px'
-                }}>
-                  {/* Top row */}
-                  <div style={{ display: 'flex', gap: '1px' }}>
-                    <OPXYKey keyChar="W" mapping={drumKeyMap[1].W} isPressed={currentOctave === 1 && pressedKeys.has('W')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true} keyWidth={keyWidth}/>
-                    <OPXYKey keyChar="E" mapping={drumKeyMap[1].E} isPressed={currentOctave === 1 && pressedKeys.has('E')} isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true} keyWidth={keyWidth}/>
-                    <OPXYKey keyChar="R" mapping={drumKeyMap[1].R} isPressed={currentOctave === 1 && pressedKeys.has('R')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true} keyWidth={keyWidth}/>
-                    <OPXYKey keyChar="Y" mapping={drumKeyMap[1].Y} isPressed={currentOctave === 1 && pressedKeys.has('Y')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true} keyWidth={keyWidth}/>
-                    <OPXYKey keyChar="U" mapping={drumKeyMap[1].U} isPressed={currentOctave === 1 && pressedKeys.has('U')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true} keyWidth={keyWidth}/>
+            {/* Swipe Direction Indicators */}
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '8px',
+              transform: 'translateY(-50%)',
+              zIndex: 10,
+              opacity: currentOctave === 0 ? 0.6 : 0,
+              transition: 'opacity 0.3s ease',
+              pointerEvents: 'none'
+            }}>
+              <i className="fas fa-chevron-right" style={{ 
+                color: 'var(--color-text-secondary)', 
+                fontSize: '1.25rem',
+                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
+              }}></i>
+            </div>
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              right: '8px',
+              transform: 'translateY(-50%)',
+              zIndex: 10,
+              opacity: currentOctave === 1 ? 0.6 : 0,
+              transition: 'opacity 0.3s ease',
+              pointerEvents: 'none'
+            }}>
+              <i className="fas fa-chevron-left" style={{ 
+                color: 'var(--color-text-secondary)', 
+                fontSize: '1.25rem',
+                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
+              }}></i>
+            </div>
+
+            {/* Viewport for clipping */}
+            <div 
+              ref={containerRef}
+              style={{
+                position: 'relative',
+                overflow: 'hidden',
+                width: '100%',
+                background: 'transparent'
+              }}>
+              {/* Sliding track */}
+              <div style={{
+                display: 'flex',
+                width: '200%',
+                transform: `translateX(${currentOctave === 0 ? '0' : '-50%'})`,
+                transition: 'transform 0.3s ease-out'
+              }}>
+                {/* Octave 0 Panel */}
+                <div style={{ width: '50%', flexShrink: 0 }}>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '1px'
+                  }}>
+                    {/* Top row */}
+                    <div style={{ display: 'flex', gap: '1px' }}>
+                      <OPXYKey keyChar="W" mapping={drumKeyMap[0].W} isPressed={currentOctave === 0 && pressedKeys.has('W')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true} keyWidth={keyWidth}/>
+                      <OPXYKey keyChar="E" mapping={drumKeyMap[0].E} isPressed={currentOctave === 0 && pressedKeys.has('E')} isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true} keyWidth={keyWidth}/>
+                      <OPXYKey keyChar="R" mapping={drumKeyMap[0].R} isPressed={currentOctave === 0 && pressedKeys.has('R')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true} keyWidth={keyWidth}/>
+                      <OPXYKey keyChar="Y" mapping={drumKeyMap[0].Y} isPressed={currentOctave === 0 && pressedKeys.has('Y')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true} keyWidth={keyWidth}/>
+                      <OPXYKey keyChar="U" mapping={drumKeyMap[0].U} isPressed={currentOctave === 0 && pressedKeys.has('U')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true} keyWidth={keyWidth}/>
+                    </div>
+                    {/* Bottom row */}
+                    <div style={{ display: 'flex', gap: '1px' }}>
+                      {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
+                        <OPXYKey key={`octave0-mobile-${key}`} keyChar={key} mapping={drumKeyMap[0][key as keyof typeof drumKeyMap[0]]} isPressed={currentOctave === 0 && pressedKeys.has(key)} isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0} isMobile={true} keyWidth={keyWidth}/>
+                      ))}
+                    </div>
                   </div>
-                  {/* Bottom row */}
-                  <div style={{ display: 'flex', gap: '1px' }}>
-                    {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
-                      <OPXYKey key={`octave1-mobile-${key}`} keyChar={key} mapping={drumKeyMap[1][key as keyof typeof drumKeyMap[1]]} isPressed={currentOctave === 1 && pressedKeys.has(key)} isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true} keyWidth={keyWidth}/>
-                    ))}
+                </div>
+
+                {/* Octave 1 Panel */}
+                <div style={{ width: '50%', flexShrink: 0 }}>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '1px'
+                  }}>
+                    {/* Top row */}
+                    <div style={{ display: 'flex', gap: '1px' }}>
+                      <OPXYKey keyChar="W" mapping={drumKeyMap[1].W} isPressed={currentOctave === 1 && pressedKeys.has('W')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true} keyWidth={keyWidth}/>
+                      <OPXYKey keyChar="E" mapping={drumKeyMap[1].E} isPressed={currentOctave === 1 && pressedKeys.has('E')} isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true} keyWidth={keyWidth}/>
+                      <OPXYKey keyChar="R" mapping={drumKeyMap[1].R} isPressed={currentOctave === 1 && pressedKeys.has('R')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true} keyWidth={keyWidth}/>
+                      <OPXYKey keyChar="Y" mapping={drumKeyMap[1].Y} isPressed={currentOctave === 1 && pressedKeys.has('Y')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true} keyWidth={keyWidth}/>
+                      <OPXYKey keyChar="U" mapping={drumKeyMap[1].U} isPressed={currentOctave === 1 && pressedKeys.has('U')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true} keyWidth={keyWidth}/>
+                    </div>
+                    {/* Bottom row */}
+                    <div style={{ display: 'flex', gap: '1px' }}>
+                      {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
+                        <OPXYKey key={`octave1-mobile-${key}`} keyChar={key} mapping={drumKeyMap[1][key as keyof typeof drumKeyMap[1]]} isPressed={currentOctave === 1 && pressedKeys.has(key)} isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1} isMobile={true} keyWidth={keyWidth}/>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+          {/* Swipe Indicator Dots - now outside the keyboard border */}
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: '-2px', // very tight to keyboard border
+            marginBottom: '0px',
+            zIndex: 1
+          }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: currentOctave === 0 ? 'var(--color-text-secondary)' : 'var(--color-border-light)',
+              transition: 'background-color 0.3s ease',
+              margin: '0 4px'
+            }}></div>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: currentOctave === 1 ? 'var(--color-text-secondary)' : 'var(--color-border-light)',
+              transition: 'background-color 0.3s ease',
+              margin: '0 4px'
+            }}></div>
+          </div>
+        </>
       ) : (
         /* Desktop Layout - Both Octaves Side by Side */
         <div style={{
