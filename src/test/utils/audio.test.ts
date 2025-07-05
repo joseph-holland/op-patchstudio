@@ -10,7 +10,8 @@ import {
   audioBufferToWav,
   findNearestZeroCrossing,
   NOTE_NAMES,
-  NOTE_OFFSET
+  NOTE_OFFSET,
+  convertAudioFormat
 } from '../../utils/audio'
 
 // Mock AudioContext for testing
@@ -349,5 +350,53 @@ describe('audio utilities', () => {
     it('should have correct NOTE_OFFSET array', () => {
       expect(NOTE_OFFSET).toEqual([33, 35, 24, 26, 28, 29, 31])
     })
+  })
+
+  describe('convertAudioFormat with normalization and gain', () => {
+    it('should apply gain correctly', async () => {
+      const mockBuffer = createMockAudioBuffer(1000, 44100);
+      const mockChannelData = new Float32Array(1000);
+      mockChannelData.fill(0.5); // Set all samples to 0.5
+      mockBuffer.getChannelData = vi.fn().mockReturnValue(mockChannelData);
+
+      const result = await convertAudioFormat(mockBuffer, { gain: 6 }); // +6dB gain
+      
+      // +6dB should double the amplitude (0.5 -> 1.0)
+      const resultData = result.getChannelData(0);
+      expect(resultData[0]).toBeCloseTo(1.0, 2);
+    });
+
+    it('should apply normalization correctly', async () => {
+      const mockBuffer = createMockAudioBuffer(1000, 44100);
+      const mockChannelData = new Float32Array(1000);
+      mockChannelData.fill(0.25); // Set all samples to 0.25 (peak at -12dB)
+      mockBuffer.getChannelData = vi.fn().mockReturnValue(mockChannelData);
+
+      const result = await convertAudioFormat(mockBuffer, { 
+        normalize: true, 
+        normalizeLevel: -6 // Normalize to -6dB
+      });
+      
+      // Should normalize 0.25 to -6dB (0.5)
+      const resultData = result.getChannelData(0);
+      expect(resultData[0]).toBeCloseTo(0.5, 2);
+    });
+
+    it('should apply both gain and normalization', async () => {
+      const mockBuffer = createMockAudioBuffer(1000, 44100);
+      const mockChannelData = new Float32Array(1000);
+      mockChannelData.fill(0.25); // Set all samples to 0.25
+      mockBuffer.getChannelData = vi.fn().mockReturnValue(mockChannelData);
+
+      const result = await convertAudioFormat(mockBuffer, { 
+        normalize: true, 
+        normalizeLevel: -6, // Normalize to -6dB (0.5)
+        gain: 6 // Then add +6dB (0.5 -> 1.0)
+      });
+      
+      // Should normalize 0.25 to 0.5, then apply +6dB to get 1.0
+      const resultData = result.getChannelData(0);
+      expect(resultData[0]).toBeCloseTo(1.0, 2);
+    });
   })
 })

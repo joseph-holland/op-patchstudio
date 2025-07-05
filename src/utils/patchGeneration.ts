@@ -316,7 +316,9 @@ export async function generateMultisamplePatch(
     const needsConversion = 
       (targetSampleRate && sampleRate !== targetSampleRate) ||
       (targetBitDepth && targetBitDepth !== sample.originalBitDepth) ||
-      (targetChannels === "mono" && sample.audioBuffer.numberOfChannels > 1);
+      (targetChannels === "mono" && sample.audioBuffer.numberOfChannels > 1) ||
+      state.multisampleSettings.normalize ||
+      multisampleGain !== 0;
 
     if (needsConversion) {
       fileReadPromises.push(
@@ -325,7 +327,10 @@ export async function generateMultisamplePatch(
             const convertedBuffer = await convertAudioFormat(sample.audioBuffer!, {
               sampleRate: targetSampleRate || sampleRate,
               bitDepth: targetBitDepth || sample.originalBitDepth || 16,
-              channels: targetChannels === "mono" ? 1 : sample.audioBuffer!.numberOfChannels
+              channels: targetChannels === "mono" ? 1 : sample.audioBuffer!.numberOfChannels,
+              normalize: state.multisampleSettings.normalize,
+              normalizeLevel: state.multisampleSettings.normalizeLevel,
+              gain: multisampleGain
             });
             
             // Validate that converted buffer frame count matches our calculation

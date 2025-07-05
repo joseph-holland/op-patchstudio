@@ -107,6 +107,10 @@ export function MultisampleTool() {
     dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: level });
   };
 
+  const handleGainChange = (gain: number) => {
+    dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: gain });
+  };
+
   const handleCutAtLoopEndChange = (enabled: boolean) => {
     dispatch({ type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END', payload: enabled });
   };
@@ -120,8 +124,9 @@ export function MultisampleTool() {
         dispatch({ type: 'SET_MULTISAMPLE_BIT_DEPTH', payload: 0 });
         dispatch({ type: 'SET_MULTISAMPLE_CHANNELS', payload: 0 });
         dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE', payload: false });
-        dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: 0.0 });
+        dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: -6.0 });
         dispatch({ type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END', payload: false });
+        dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: 0 });
         setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
       }
     });
@@ -195,8 +200,9 @@ export function MultisampleTool() {
         
         // Reset normalize and cut settings
         dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE', payload: false });
-        dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: 0.0 });
+        dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: -6.0 });
         dispatch({ type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END', payload: false });
+        dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: 0 });
         
         setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
       }
@@ -310,7 +316,7 @@ export function MultisampleTool() {
     state.multisampleSettings.bitDepth !== 0 ||
     state.multisampleSettings.channels !== 0 ||
     state.multisampleSettings.normalize !== false || // Normalize settings changed
-    state.multisampleSettings.normalizeLevel !== 0.0 ||
+    state.multisampleSettings.normalizeLevel !== -6.0 ||
     state.multisampleSettings.cutAtLoopEnd !== false // Cut at loop end changed
     // Note: Multisample preset settings are handled in MultisamplePresetSettings component
   );
@@ -554,6 +560,8 @@ export function MultisampleTool() {
           normalizeLevel={state.multisampleSettings.normalizeLevel}
           onNormalizeChange={handleNormalizeChange}
           onNormalizeLevelChange={handleNormalizeLevelChange}
+          gain={state.multisampleSettings.gain}
+          onGainChange={handleGainChange}
           cutAtLoopEnd={state.multisampleSettings.cutAtLoopEnd}
           onCutAtLoopEndChange={handleCutAtLoopEndChange}
           onResetAudioSettingsConfirm={handleResetAudioSettingsConfirm}

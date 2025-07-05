@@ -30,13 +30,14 @@ vi.mock('../../context/AppContext', () => ({
         }
       },
       multisampleSettings: {
-        sampleRate: 44100,
-        bitDepth: 16,
-        channels: 2,
+        sampleRate: 0,
+        bitDepth: 0,
+        channels: 0,
         presetName: '',
         normalize: false,
-        normalizeLevel: 0,
-        cutAtLoopEnd: false
+        normalizeLevel: -6.0,
+        cutAtLoopEnd: false,
+        gain: 0
       },
       notifications: [],
       importedDrumPreset: null,
@@ -101,13 +102,14 @@ describe('useFileUpload', () => {
           }
         },
         multisampleSettings: {
-          sampleRate: 44100,
-          bitDepth: 16,
-          channels: 2,
+          sampleRate: 0,
+          bitDepth: 0,
+          channels: 0,
           presetName: '',
           normalize: false,
-          normalizeLevel: 0,
-          cutAtLoopEnd: false
+          normalizeLevel: -6.0,
+          cutAtLoopEnd: false,
+          gain: 0
         },
         notifications: [],
         importedDrumPreset: null,

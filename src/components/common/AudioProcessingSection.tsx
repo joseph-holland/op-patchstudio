@@ -18,6 +18,8 @@ interface AudioProcessingSectionProps {
   cutAtLoopEnd?: boolean;
   onCutAtLoopEndChange?: (enabled: boolean) => void;
   onResetAudioSettingsConfirm?: () => void;
+  gain?: number; // -30 to +20 dB
+  onGainChange?: (gain: number) => void;
 }
 
 export function AudioProcessingSection({
@@ -35,7 +37,9 @@ export function AudioProcessingSection({
   onNormalizeLevelChange,
   cutAtLoopEnd = false,
   onCutAtLoopEndChange,
-  onResetAudioSettingsConfirm
+  onResetAudioSettingsConfirm,
+  gain = 0,
+  onGainChange
 }: AudioProcessingSectionProps) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -56,7 +60,8 @@ export function AudioProcessingSection({
     channels !== 0 ||
     normalize !== false ||
     normalizeLevel !== 0.0 ||
-    (type === 'multisample' && cutAtLoopEnd !== false)
+    (type === 'multisample' && cutAtLoopEnd !== false) ||
+    (type === 'multisample' && gain !== 0)
   );
 
 
@@ -195,6 +200,63 @@ export function AudioProcessingSection({
               `}</style>
             </div>
           </div>
+          {/* Gain Control (only for multisample) */}
+          {type === 'multisample' && (
+            <div style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? '1rem' : '2rem',
+              alignItems: isMobile ? 'center' : 'flex-start',
+            }}>
+              <div style={{ 
+                flex: isMobile ? 'none' : '1',
+                width: isMobile ? '100%' : 'auto',
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '1rem', 
+                justifyContent: isMobile ? 'center' : 'flex-start' 
+              }}>
+                <div style={{ fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                  gain
+                </div>
+              </div>
+              
+              <div style={{ 
+                flex: isMobile ? 'none' : '1',
+                width: isMobile ? '100%' : 'auto'
+              }}>
+                <div style={{ fontSize: isMobile ? '0.9rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left' }}>
+                  gain: {gain} db
+                </div>
+                <Slider
+                  id="gain-slider"
+                  min={-30}
+                  max={20}
+                  step={1}
+                  value={gain}
+                  onChange={({ value }) => onGainChange?.(value)}
+                  hideTextInput
+                  style={{ width: '100%' }}
+                />
+                <style>{`
+                  #gain-slider .cds--slider__track {
+                    background: linear-gradient(to right, var(--color-bg-slider-track) 0%, var(--color-interactive-secondary) 100%) !important;
+                  }
+                  #gain-slider .cds--slider__filled-track {
+                    background: var(--color-interactive-dark) !important;
+                  }
+                  #gain-slider .cds--slider__thumb {
+                    background: var(--color-interactive-dark) !important;
+                    border: 2px solid var(--color-interactive-dark) !important;
+                  }
+                  #gain-slider .cds--slider__thumb:hover {
+                    background: var(--color-text-primary) !important;
+                    border-color: var(--color-text-primary) !important;
+                  }
+                `}</style>
+              </div>
+            </div>
+          )}
           {/* Loop End Cut Toggle (new row, only for multisample) */}
           {type === 'multisample' && (
             <div style={{ width: isMobile ? '100%' : 'auto', display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: isMobile ? 'center' : 'flex-start' }}>

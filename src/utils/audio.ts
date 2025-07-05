@@ -188,6 +188,9 @@ export interface ConversionOptions {
   sampleRate?: number;
   bitDepth?: number;
   channels?: number;
+  normalize?: boolean;
+  normalizeLevel?: number; // dB
+  gain?: number; // dB
 }
 
 export async function convertAudioFormat(
@@ -196,6 +199,9 @@ export async function convertAudioFormat(
 ): Promise<AudioBuffer> {
   const targetSampleRate = options.sampleRate || audioBuffer.sampleRate;
   const targetChannels = options.channels || audioBuffer.numberOfChannels;
+  const normalize = options.normalize || false;
+  const normalizeLevel = options.normalizeLevel || 0;
+  const gain = options.gain || 0;
   
   // Create offline context for conversion
   const offlineContext = audioContextManager.createOfflineContext(
@@ -208,6 +214,36 @@ export async function convertAudioFormat(
   const source = offlineContext.createBufferSource();
   source.buffer = audioBuffer;
 
+  // Create gain node for normalization and gain
+  const gainNode = offlineContext.createGain();
+  let gainValue = 1;
+
+  // Apply gain
+  if (gain !== 0) {
+    gainValue *= Math.pow(10, gain / 20);
+  }
+
+  // Apply normalization if enabled
+  if (normalize) {
+    // Find the peak amplitude
+    let peak = 0;
+    for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+      const channelData = audioBuffer.getChannelData(ch);
+      for (let i = 0; i < channelData.length; i++) {
+        peak = Math.max(peak, Math.abs(channelData[i]));
+      }
+    }
+    
+    if (peak > 0) {
+      // Calculate normalization gain to reach the target level
+      const targetAmplitude = Math.pow(10, normalizeLevel / 20);
+      const normalizeGain = targetAmplitude / peak;
+      gainValue *= normalizeGain;
+    }
+  }
+
+  gainNode.gain.value = gainValue;
+
   // Handle channel conversion
   if (targetChannels !== audioBuffer.numberOfChannels) {
     // Add channel splitter/merger for channel conversion
@@ -215,6 +251,8 @@ export async function convertAudioFormat(
     const merger = offlineContext.createChannelMerger(targetChannels);
     
     source.connect(splitter);
+    splitter.connect(gainNode);
+    gainNode.connect(merger);
     
     // Connect channels based on conversion type
     if (targetChannels === 1 && audioBuffer.numberOfChannels === 2) {
@@ -234,7 +272,8 @@ export async function convertAudioFormat(
     
     merger.connect(offlineContext.destination);
   } else {
-    source.connect(offlineContext.destination);
+    source.connect(gainNode);
+    gainNode.connect(offlineContext.destination);
   }
 
   source.start(0);
