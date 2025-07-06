@@ -127,6 +127,8 @@ export function MultisampleTool() {
         dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: -6.0 });
         dispatch({ type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END', payload: false });
         dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: 0 });
+        dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: true });
+        dispatch({ type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE', payload: true });
         setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
       }
     });
@@ -203,6 +205,8 @@ export function MultisampleTool() {
         dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: -6.0 });
         dispatch({ type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END', payload: false });
         dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: 0 });
+        dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: true });
+        dispatch({ type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE', payload: true });
         
         setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
       }

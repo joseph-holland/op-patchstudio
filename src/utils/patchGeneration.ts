@@ -301,8 +301,8 @@ export async function generateMultisamplePatch(
       lokey: lowKey,
       "loop.crossfade": 0,
       "loop.end": loopEnd,
-      "loop.onrelease": false, // TODO: Get from advanced settings
-      "loop.enabled": false, // TODO: Get from advanced settings
+      "loop.onrelease": state.multisampleSettings.loopOnRelease,
+      "loop.enabled": state.multisampleSettings.loopEnabled,
       "loop.start": loopStart,
       "pitch.keycenter": sampleNote,
       reverse: false,
