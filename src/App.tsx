@@ -3,6 +3,7 @@ import { AppHeader } from './components/common/AppHeader';
 import { MainTabs } from './components/common/MainTabs';
 import { NotificationSystem } from './components/common/NotificationSystem';
 import { AppContextProvider, useAppContext } from './context/AppContext';
+import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import './theme/device-themes.scss';
 import { useState, useEffect } from 'react';
 import { isMobile, isTablet } from 'react-device-detect';
@@ -109,6 +110,8 @@ function AppContent() {
               notifications={state.notifications}
               onDismiss={handleDismissNotification}
             />
+            
+            <PWAInstallPrompt />
             
             {/* Footer - matching legacy */}
             <footer style={{ 
