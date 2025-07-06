@@ -246,7 +246,7 @@ export async function generateMultisamplePatch(
   patchJson.regions = [];
 
   // Merge imported preset settings if they exist
-  mergeImportedMultisampleSettings(patchJson, (state as any).importedMultisamplePresetJson);
+  mergeImportedMultisampleSettings(patchJson, (state as any).importedMultisamplePreset);
 
   // Apply multisample preset settings
   // TODO: Add multisample advanced settings when implemented

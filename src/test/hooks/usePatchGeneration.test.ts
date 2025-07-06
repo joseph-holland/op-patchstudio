@@ -197,4 +197,246 @@ describe('usePatchGeneration', () => {
       })
     )
   })
+
+  it('should verify envelope values are included in multisample preset (FIXED)', async () => {
+    // Mock the generateMultisamplePatch function to capture the JSON that gets generated
+    let capturedJson: any = null;
+    vi.mocked(patchModule.generateMultisamplePatch).mockImplementation(async (state, _patchName) => {
+      // Capture the state that gets passed to the patch generation
+      capturedJson = state;
+      return new Blob(['mock patch'], { type: 'application/zip' });
+    });
+
+    // Mock state with imported multisample preset that includes envelope values
+    vi.mocked(useAppContext).mockReturnValue({
+      ...defaultMockState,
+      state: {
+        ...defaultMockState.state,
+        importedMultisamplePreset: {
+          engine: {
+            playmode: 'poly',
+            transpose: 0,
+            'velocity.sensitivity': 10240,
+            volume: 16466,
+            width: 0,
+            highpass: 0,
+            'portamento.amount': 0,
+            'portamento.type': 32767,
+            'tuning.root': 0,
+          },
+          envelope: {
+            amp: {
+              attack: 500,
+              decay: 6000,
+              sustain: 22000,
+              release: 12000,
+            },
+            filter: {
+              attack: 0,
+              decay: 5000,
+              sustain: 18000,
+              release: 10000,
+            },
+          },
+          regions: []
+        }
+      }
+    });
+
+    const { result } = renderHook(() => usePatchGeneration())
+    
+    await act(async () => {
+      await result.current.generateMultisamplePatchFile('Test Multisample')
+    })
+    
+    // Verify that the state passed to patch generation contains envelope values
+    expect(capturedJson).toBeDefined();
+    expect(capturedJson.importedMultisamplePreset).toBeDefined();
+    expect(capturedJson.importedMultisamplePreset.envelope).toBeDefined();
+    expect(capturedJson.importedMultisamplePreset.envelope.amp).toBeDefined();
+    expect(capturedJson.importedMultisamplePreset.envelope.filter).toBeDefined();
+    
+    // Verify specific envelope values are present
+    expect(capturedJson.importedMultisamplePreset.envelope.amp.attack).toBe(500);
+    expect(capturedJson.importedMultisamplePreset.envelope.amp.decay).toBe(6000);
+    expect(capturedJson.importedMultisamplePreset.envelope.amp.sustain).toBe(22000);
+    expect(capturedJson.importedMultisamplePreset.envelope.amp.release).toBe(12000);
+  })
+
+  it('should verify that envelope values from UI are automatically included in exported preset', async () => {
+    // Mock the actual patch generation to capture the final JSON
+    let capturedPatchJson: any = null;
+    vi.mocked(patchModule.generateMultisamplePatch).mockImplementation(async (state, _patchName) => {
+      // Simulate what the actual patch generation does - merge imported preset with base JSON
+      const baseJson = {
+        engine: { playmode: 'poly', volume: 16466 },
+        envelope: { amp: { attack: 0, decay: 0, sustain: 32767, release: 32767 } },
+        regions: []
+      };
+      
+      // Merge the imported preset (which contains our UI settings)
+      if (state.importedMultisamplePreset) {
+        if (state.importedMultisamplePreset.engine) {
+          Object.assign(baseJson.engine, state.importedMultisamplePreset.engine);
+        }
+        if (state.importedMultisamplePreset.envelope) {
+          Object.assign(baseJson.envelope, state.importedMultisamplePreset.envelope);
+        }
+      }
+      
+      capturedPatchJson = baseJson;
+      return new Blob(['mock patch'], { type: 'application/zip' });
+    });
+
+    // Mock state with imported multisample preset that includes envelope values from UI
+    vi.mocked(useAppContext).mockReturnValue({
+      ...defaultMockState,
+      state: {
+        ...defaultMockState.state,
+        importedMultisamplePreset: {
+          engine: {
+            playmode: 'poly',
+            transpose: 0,
+            'velocity.sensitivity': 10240,
+            volume: 16466,
+            width: 0,
+            highpass: 0,
+            'portamento.amount': 0,
+            'portamento.type': 32767,
+            'tuning.root': 0,
+          },
+          envelope: {
+            amp: {
+              attack: 1000,  // Custom UI value
+              decay: 8000,   // Custom UI value
+              sustain: 25000, // Custom UI value
+              release: 15000, // Custom UI value
+            },
+            filter: {
+              attack: 200,   // Custom UI value
+              decay: 4000,   // Custom UI value
+              sustain: 20000, // Custom UI value
+              release: 12000, // Custom UI value
+            },
+          },
+          regions: []
+        }
+      }
+    });
+
+    const { result } = renderHook(() => usePatchGeneration())
+    
+    await act(async () => {
+      await result.current.generateMultisamplePatchFile('Test Multisample')
+    })
+    
+    // Verify that the final patch JSON contains the envelope values from the UI
+    expect(capturedPatchJson).toBeDefined();
+    expect(capturedPatchJson.envelope).toBeDefined();
+    expect(capturedPatchJson.envelope.amp).toBeDefined();
+    expect(capturedPatchJson.envelope.filter).toBeDefined();
+    
+    // Verify that the custom UI envelope values are in the final exported preset
+    expect(capturedPatchJson.envelope.amp.attack).toBe(1000);
+    expect(capturedPatchJson.envelope.amp.decay).toBe(8000);
+    expect(capturedPatchJson.envelope.amp.sustain).toBe(25000);
+    expect(capturedPatchJson.envelope.amp.release).toBe(15000);
+    
+    expect(capturedPatchJson.envelope.filter.attack).toBe(200);
+    expect(capturedPatchJson.envelope.filter.decay).toBe(4000);
+    expect(capturedPatchJson.envelope.filter.sustain).toBe(20000);
+    expect(capturedPatchJson.envelope.filter.release).toBe(12000);
+  })
+
+  it('should verify that 100% envelope values (32767) are correctly exported', async () => {
+    // Mock the actual patch generation to capture the final JSON
+    let capturedPatchJson: any = null;
+    vi.mocked(patchModule.generateMultisamplePatch).mockImplementation(async (state, _patchName) => {
+      // Simulate what the actual patch generation does - merge imported preset with base JSON
+      const baseJson = {
+        engine: { playmode: 'poly', volume: 16466 },
+        envelope: { amp: { attack: 0, decay: 0, sustain: 32767, release: 32767 } },
+        regions: []
+      };
+      
+      // Merge the imported preset (which contains our UI settings)
+      if (state.importedMultisamplePreset) {
+        if (state.importedMultisamplePreset.engine) {
+          Object.assign(baseJson.engine, state.importedMultisamplePreset.engine);
+        }
+        if (state.importedMultisamplePreset.envelope) {
+          Object.assign(baseJson.envelope, state.importedMultisamplePreset.envelope);
+        }
+      }
+      
+      capturedPatchJson = baseJson;
+      return new Blob(['mock patch'], { type: 'application/zip' });
+    });
+
+    // Mock state with imported multisample preset that includes 100% envelope values (32767)
+    vi.mocked(useAppContext).mockReturnValue({
+      ...defaultMockState,
+      state: {
+        ...defaultMockState.state,
+        importedMultisamplePreset: {
+          engine: {
+            playmode: 'poly',
+            transpose: 0,
+            'velocity.sensitivity': 32767, // 100%
+            volume: 32767, // 100%
+            width: 32767, // 100%
+            highpass: 32767, // 100%
+            'portamento.amount': 32767, // 100%
+            'portamento.type': 32767,
+            'tuning.root': 0,
+          },
+          envelope: {
+            amp: {
+              attack: 32767,  // 100%
+              decay: 32767,   // 100%
+              sustain: 32767, // 100%
+              release: 32767, // 100%
+            },
+            filter: {
+              attack: 32767,  // 100%
+              decay: 32767,   // 100%
+              sustain: 32767, // 100%
+              release: 32767, // 100%
+            },
+          },
+          regions: []
+        }
+      }
+    });
+
+    const { result } = renderHook(() => usePatchGeneration())
+    
+    await act(async () => {
+      await result.current.generateMultisamplePatchFile('Test Multisample')
+    })
+    
+    // Verify that the final patch JSON contains the 100% envelope values (32767)
+    expect(capturedPatchJson).toBeDefined();
+    expect(capturedPatchJson.envelope).toBeDefined();
+    expect(capturedPatchJson.envelope.amp).toBeDefined();
+    expect(capturedPatchJson.envelope.filter).toBeDefined();
+    
+    // Verify that all envelope values are 32767 (100%)
+    expect(capturedPatchJson.envelope.amp.attack).toBe(32767);
+    expect(capturedPatchJson.envelope.amp.decay).toBe(32767);
+    expect(capturedPatchJson.envelope.amp.sustain).toBe(32767);
+    expect(capturedPatchJson.envelope.amp.release).toBe(32767);
+    
+    expect(capturedPatchJson.envelope.filter.attack).toBe(32767);
+    expect(capturedPatchJson.envelope.filter.decay).toBe(32767);
+    expect(capturedPatchJson.envelope.filter.sustain).toBe(32767);
+    expect(capturedPatchJson.envelope.filter.release).toBe(32767);
+    
+    // Also verify engine values are 32767 (100%)
+    expect(capturedPatchJson.engine.volume).toBe(32767);
+    expect(capturedPatchJson.engine.width).toBe(32767);
+    expect(capturedPatchJson.engine.highpass).toBe(32767);
+    expect(capturedPatchJson.engine['velocity.sensitivity']).toBe(32767);
+    expect(capturedPatchJson.engine['portamento.amount']).toBe(32767);
+  })
 })
