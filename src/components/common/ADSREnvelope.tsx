@@ -444,11 +444,8 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
         display: 'flex', 
         flexDirection: 'column', 
         gap: '1rem',
-        border: '1px solid #dee2e6',
         borderRadius: '15px',
         padding: '1rem',
-        backgroundColor: '#fff',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
         width: window.innerWidth <= 768 ? '100%' : '50%'
       }}>
       {/* Header with envelope selector */}
