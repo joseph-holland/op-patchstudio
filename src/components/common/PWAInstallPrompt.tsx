@@ -185,7 +185,7 @@ const PWAInstallPrompt: React.FC = () => {
           fontWeight: '500',
           color: 'var(--color-text-primary)'
         }}>
-          install op-patchstudio offline?
+          install OP-PatchStudio offline
         </strong>
         <span style={{ 
           fontSize: '0.875rem', 
@@ -193,7 +193,7 @@ const PWAInstallPrompt: React.FC = () => {
           lineHeight: '1.4'
         }}>
           {isMobile 
-            ? 'install as app for quick access'
+            ? 'install as app for offline use and quick access'
             : 'install as app for offline use and quick access'
           }
         </span>

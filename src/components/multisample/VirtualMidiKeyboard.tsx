@@ -607,9 +607,9 @@ export function VirtualMidiKeyboard({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '1rem 1rem 0.5rem 1rem',
+          padding: '0.7rem 1rem 0.5rem 1rem',
           borderBottom: '1px solid var(--color-border-medium)',
-          backgroundColor: 'var(--color-bg-primary)'
+          backgroundColor: 'var(--color-bg-secondary)'
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
             <h3 style={{
