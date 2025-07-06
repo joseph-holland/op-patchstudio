@@ -39,6 +39,11 @@ export function VirtualMidiKeyboard({
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
   const [mousePressedKey, setMousePressedKey] = useState<number | null>(null);
   
+  // Mouse drag scrolling state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartScrollLeft, setDragStartScrollLeft] = useState(0);
+  
   // Keyboard mapping - white keys (bottom row) and black keys (top row)
   const keyboardMapping = {
     // White keys (C, D, E, F, G, A, B)
@@ -276,6 +281,9 @@ export function VirtualMidiKeyboard({
   }, [activeOctave, keyboardMapping]);
 
   const handleKeyClick = useCallback((midiNote: number) => {
+    // Don't trigger key actions if we're dragging
+    if (isDragging) return;
+    
     const isAssigned = assignedNotes.includes(midiNote);
     // Find the computer key for this midiNote in the current octave
     const computerKey = getComputerKeyForNote(midiNote);
@@ -294,7 +302,7 @@ export function VirtualMidiKeyboard({
     } else {
       onUnassignedKeyClick?.(midiNote);
     }
-  }, [assignedNotes, onKeyClick, onUnassignedKeyClick, getComputerKeyForNote]);
+  }, [assignedNotes, onKeyClick, onUnassignedKeyClick, getComputerKeyForNote, isDragging]);
 
   const handleKeyMouseEnter = useCallback((midiNote: number) => {
     setHoveredKey(midiNote);
@@ -332,6 +340,49 @@ export function VirtualMidiKeyboard({
       onKeyDrop?.(midiNote, wavFiles);
     }
   }, [onKeyDrop]);
+
+  // Mouse drag handlers for keyboard scrolling
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Start dragging on any click in the keyboard area
+    setIsDragging(true);
+    setDragStartX(e.clientX);
+    setDragStartScrollLeft(keyboardScrollRef.current?.scrollLeft || 0);
+    e.preventDefault();
+  }, []);
+
+
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Global mouse handlers for dragging
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !keyboardScrollRef.current) return;
+      
+      const deltaX = e.clientX - dragStartX;
+      keyboardScrollRef.current.scrollLeft = dragStartScrollLeft - deltaX;
+      e.preventDefault();
+    };
+
+    if (isDragging) {
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      return () => {
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+        document.removeEventListener('mousemove', handleGlobalMouseMove);
+      };
+    }
+  }, [isDragging, dragStartX, dragStartScrollLeft]);
 
   // Generate all 128 MIDI keys
   const renderKeys = () => {
@@ -396,7 +447,12 @@ export function VirtualMidiKeyboard({
               userSelect: 'none',
               boxShadow: isHovered ? '0 2px 4px rgba(0,0,0,0.1)' : '0 2px 6px rgba(0,0,0,0.3)',
             }}
-            onMouseDown={() => setMousePressedKey(midiNote)}
+            onMouseDown={() => {
+              // Don't set pressed key if we're starting to drag
+              if (!isDragging) {
+                setMousePressedKey(midiNote);
+              }
+            }}
             onMouseUp={() => setMousePressedKey(null)}
             onMouseLeave={() => { setMousePressedKey(null); handleKeyMouseLeave(); }}
             onClick={() => handleKeyClick(midiNote)}
@@ -474,7 +530,12 @@ export function VirtualMidiKeyboard({
               userSelect: 'none',
               boxShadow: isHovered ? '0 3px 8px rgba(0,0,0,0.5)' : '0 2px 4px rgba(0,0,0,0.3)',
             }}
-            onMouseDown={() => setMousePressedKey(midiNote)}
+            onMouseDown={() => {
+              // Don't set pressed key if we're starting to drag
+              if (!isDragging) {
+                setMousePressedKey(midiNote);
+              }
+            }}
             onMouseUp={() => setMousePressedKey(null)}
             onMouseLeave={() => { setMousePressedKey(null); handleKeyMouseLeave(); }}
             onClick={() => handleKeyClick(midiNote)}
@@ -634,8 +695,13 @@ export function VirtualMidiKeyboard({
             padding: '1rem',
             overflowX: 'auto',
             overflowY: 'hidden',
-            position: 'relative'
-          }}>
+            position: 'relative',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            userSelect: 'none'
+          }}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}>
           
           <div style={{
             display: 'flex',

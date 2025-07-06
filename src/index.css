@@ -4,6 +4,15 @@
 /* Import Font Awesome */
 @import '@fortawesome/fontawesome-free/css/all.css';
 
+/* Embed Nimbus Sans L font (Helvetica alternative) */
+@font-face {
+  font-family: 'NimbusSansL';
+  src: url('/assets/NimbusSanL-Reg-webfont.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   font-family: "Montserrat", "Arial", sans-serif;
   line-height: 1.7;
@@ -395,6 +404,14 @@ body {
     justify-content: center !important;
   }
   
+  /* Specific improvements for drum sample settings modal */
+  .drum-sample-settings-modal {
+    width: 95% !important;
+    max-width: 95% !important;
+    max-height: calc(100vh - 1rem) !important;
+    margin: 0 !important;
+  }
+  
   div[style*="position: fixed"][style*="z-index: 1050"] > div {
     width: 100% !important;
     max-width: 100% !important;
@@ -430,12 +447,34 @@ body {
     min-width: 180px !important;
     font-size: 0.85rem !important;
   }
+  
+  /* Ensure waveform containers scale properly on tablets */
+  .drum-sample-settings-modal canvas {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+  }
+  
+  /* Improve waveform container responsiveness */
+  .drum-sample-settings-modal div[style*="position: relative"][style*="margin-bottom: 1rem"] {
+    width: 100% !important;
+    overflow: hidden !important;
+  }
 }
 
 @media (max-width: 480px) {
   /* Further adjustments for very small screens */
   div[style*="position: fixed"][style*="z-index: 1050"] {
     padding: 0.25rem !important;
+  }
+  
+  /* Specific improvements for drum sample settings modal on very small screens */
+  .drum-sample-settings-modal {
+    width: 98% !important;
+    max-width: 98% !important;
+    max-height: calc(100vh - 0.5rem) !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
   }
   
   div[style*="position: fixed"][style*="z-index: 1050"] > div {
@@ -464,5 +503,18 @@ body {
   div[style*="display: flex"][style*="align-items: center"][style*="flex-wrap: wrap"] select {
     min-width: 150px !important;
     font-size: 0.8rem !important;
+  }
+  
+  /* Ensure waveform containers scale properly on mobile */
+  .drum-sample-settings-modal canvas {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+  }
+  
+  /* Improve waveform container responsiveness */
+  .drum-sample-settings-modal div[style*="position: relative"][style*="margin-bottom: 1rem"] {
+    width: 100% !important;
+    overflow: hidden !important;
   }
 }

@@ -144,11 +144,7 @@ export const FourKnobControl: React.FC<FourKnobControlProps> = ({
       style={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        gap: '1rem',
-        padding: '1rem',
-        border: '1px solid var(--color-border-light)',
-        borderRadius: '4px',
-        backgroundColor: 'var(--color-bg-panel)'
+        gap: '1rem'
       }}
     >
       {title && (

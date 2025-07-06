@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { FourKnobControl } from './FourKnobControl';
 
 interface ADSRValues {
@@ -16,6 +16,32 @@ interface ADSREnvelopeProps {
   width?: number;
   height?: number;
 }
+
+// ADSR Presets for different instrument types
+const ADSR_PRESETS = {
+  bass: {
+    amp: { attack: 1000, decay: 12000, sustain: 28000, release: 15000 },
+    filter: { attack: 0, decay: 8000, sustain: 20000, release: 12000 }
+  },
+  pad: {
+    amp: { attack: 15000, decay: 20000, sustain: 30000, release: 25000 },
+    filter: { attack: 4000, decay: 15000, sustain: 25000, release: 20000 }
+  },
+  keys: {
+    amp: { attack: 500, decay: 6000, sustain: 22000, release: 12000 },
+    filter: { attack: 0, decay: 5000, sustain: 18000, release: 10000 }
+  },
+  pluck: {
+    amp: { attack: 0, decay: 2000, sustain: 8000, release: 5000 },
+    filter: { attack: 0, decay: 3000, sustain: 12000, release: 8000 }
+  },
+  lead: {
+    amp: { attack: 800, decay: 8000, sustain: 20000, release: 12000 },
+    filter: { attack: 0, decay: 6000, sustain: 18000, release: 10000 }
+  }
+};
+
+type PresetType = keyof typeof ADSR_PRESETS;
 
 // Convert 0-32767 to 0-100% for display
 const valueToPercent = (value: number): number => Math.round((value / 32767) * 100);
@@ -74,9 +100,33 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
   const svgRef = React.useRef<SVGSVGElement>(null);
   const [activeEnvelope, setActiveEnvelope] = useState<'amp' | 'filter'>('amp');
   const [isDragging, setIsDragging] = useState<string | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<PresetType>('keys');
 
   const currentEnvelope = activeEnvelope === 'amp' ? ampEnvelope : filterEnvelope;
   const inactiveEnvelope = activeEnvelope === 'amp' ? filterEnvelope : ampEnvelope;
+
+  // Initialize with keys preset if envelopes are empty
+  useEffect(() => {
+    const isEnvelopesEmpty = 
+      ampEnvelope.attack === 0 && ampEnvelope.decay === 0 && ampEnvelope.sustain === 0 && ampEnvelope.release === 0 &&
+      filterEnvelope.attack === 0 && filterEnvelope.decay === 0 && filterEnvelope.sustain === 0 && filterEnvelope.release === 0;
+    
+    if (isEnvelopesEmpty) {
+      const keysPreset = ADSR_PRESETS.keys;
+      onAmpEnvelopeChange(keysPreset.amp);
+      onFilterEnvelopeChange(keysPreset.filter);
+    }
+  }, [ampEnvelope, filterEnvelope, onAmpEnvelopeChange, onFilterEnvelopeChange]);
+
+  // Handle preset changes
+  const handlePresetChange = useCallback((preset: PresetType) => {
+    setSelectedPreset(preset);
+    const presetValues = ADSR_PRESETS[preset];
+    
+    // Apply preset to both amp and filter envelopes
+    onAmpEnvelopeChange(presetValues.amp);
+    onFilterEnvelopeChange(presetValues.filter);
+  }, [onAmpEnvelopeChange, onFilterEnvelopeChange]);
 
   // Handle knob value changes for the active envelope
   const handleKnobValueChange = useCallback((index: number, value: number) => {
@@ -444,12 +494,6 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
         display: 'flex', 
         flexDirection: 'column', 
         gap: '1rem',
-        border: '1px solid #dee2e6',
-        borderRadius: '15px',
-        padding: '1rem',
-        backgroundColor: '#fff',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-        width: window.innerWidth <= 768 ? '100%' : '50%'
       }}>
       {/* Header with envelope selector */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -494,9 +538,6 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
         viewBox={`0 0 ${width} ${height}`}
         preserveAspectRatio="xMidYMid meet"
         style={{ 
-          border: '1px solid #ccc',
-          borderRadius: '6px',
-          backgroundColor: '#ffffff',
           cursor: isDragging ? 'grabbing' : 'crosshair'
         }}
         onMouseDown={handlePointerDown}
@@ -505,19 +546,6 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {/* Grey border - now fills the entire 194px height */}
-        <rect 
-          x={(width - Math.round(55 * 7.74)) / 2} 
-          y="0" 
-          width={Math.round(55 * 7.74)} 
-          height={Math.round(25 * 7.74)} 
-          fill="#ffffff" 
-          stroke="#ddd" 
-          strokeWidth="1" 
-        />
-        
-        {/* Envelope area background (46x20mm) - REMOVED */}
-        
         {/* Bottom line for envelope area */}
         <line 
           x1={(width - Math.round(55 * 7.74)) / 2 + (Math.round(55 * 7.74) - Math.round(46 * 7.74)) / 2} 
@@ -592,38 +620,6 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
         {/* Interactive handles for active envelope only */}
         {renderHandles(currentEnvelope, true)}
         
-        {/* Fixed decorative squares at envelope start and end */}
-        {(() => {
-          const pos = getPhasePositions(currentEnvelope);
-          const envelopeBottom = (height - Math.round(25 * 7.74)) / 2 + (Math.round(25 * 7.74) - Math.round(20 * 7.74)) / 2 + Math.round(20 * 7.74);
-          
-          return (
-            <>
-              {/* Start of envelope square */}
-              <rect
-                x={pos.start.x - 4}
-                y={envelopeBottom - 4}
-                width="8"
-                height="8"
-                fill="#000"
-                rx="3"
-                ry="3"
-              />
-              
-              {/* End of envelope square */}
-              <rect
-                x={pos.releaseEnd.x - 4}
-                y={envelopeBottom - 4}
-                width="8"
-                height="8"
-                fill="#000"
-                rx="3"
-                ry="3"
-              />
-            </>
-          );
-        })()}
-        
         {/* Envelope type labels positioned like OP-XY */}
         {(() => {
           const ampPos = getHandlePositions(ampEnvelope);
@@ -660,6 +656,44 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
           );
         })()}
       </svg>
+      
+      {/* Preset Dropdown */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+        gap: '0.5rem',
+        marginBottom: '1rem'
+      }}>
+        <span style={{
+          fontSize: '0.875rem',
+          fontWeight: '500',
+          color: 'var(--color-text-primary)',
+          userSelect: 'none'
+        }}>
+          preset
+        </span>
+        <select
+          value={selectedPreset}
+          onChange={(e) => handlePresetChange(e.target.value as PresetType)}
+          style={{
+            padding: '0.5rem',
+            fontSize: '0.875rem',
+            border: '1px solid var(--color-border-light)',
+            borderRadius: '3px',
+            backgroundColor: 'var(--color-bg-primary)',
+            color: 'var(--color-text-primary)',
+            cursor: 'pointer',
+            width: '100%'
+          }}
+        >
+          <option value="bass">bass</option>
+          <option value="pad">pad</option>
+          <option value="keys">keys</option>
+          <option value="pluck">pluck</option>
+          <option value="lead">lead</option>
+        </select>
+      </div>
       
       {/* ADSR Control Knobs */}
       <FourKnobControl

@@ -192,27 +192,41 @@ function AppContent() {
           transition: 'opacity 0.3s ease-in-out, visibility 0.3s ease-in-out'
         }}
       >
-        <div style={{ position: 'relative', width: '4em', height: '4em', marginBottom: '2.5rem', marginTop: '-6em', display: 'inline-block' }}>
-          {/* Upright phone */}
-          <i className="fas fa-mobile-alt" style={{ position: 'absolute', right: 0, bottom: 0, fontSize: '4em', color: 'var(--color-interactive-primary, #1a1a1a)', opacity: 0.6 }}></i>
-          {/* Rotated phone, shifted left/up by 50% of icon size */}
-          <i className="fas fa-mobile-alt" style={{ position: 'absolute', right: 0, bottom: 0, fontSize: '4em', color: 'var(--color-interactive-primary, #1a1a1a)', transform: 'rotate(-90deg) translate(20%, -50%)', transformOrigin: 'bottom right' }}></i>
-          {/* Reply arrow centered */}
-          <i className="fas fa-reply" style={{ position: 'absolute', left: '10%', top: '40%', fontSize: '2em', color: 'var(--color-interactive-primary, #1a1a1a)', transform: 'translate(-60%, -10%) rotate(-90deg)' }}></i>
-        </div>
-        <div
-          style={{
-            fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif',
-            fontWeight: 300,
-            fontSize: '2.1rem',
-            color: 'var(--color-text-primary)',
-            textAlign: 'center',
-            letterSpacing: '-0.05em',
-            lineHeight: 1.1,
-            padding: '0 2rem'
-          }}
-        >
-          please rotate your device to landscape mode
+        {/* White background container with border */}
+        <div style={{
+          background: 'white',
+          border: '1px solid var(--color-border-light)',
+          borderRadius: '15px',
+          padding: '2rem',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          maxWidth: '90vw',
+          margin: '0 1rem'
+        }}>
+          <div style={{ position: 'relative', width: '4em', height: '4em', marginBottom: '2.5rem', display: 'inline-block' }}>
+            {/* Upright phone */}
+            <i className="fas fa-mobile-alt" style={{ position: 'absolute', right: 0, bottom: 0, fontSize: '4em', color: 'var(--color-interactive-primary, #1a1a1a)', opacity: 0.6 }}></i>
+            {/* Rotated phone, shifted left/up by 50% of icon size */}
+            <i className="fas fa-mobile-alt" style={{ position: 'absolute', right: 0, bottom: 0, fontSize: '4em', color: 'var(--color-interactive-primary, #1a1a1a)', transform: 'rotate(-90deg) translate(20%, -50%)', transformOrigin: 'bottom right' }}></i>
+            {/* Reply arrow centered */}
+            <i className="fas fa-reply" style={{ position: 'absolute', left: '10%', top: '40%', fontSize: '2em', color: 'var(--color-interactive-primary, #1a1a1a)', transform: 'translate(-60%, -10%) rotate(-90deg)' }}></i>
+          </div>
+          <div
+            style={{
+              fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif',
+              fontWeight: 300,
+              fontSize: '2.1rem',
+              color: 'var(--color-text-primary)',
+              textAlign: 'center',
+              letterSpacing: '-0.05em',
+              lineHeight: 1.1,
+              padding: '0 1rem'
+            }}
+          >
+            please rotate your device to landscape mode
+          </div>
         </div>
       </div>
     </>

@@ -489,7 +489,7 @@ export function MultisamplePresetSettings() {
             </div>
           </section>
 
-          {/* Envelopes */}
+          {/* Envelopes and Filters */}
           <section>
             <h4 style={{ 
               marginBottom: '1rem', 
@@ -501,12 +501,50 @@ export function MultisamplePresetSettings() {
               envelopes and filters
             </h4>
             
-            <ADSREnvelope
-              ampEnvelope={settings.ampEnvelope}
-              filterEnvelope={settings.filterEnvelope}
-              onAmpEnvelopeChange={updateAmpEnvelope}
-              onFilterEnvelopeChange={updateFilterEnvelope}
-            />
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
+              gap: isMobile ? '2rem' : '3rem' 
+            }}>
+              {/* Envelopes */}
+              <div>
+                <ADSREnvelope
+                  ampEnvelope={settings.ampEnvelope}
+                  filterEnvelope={settings.filterEnvelope}
+                  onAmpEnvelopeChange={updateAmpEnvelope}
+                  onFilterEnvelopeChange={updateFilterEnvelope}
+                />
+              </div>
+              
+              {/* Filters (Coming Soon) */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: '300px',
+                border: '1px solid var(--color-border-light)',
+                borderRadius: '6px',
+                backgroundColor: 'var(--color-bg-panel)',
+                color: 'var(--color-text-secondary)'
+              }}>
+                <div style={{
+                  fontSize: '1.1rem',
+                  fontWeight: '500',
+                  marginBottom: '0.5rem',
+                  textAlign: 'center'
+                }}>
+                  filters
+                </div>
+                <div style={{
+                  fontSize: '0.9rem',
+                  opacity: 0.7,
+                  textAlign: 'center'
+                }}>
+                  coming soon
+                </div>
+              </div>
+            </div>
           </section>
         </div>
 
