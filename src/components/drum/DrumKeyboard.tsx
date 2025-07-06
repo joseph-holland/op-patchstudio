@@ -531,9 +531,7 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
                     gap: '8px',
                     marginBottom: '12px'
                   }}>
-                    <i className="fas fa-arrow-left" style={{ color: 'var(--color-text-secondary)', fontSize: '1rem' }}></i>
                     <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>swipe to change octaves</span>
-                    <i className="fas fa-arrow-right" style={{ color: 'var(--color-text-secondary)', fontSize: '1rem' }}></i>
                   </div>
                   <button
                     onClick={() => {
@@ -556,40 +554,6 @@ export function DrumKeyboard({ onFileUpload }: DrumKeyboardProps = {}) {
                 </div>
               </div>
             )}
-
-            {/* Swipe Direction Indicators */}
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '8px',
-              transform: 'translateY(-50%)',
-              zIndex: 10,
-              opacity: currentOctave === 0 ? 0.6 : 0,
-              transition: 'opacity 0.3s ease',
-              pointerEvents: 'none'
-            }}>
-              <i className="fas fa-chevron-right" style={{ 
-                color: 'var(--color-text-secondary)', 
-                fontSize: '1.25rem',
-                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
-              }}></i>
-            </div>
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              right: '8px',
-              transform: 'translateY(-50%)',
-              zIndex: 10,
-              opacity: currentOctave === 1 ? 0.6 : 0,
-              transition: 'opacity 0.3s ease',
-              pointerEvents: 'none'
-            }}>
-              <i className="fas fa-chevron-left" style={{ 
-                color: 'var(--color-text-secondary)', 
-                fontSize: '1.25rem',
-                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
-              }}></i>
-            </div>
 
             {/* Viewport for clipping */}
             <div 
