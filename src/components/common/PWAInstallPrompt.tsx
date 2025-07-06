@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@carbon/react';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
