@@ -10,8 +10,8 @@ async function generateIcons() {
     const assetsDir = path.join(process.cwd(), 'public', 'assets');
     await fs.mkdir(assetsDir, { recursive: true });
 
-    // Read the source favicon
-    const sourcePath = path.join(process.cwd(), 'public', 'assets', 'favicon.png');
+    // Read the source favicon (SVG)
+    const sourcePath = path.join(process.cwd(), 'public', 'assets', 'favicon.svg');
     
     for (const size of sizes) {
       const outputPath = path.join(assetsDir, `icon-${size}x${size}.png`);
@@ -19,7 +19,7 @@ async function generateIcons() {
       await sharp(sourcePath)
         .resize(size, size, {
           fit: 'contain',
-          background: { r: 0, g: 0, b: 0, alpha: 1 }
+          background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent background
         })
         .png()
         .toFile(outputPath);

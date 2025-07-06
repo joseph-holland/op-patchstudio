@@ -44,7 +44,7 @@ export default defineConfig({
       manifest: {
         name: 'OP-PatchStudio [unofficial]',
         short_name: 'OP-PatchStudio',
-        description: 'Free & open source preset creator for OP synthesizers. Upload samples, edit waveforms, adjust settings, and generate patches instantly.',
+        description: 'Free & open source preset creator for OP synthesizers. Upload samples, edit waveforms, adjust settingsand generate patches instantly.',
         theme_color: '#000000',
         background_color: '#000000',
         display: 'standalone',
