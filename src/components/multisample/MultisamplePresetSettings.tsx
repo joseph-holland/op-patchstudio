@@ -83,12 +83,29 @@ const createDefaultSettings = (): MultisampleAdvancedSettings => {
   };
 };
 
+// Function to create true default settings (non-random, consistent values)
+const createTrueDefaultSettings = (): MultisampleAdvancedSettings => {
+  return {
+    playmode: 'poly',
+    loopEnabled: true,
+    transpose: 0,
+    velocitySensitivity: 20,
+    volume: 69,
+    width: 0,
+    highpass: 0,
+    portamentoType: 'linear',
+    portamentoAmount: 0,
+    tuningRoot: 0, // C
+    ampEnvelope: ADSR_PRESETS.keys.amp, // Use consistent 'keys' preset as default
+    filterEnvelope: ADSR_PRESETS.keys.filter,
+  };
+};
+
 export function MultisamplePresetSettings() {
   const { dispatch } = useAppContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [settings, setSettings] = useState<MultisampleAdvancedSettings>(createDefaultSettings());
-  const [initialSettings, setInitialSettings] = useState<MultisampleAdvancedSettings | null>(null);
   const [expandedSections, setExpandedSections] = useState({
     essential: true,
     sound: false,
@@ -104,13 +121,6 @@ export function MultisamplePresetSettings() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Store initial settings on first load
-  useEffect(() => {
-    if (!initialSettings) {
-      setInitialSettings(settings);
-    }
-  }, [settings, initialSettings]);
 
   const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -171,11 +181,7 @@ export function MultisamplePresetSettings() {
   };
 
   const handleReset = () => {
-    if (initialSettings) {
-      setSettings(initialSettings);
-    } else {
-      setSettings(createDefaultSettings());
-    }
+    setSettings(createTrueDefaultSettings());
   };
 
   const updateSetting = <K extends keyof MultisampleAdvancedSettings>(
@@ -197,43 +203,32 @@ export function MultisamplePresetSettings() {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Create baseline settings for comparison (non-envelope settings that should be at defaults)
-  const baselineSettings = {
-    playmode: 'poly' as const,
-    loopEnabled: true,
-    transpose: 0,
-    velocitySensitivity: 20,
-    volume: 69,
-    width: 0,
-    highpass: 0,
-    portamentoType: 'linear' as const,
-    portamentoAmount: 0,
-    tuningRoot: 0,
-  };
+  // Get true default settings for comparison
+  const trueDefaults = createTrueDefaultSettings();
 
-  // Check if any settings have changed from their initial values
-  const hasPresetChanges = initialSettings ? (
-    // Check non-envelope settings against baseline
-    settings.playmode !== baselineSettings.playmode ||
-    settings.loopEnabled !== baselineSettings.loopEnabled ||
-    settings.transpose !== baselineSettings.transpose ||
-    settings.velocitySensitivity !== baselineSettings.velocitySensitivity ||
-    settings.volume !== baselineSettings.volume ||
-    settings.width !== baselineSettings.width ||
-    settings.highpass !== baselineSettings.highpass ||
-    settings.portamentoType !== baselineSettings.portamentoType ||
-    settings.portamentoAmount !== baselineSettings.portamentoAmount ||
-    settings.tuningRoot !== baselineSettings.tuningRoot ||
-    // Check envelope settings against initial values
-    settings.ampEnvelope.attack !== initialSettings.ampEnvelope.attack ||
-    settings.ampEnvelope.decay !== initialSettings.ampEnvelope.decay ||
-    settings.ampEnvelope.sustain !== initialSettings.ampEnvelope.sustain ||
-    settings.ampEnvelope.release !== initialSettings.ampEnvelope.release ||
-    settings.filterEnvelope.attack !== initialSettings.filterEnvelope.attack ||
-    settings.filterEnvelope.decay !== initialSettings.filterEnvelope.decay ||
-    settings.filterEnvelope.sustain !== initialSettings.filterEnvelope.sustain ||
-    settings.filterEnvelope.release !== initialSettings.filterEnvelope.release
-  ) : false;
+  // Check if any settings have changed from their true default values
+  const hasPresetChanges = (
+    // Check non-envelope settings against true defaults
+    settings.playmode !== trueDefaults.playmode ||
+    settings.loopEnabled !== trueDefaults.loopEnabled ||
+    settings.transpose !== trueDefaults.transpose ||
+    settings.velocitySensitivity !== trueDefaults.velocitySensitivity ||
+    settings.volume !== trueDefaults.volume ||
+    settings.width !== trueDefaults.width ||
+    settings.highpass !== trueDefaults.highpass ||
+    settings.portamentoType !== trueDefaults.portamentoType ||
+    settings.portamentoAmount !== trueDefaults.portamentoAmount ||
+    settings.tuningRoot !== trueDefaults.tuningRoot ||
+    // Check envelope settings against true defaults
+    settings.ampEnvelope.attack !== trueDefaults.ampEnvelope.attack ||
+    settings.ampEnvelope.decay !== trueDefaults.ampEnvelope.decay ||
+    settings.ampEnvelope.sustain !== trueDefaults.ampEnvelope.sustain ||
+    settings.ampEnvelope.release !== trueDefaults.ampEnvelope.release ||
+    settings.filterEnvelope.attack !== trueDefaults.filterEnvelope.attack ||
+    settings.filterEnvelope.decay !== trueDefaults.filterEnvelope.decay ||
+    settings.filterEnvelope.sustain !== trueDefaults.filterEnvelope.sustain ||
+    settings.filterEnvelope.release !== trueDefaults.filterEnvelope.release
+  );
 
   return (
     <div style={{
