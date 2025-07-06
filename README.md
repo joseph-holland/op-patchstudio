@@ -77,6 +77,33 @@ npm run test
 6. click **generate patch** to download your preset as a zip file.
 7. unzip and copy the folder to your OP-XY's `presets` directory via usb.
 
+## progressive web app (pwa)
+
+OP-PatchStudio is available as a Progressive Web App for offline use and quick access.
+
+### install for offline use
+
+- **desktop**: Look for the install icon in your browser's address bar or menu
+- **mobile**: Use your browser's "Add to Home Screen" option
+- **automatic prompt**: The app will show an install prompt when available
+
+### pwa features
+
+- **offline functionality**: Core features work without internet connection
+- **home screen access**: Launch directly from your device's home screen
+- **app shortcuts**: Quick access to Drum and Multisample tools
+- **automatic updates**: App updates automatically when online
+- **native app experience**: Runs like a native app with full-screen mode
+
+### offline capabilities
+
+- ✅ Create and edit drum presets
+- ✅ Create and edit multisample presets  
+- ✅ Waveform editing and sample processing
+- ✅ Generate and download patch files
+- ⚠️ Sample upload requires internet connection
+- ⚠️ Some advanced features may require online access
+
 
 See [MIGRATION_COMPLETION_SUMMARY.md](MIGRATION_COMPLETION_SUMMARY.md) for detailed progress report.
 
