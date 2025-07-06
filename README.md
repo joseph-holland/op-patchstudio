@@ -4,6 +4,9 @@
 
 ![OP-PatchStudio Preview](public/assets/preview-image.png)
 
+
+![OP-PatchStudio Preview](public/assets/preview-image-2.png)
+
 - **live demo:** [OP-PatchStudio](https://op-patch.studio/)
 - **GitHub:** [github.com/joseph-holland/op-patchstudio](https://github.com/joseph-holland/op-patchstudio)
 
