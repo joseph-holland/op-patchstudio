@@ -12,7 +12,7 @@ export function AppHeader() {
   const titleFontSize = isMobile ? '2.1rem' : '2.8rem';
   const badgeFontSize = isMobile ? '0.65rem' : '0.9rem';
   const badgeGap = isMobile ? '12px' : '16px';
-  const bottomPosition = isMobile ? '43%' : '45%';
+  const bottomPosition = isMobile ? '36%' : '40%';
 
   return (
     <header 
@@ -26,8 +26,8 @@ export function AppHeader() {
         display: 'inline-block',
         fontSize: titleFontSize,
         letterSpacing: '-0.05em',
-        fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif',
-        fontWeight: 300,
+        fontFamily: '"NimbusSansL", Arial, sans-serif',
+        fontWeight: 200,
         color: 'var(--color-text-primary)',
         margin: 0,
         lineHeight: 1
@@ -39,7 +39,7 @@ export function AppHeader() {
           position: 'absolute',
           left: `calc(100% + ${badgeGap})`,
           bottom: bottomPosition,
-          fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif',
+          fontFamily: '"NimbusSansL", "Helvetica", "Helvetica Neue", Arial, sans-serif',
           letterSpacing: '-0.008em',
           fontVariantLigatures: 'none',
           fontFeatureSettings: '"liga" 0',
