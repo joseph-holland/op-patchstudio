@@ -143,12 +143,12 @@ export async function generateDrumPatch(
     if (!sample.isLoaded || !sample.file || !sample.audioBuffer) continue;
 
     const outputName = sanitizeName(sample.file.name);
-    const sampleRate = sample.audioBuffer.sampleRate;
+    const originalSampleRate = sample.originalSampleRate || sample.audioBuffer.sampleRate;
     const duration = sample.audioBuffer.duration;
 
     // Create region object in correct OP-XY format
     const midiNote = midiNoteCounter++;
-    const effectiveSampleRate = targetSampleRate || sampleRate;
+    const effectiveSampleRate = targetSampleRate || originalSampleRate;
     const framecount = Math.floor(duration * effectiveSampleRate);
     const getClamped = (val: number, min: number, max: number) => Math.max(min, Math.min(val, max));
     const sampleStart = 0;
@@ -172,7 +172,7 @@ export async function generateDrumPatch(
 
     // Handle audio conversions if needed
     const needsConversion = 
-      (targetSampleRate && sampleRate !== targetSampleRate) ||
+      (targetSampleRate && originalSampleRate !== targetSampleRate) ||
       (targetBitDepth && targetBitDepth !== sample.originalBitDepth) ||
       (targetChannels === "mono" && sample.audioBuffer.numberOfChannels > 1);
 
@@ -181,13 +181,13 @@ export async function generateDrumPatch(
         (async () => {
           try {
             const convertedBuffer = await convertAudioFormat(sample.audioBuffer!, {
-              sampleRate: targetSampleRate || sampleRate,
+              sampleRate: targetSampleRate || originalSampleRate,
               bitDepth: targetBitDepth || sample.originalBitDepth || 16,
               channels: targetChannels === "mono" ? 1 : sample.audioBuffer!.numberOfChannels
             });
             
             // Validate that converted buffer frame count matches our calculation
-            const expectedFramecount = Math.floor(duration * (targetSampleRate || sampleRate));
+            const expectedFramecount = Math.floor(duration * effectiveSampleRate);
             validateFrameCount(sample.name, expectedFramecount, convertedBuffer.length, region);
             
             // Convert to WAV blob
@@ -272,10 +272,10 @@ export async function generateMultisamplePatch(
     if (!sample.file || !sample.audioBuffer) continue;
 
     const outputName = sanitizeName(sample.file.name);
-    const sampleRate = sample.audioBuffer.sampleRate;
+    const originalSampleRate = sample.originalSampleRate || sample.audioBuffer.sampleRate;
     const duration = sample.audioBuffer.duration;
     const sampleNote = sample.rootNote >= 0 ? sample.rootNote : 60 + sample.originalIndex;
-    const effectiveSampleRate = targetSampleRate || sampleRate;
+    const effectiveSampleRate = targetSampleRate || originalSampleRate;
     const framecount = Math.floor(duration * effectiveSampleRate);
 
     // Calculate key ranges (matching working implementation)
@@ -283,14 +283,24 @@ export async function generateMultisamplePatch(
     const hiKey = sampleNote;
     lastKey = sampleNote + 1;
 
-    // Debug logging
-    console.log(`Processing sample: ${outputName}, MIDI: ${sampleNote}, lokey: ${lowKey}, hikey: ${hiKey}, framecount: ${framecount}`);
-
     // Calculate proportional points
     const getClamped = (val: number, min: number, max: number) => Math.max(min, Math.min(val, max));
     const prop = (point: number | undefined, fallback: number) => (typeof point === 'number' ? point : fallback);
-    const loopStart = getClamped(Math.floor(framecount * (prop(sample.loopStart, 0) / duration)), 0, framecount - 1);
-    const loopEnd = getClamped(Math.floor(framecount * (prop(sample.loopEnd, duration) / duration)), loopStart + 1, framecount);
+    
+    // Use original sample rate and duration for loop point calculations to match legacy behavior
+    const originalDuration = sample.duration || duration;
+    const originalFramecount = Math.floor(originalDuration * originalSampleRate);
+    
+    // Calculate loop points using original sample rate (matching legacy behavior)
+    const loopStart = getClamped(Math.floor(originalFramecount * (prop(sample.loopStart, originalDuration * 0.1) / originalDuration)), 0, originalFramecount - 1);
+    const loopEnd = getClamped(Math.floor(originalFramecount * (prop(sample.loopEnd, originalDuration * 0.9) / originalDuration)), loopStart + 1, originalFramecount);
+    
+    // Scale loop points to target sample rate if resampling
+    const scaleFactor = effectiveSampleRate / originalSampleRate;
+    const scaledLoopStart = Math.floor(loopStart * scaleFactor);
+    const scaledLoopEnd = Math.floor(loopEnd * scaleFactor);
+    
+    // Calculate sample start/end points using target sample rate
     const sampleStart = getClamped(Math.floor(framecount * (prop(sample.inPoint, 0) / duration)), 0, framecount - 1);
     const sampleEnd = getClamped(Math.floor(framecount * (prop(sample.outPoint, duration) / duration)), sampleStart + 1, framecount);
 
@@ -300,10 +310,10 @@ export async function generateMultisamplePatch(
       hikey: hiKey,
       lokey: lowKey,
       "loop.crossfade": 0,
-      "loop.end": loopEnd,
+      "loop.end": scaledLoopEnd,
       "loop.onrelease": state.multisampleSettings.loopOnRelease,
       "loop.enabled": state.multisampleSettings.loopEnabled,
-      "loop.start": loopStart,
+      "loop.start": scaledLoopStart,
       "pitch.keycenter": sampleNote,
       reverse: false,
       sample: outputName,
@@ -314,7 +324,7 @@ export async function generateMultisamplePatch(
 
     // Handle audio conversions if needed
     const needsConversion = 
-      (targetSampleRate && sampleRate !== targetSampleRate) ||
+      (targetSampleRate && originalSampleRate !== targetSampleRate) ||
       (targetBitDepth && targetBitDepth !== sample.originalBitDepth) ||
       (targetChannels === "mono" && sample.audioBuffer.numberOfChannels > 1) ||
       state.multisampleSettings.normalize ||
@@ -325,7 +335,7 @@ export async function generateMultisamplePatch(
         (async () => {
           try {
             const convertedBuffer = await convertAudioFormat(sample.audioBuffer!, {
-              sampleRate: targetSampleRate || sampleRate,
+              sampleRate: targetSampleRate || originalSampleRate,
               bitDepth: targetBitDepth || sample.originalBitDepth || 16,
               channels: targetChannels === "mono" ? 1 : sample.audioBuffer!.numberOfChannels,
               normalize: state.multisampleSettings.normalize,

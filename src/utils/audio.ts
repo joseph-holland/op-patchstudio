@@ -42,14 +42,17 @@ export async function readWavMetadata(file: File): Promise<WavMetadata> {
   const audioContext = await audioContextManager.getAudioContext();
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
   
+  // Calculate duration from WAV data chunk size to match legacy behavior
+  const calculatedDuration = header.dataLength / (header.bitDepth / 8) / header.channels / header.sampleRate;
+  
   // Parse SMPL chunk for loop data and MIDI note with proper fallbacks
-  const smplData = parseSmplChunk(dataView, header.sampleRate, audioBuffer.duration, file.name);
+  const smplData = parseSmplChunk(dataView, header.sampleRate, calculatedDuration, file.name);
   
   return {
     ...header,
     ...smplData,
     audioBuffer,
-    duration: audioBuffer.duration,
+    duration: calculatedDuration, // Use calculated duration instead of AudioBuffer.duration
     fileSize: file.size,
   };
 }
