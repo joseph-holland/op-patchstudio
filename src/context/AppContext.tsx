@@ -80,6 +80,8 @@ export interface AppState {
     normalizeLevel: number; // -6.0 to 0.0 dB
     cutAtLoopEnd: boolean;
     gain: number; // -30 to +20 dB
+    loopEnabled: boolean;
+    loopOnRelease: boolean;
   };
   
   // Drum samples (24 samples for full OP-XY compatibility)
@@ -125,6 +127,8 @@ export type AppAction =
   | { type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL'; payload: number }
   | { type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END'; payload: boolean }
   | { type: 'SET_MULTISAMPLE_GAIN'; payload: number }
+  | { type: 'SET_MULTISAMPLE_LOOP_ENABLED'; payload: boolean }
+  | { type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE'; payload: boolean }
   | { type: 'LOAD_DRUM_SAMPLE'; payload: { index: number; file: File; audioBuffer: AudioBuffer; metadata: WavMetadata } }
   | { type: 'CLEAR_DRUM_SAMPLE'; payload: number }
   | { type: 'UPDATE_DRUM_SAMPLE'; payload: { index: number; updates: Partial<DrumSample> } }
@@ -217,7 +221,9 @@ const initialState: AppState = {
     normalize: false,
     normalizeLevel: -6.0,
     cutAtLoopEnd: false,
-    gain: 0
+    gain: 0,
+    loopEnabled: true,
+    loopOnRelease: true
   },
   drumSamples: Array(24).fill(null).map(() => ({ ...initialDrumSample })),
   multisampleFiles: [], // Dynamic array, 1-24 samples max
@@ -370,6 +376,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { 
         ...state, 
         multisampleSettings: { ...state.multisampleSettings, gain: action.payload }
+      };
+      
+    case 'SET_MULTISAMPLE_LOOP_ENABLED':
+      return { 
+        ...state, 
+        multisampleSettings: { ...state.multisampleSettings, loopEnabled: action.payload }
+      };
+      
+    case 'SET_MULTISAMPLE_LOOP_ON_RELEASE':
+      return { 
+        ...state, 
+        multisampleSettings: { ...state.multisampleSettings, loopOnRelease: action.payload }
       };
       
     case 'LOAD_DRUM_SAMPLE':

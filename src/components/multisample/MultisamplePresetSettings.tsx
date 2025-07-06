@@ -41,6 +41,7 @@ const getRandomPreset = (): PresetType => {
 interface MultisampleAdvancedSettings {
   playmode: 'poly' | 'mono' | 'legato';
   loopEnabled: boolean;
+  loopOnRelease: boolean;
   transpose: number; // -36 to +36
   velocitySensitivity: number; // 0-100%
   volume: number; // 0-100%
@@ -71,6 +72,7 @@ const createDefaultSettings = (): MultisampleAdvancedSettings => {
   return {
     playmode: 'poly',
     loopEnabled: true,
+    loopOnRelease: true,
     transpose: 0,
     velocitySensitivity: 20,
     volume: 69,
@@ -89,6 +91,7 @@ const createTrueDefaultSettings = (): MultisampleAdvancedSettings => {
   return {
     playmode: 'poly',
     loopEnabled: true,
+    loopOnRelease: true,
     transpose: 0,
     velocitySensitivity: 20,
     volume: 69,
@@ -108,7 +111,7 @@ export function MultisamplePresetSettings() {
   const [isMobile, setIsMobile] = useState(false);
   const [settings, setSettings] = useState<MultisampleAdvancedSettings>(createDefaultSettings());
   const [expandedSections, setExpandedSections] = useState({
-    essential: true,
+    basic: true,
     sound: false,
     envelopes: true
   });
@@ -205,6 +208,10 @@ export function MultisamplePresetSettings() {
 
   // Function to dispatch current settings to app context
   const dispatchSettingsToContext = (currentSettings: MultisampleAdvancedSettings) => {
+    // Dispatch loop settings to global context
+    dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: currentSettings.loopEnabled });
+    dispatch({ type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE', payload: currentSettings.loopOnRelease });
+    
     const payload = {
       engine: {
         playmode: currentSettings.playmode,
@@ -233,8 +240,6 @@ export function MultisamplePresetSettings() {
       },
       regions: [] // Will be populated during patch generation
     };
-
-
 
     dispatch({
       type: 'SET_IMPORTED_MULTISAMPLE_PRESET',
@@ -270,6 +275,7 @@ export function MultisamplePresetSettings() {
     // Check non-envelope settings against true defaults
     settings.playmode !== trueDefaults.playmode ||
     settings.loopEnabled !== trueDefaults.loopEnabled ||
+    settings.loopOnRelease !== trueDefaults.loopOnRelease ||
     settings.transpose !== trueDefaults.transpose ||
     settings.velocitySensitivity !== trueDefaults.velocitySensitivity ||
     settings.volume !== trueDefaults.volume ||
@@ -336,7 +342,7 @@ export function MultisamplePresetSettings() {
           }}>
             {/* Header */}
             <div
-              onClick={() => toggleSection('essential')}
+              onClick={() => toggleSection('basic')}
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -345,7 +351,7 @@ export function MultisamplePresetSettings() {
                 background: 'var(--color-bg-secondary)',
                 cursor: 'pointer',
                 userSelect: 'none',
-                borderBottom: expandedSections.essential ? '1px solid var(--color-border-light)' : 'none',
+                borderBottom: expandedSections.basic ? '1px solid var(--color-border-light)' : 'none',
                 transition: 'background 0.2s',
                 borderRadius: '6px 6px 0 0',
                 overflow: 'hidden',
@@ -357,22 +363,33 @@ export function MultisamplePresetSettings() {
                 fontWeight: '500',
                 fontSize: '1rem',
                 letterSpacing: '0.01em',
-              }}>essential</h4>
+              }}>basic</h4>
               <i
                 className="fas fa-chevron-right"
                 style={{
                   color: 'var(--color-text-secondary)',
                   fontSize: '1rem',
                   transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1)',
-                  transform: expandedSections.essential ? 'rotate(90deg)' : 'rotate(0deg)'
+                  transform: expandedSections.basic ? 'rotate(90deg)' : 'rotate(0deg)'
                 }}
               />
             </div>
             {/* Content */}
-            {expandedSections.essential && (
+            {expandedSections.basic && (
               <div style={{ padding: '1.25rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: isMobile ? '1.5rem' : '2rem' }}>
-                  <div>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', 
+                  gap: isMobile ? '1.5rem' : '2rem',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    textAlign: 'center'
+                  }}>
                     <label style={{ 
                       display: 'block',
                       marginBottom: '0.5rem',
@@ -382,7 +399,7 @@ export function MultisamplePresetSettings() {
                     }}>
                       playmode
                     </label>
-                    <div style={{ maxWidth: '150px' }}>
+                    <div style={{ width: '100%', maxWidth: '150px' }}>
                       <Select
                         id="playmode"
                         labelText=""
@@ -397,7 +414,12 @@ export function MultisamplePresetSettings() {
                     </div>
                   </div>
 
-                  <div>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    textAlign: 'center'
+                  }}>
                     <label style={{ 
                       display: 'block',
                       marginBottom: '0.5rem',
@@ -413,6 +435,31 @@ export function MultisamplePresetSettings() {
                       labelB="on"
                       toggled={settings.loopEnabled}
                       onToggle={(checked) => updateSetting('loopEnabled', checked)}
+                      size="sm"
+                    />
+                  </div>
+
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    textAlign: 'center'
+                  }}>
+                    <label style={{ 
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontWeight: '500',
+                      fontSize: '0.875rem',
+                      color: 'var(--color-text-primary)'
+                    }}>
+                      loop on release
+                    </label>
+                    <Toggle
+                      id="multisample-loop-onrelease"
+                      labelA="off"
+                      labelB="on"
+                      toggled={settings.loopOnRelease}
+                      onToggle={(checked) => updateSetting('loopOnRelease', checked)}
                       size="sm"
                     />
                   </div>

@@ -57,7 +57,9 @@ const defaultMockState = {
       normalize: false,
       normalizeLevel: -6.0,
       cutAtLoopEnd: false,
-      gain: 0
+      gain: 0,
+      loopEnabled: true,
+      loopOnRelease: true
     },
     notifications: [],
     importedDrumPreset: null,
@@ -191,7 +193,9 @@ describe('usePatchGeneration', () => {
           normalize: false,
           normalizeLevel: -6.0,
           cutAtLoopEnd: false,
-          gain: 0
+          gain: 0,
+          loopEnabled: true,
+          loopOnRelease: true
         },
         notifications: [],
         importedDrumPreset: null,

@@ -11,6 +11,7 @@ interface MultisampleAdvancedSettingsProps {
 interface MultisampleAdvancedSettings {
   playmode: 'poly' | 'mono' | 'legato';
   loopEnabled: boolean;
+  loopOnRelease: boolean;
   transpose: number; // -36 to +36
   velocitySensitivity: number; // 0-100%
   volume: number; // 0-100%
@@ -46,6 +47,7 @@ const percentToInternal = (percent: number): number => {
 const defaultSettings: MultisampleAdvancedSettings = {
   playmode: 'poly',
   loopEnabled: true,
+  loopOnRelease: true,
   transpose: 0,
       velocitySensitivity: 20,
         volume: 69,
@@ -69,14 +71,21 @@ const defaultSettings: MultisampleAdvancedSettings = {
 };
 
 export function MultisampleAdvancedSettings({ isOpen, onClose }: MultisampleAdvancedSettingsProps) {
-  const { dispatch } = useAppContext();
-  const [settings, setSettings] = useState<MultisampleAdvancedSettings>(defaultSettings);
+  const { state, dispatch } = useAppContext();
+  const [settings, setSettings] = useState<MultisampleAdvancedSettings>({
+    ...defaultSettings,
+    loopEnabled: state.multisampleSettings.loopEnabled,
+    loopOnRelease: state.multisampleSettings.loopOnRelease
+  });
 
   const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
   const handleSave = () => {
-    // TODO: Add action to save advanced settings to context
-    // For now, we'll store them in the imported preset which gets used during patch generation
+    // Save loop settings to global context
+    dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: settings.loopEnabled });
+    dispatch({ type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE', payload: settings.loopOnRelease });
+    
+    // Store other settings in the imported preset which gets used during patch generation
     dispatch({
       type: 'SET_IMPORTED_MULTISAMPLE_PRESET',
       payload: {
@@ -214,6 +223,35 @@ export function MultisampleAdvancedSettings({ isOpen, onClose }: MultisampleAdva
                   }
                   #advanced-loop-enabled .cds--toggle__text--off,
                   #advanced-loop-enabled .cds--toggle__text--on {
+                    color: var(--color-text-secondary) !important;
+                  }
+                `}</style>
+              </div>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <Toggle
+                  id="advanced-loop-onrelease"
+                  labelText="Loop On Release"
+                  toggled={settings.loopOnRelease}
+                  onToggle={(checked) => updateSetting('loopOnRelease', checked)}
+                />
+                <style>{`
+                  #advanced-loop-onrelease .cds--toggle-input__appearance {
+                    background-color: var(--color-surface-secondary) !important;
+                  }
+                  #advanced-loop-onrelease .cds--toggle-input__appearance:before {
+                    background-color: var(--color-text-secondary) !important;
+                  }
+                  #advanced-loop-onrelease .cds--toggle-input:checked + .cds--toggle-input__appearance {
+                    background-color: var(--color-interactive-primary) !important;
+                  }
+                  #advanced-loop-onrelease .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
+                    background-color: var(--color-surface-primary) !important;
+                  }
+                  #advanced-loop-onrelease .cds--toggle__text--off,
+                  #advanced-loop-onrelease .cds--toggle__text--on {
                     color: var(--color-text-secondary) !important;
                   }
                 `}</style>

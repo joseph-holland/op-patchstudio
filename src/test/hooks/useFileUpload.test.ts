@@ -29,16 +29,18 @@ vi.mock('../../context/AppContext', () => ({
           width: 100
         }
       },
-      multisampleSettings: {
-        sampleRate: 0,
-        bitDepth: 0,
-        channels: 0,
-        presetName: '',
-        normalize: false,
-        normalizeLevel: -6.0,
-        cutAtLoopEnd: false,
-        gain: 0
-      },
+              multisampleSettings: {
+          sampleRate: 0,
+          bitDepth: 0,
+          channels: 0,
+          presetName: '',
+          normalize: false,
+          normalizeLevel: -6.0,
+          cutAtLoopEnd: false,
+          gain: 0,
+          loopEnabled: true,
+          loopOnRelease: true
+        },
       notifications: [],
       importedDrumPreset: null,
       importedMultisamplePreset: null
@@ -109,7 +111,9 @@ describe('useFileUpload', () => {
           normalize: false,
           normalizeLevel: -6.0,
           cutAtLoopEnd: false,
-          gain: 0
+          gain: 0,
+          loopEnabled: true,
+          loopOnRelease: true
         },
         notifications: [],
         importedDrumPreset: null,
