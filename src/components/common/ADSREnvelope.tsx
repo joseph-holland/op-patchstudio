@@ -443,7 +443,7 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
             onAmpEnvelopeChange(newEnvelope);
           } else {
             onFilterEnvelopeChange(newEnvelope);
-          // }
+          }
         };
         
         const handleGlobalEnd = () => {
