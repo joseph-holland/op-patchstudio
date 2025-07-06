@@ -24,7 +24,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "pre-commit": "npm run test && npm run build"
   },
   "dependencies": {
     "@carbon/react": "^1.85.1",

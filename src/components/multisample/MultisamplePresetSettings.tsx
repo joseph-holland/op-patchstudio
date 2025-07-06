@@ -3,6 +3,7 @@ import { useAppContext } from '../../context/AppContext';
 import { Select, SelectItem, Slider, Toggle } from '@carbon/react';
 import { importPresetFromFile, type MultisamplePresetJson } from '../../utils/presetImport';
 import { ADSREnvelope } from '../common/ADSREnvelope';
+import { percentToInternal } from '../../utils/valueConversions';
 
 // ADSR Presets for different instrument types (copied from ADSREnvelope component)
 const ADSR_PRESETS = {
@@ -122,6 +123,11 @@ export function MultisamplePresetSettings() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Dispatch initial settings to app context on mount
+  useEffect(() => {
+    dispatchSettingsToContext(settings);
+  }, []); // Only run once on mount
+
   const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
   const handleImportClick = () => {
@@ -181,22 +187,75 @@ export function MultisamplePresetSettings() {
   };
 
   const handleReset = () => {
-    setSettings(createTrueDefaultSettings());
+    const resetSettings = createTrueDefaultSettings();
+    setSettings(resetSettings);
+    dispatchSettingsToContext(resetSettings);
   };
 
   const updateSetting = <K extends keyof MultisampleAdvancedSettings>(
     key: K,
     value: MultisampleAdvancedSettings[K]
   ) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    setSettings(prev => {
+      const newSettings = { ...prev, [key]: value };
+      dispatchSettingsToContext(newSettings);
+      return newSettings;
+    });
+  };
+
+  // Function to dispatch current settings to app context
+  const dispatchSettingsToContext = (currentSettings: MultisampleAdvancedSettings) => {
+    const payload = {
+      engine: {
+        playmode: currentSettings.playmode,
+        transpose: currentSettings.transpose,
+        'velocity.sensitivity': percentToInternal(currentSettings.velocitySensitivity),
+        volume: percentToInternal(currentSettings.volume),
+        width: percentToInternal(currentSettings.width),
+        highpass: percentToInternal(currentSettings.highpass),
+        'portamento.amount': percentToInternal(currentSettings.portamentoAmount),
+        'portamento.type': currentSettings.portamentoType === 'linear' ? 32767 : 0,
+        'tuning.root': currentSettings.tuningRoot,
+      },
+      envelope: {
+        amp: {
+          attack: currentSettings.ampEnvelope.attack,
+          decay: currentSettings.ampEnvelope.decay,
+          sustain: currentSettings.ampEnvelope.sustain,
+          release: currentSettings.ampEnvelope.release,
+        },
+        filter: {
+          attack: currentSettings.filterEnvelope.attack,
+          decay: currentSettings.filterEnvelope.decay,
+          sustain: currentSettings.filterEnvelope.sustain,
+          release: currentSettings.filterEnvelope.release,
+        },
+      },
+      regions: [] // Will be populated during patch generation
+    };
+
+
+
+    dispatch({
+      type: 'SET_IMPORTED_MULTISAMPLE_PRESET',
+      payload
+    });
   };
 
   const updateAmpEnvelope = (envelope: MultisampleAdvancedSettings['ampEnvelope']) => {
-    setSettings(prev => ({ ...prev, ampEnvelope: envelope }));
+    setSettings(prev => {
+      const newSettings = { ...prev, ampEnvelope: envelope };
+      dispatchSettingsToContext(newSettings);
+      return newSettings;
+    });
   };
 
   const updateFilterEnvelope = (envelope: MultisampleAdvancedSettings['filterEnvelope']) => {
-    setSettings(prev => ({ ...prev, filterEnvelope: envelope }));
+    setSettings(prev => {
+      const newSettings = { ...prev, filterEnvelope: envelope };
+      dispatchSettingsToContext(newSettings);
+      return newSettings;
+    });
   };
 
   const toggleSection = (section: keyof typeof expandedSections) => {
