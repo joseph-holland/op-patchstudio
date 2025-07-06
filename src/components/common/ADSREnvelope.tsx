@@ -41,7 +41,17 @@ const ADSR_PRESETS = {
   }
 };
 
-type PresetType = keyof typeof ADSR_PRESETS;
+type PresetType = keyof typeof ADSR_PRESETS | 'random';
+
+// Function to generate random envelope values
+const generateRandomEnvelope = (): ADSRValues => {
+  return {
+    attack: Math.floor(Math.random() * 32767),
+    decay: Math.floor(Math.random() * 32767),
+    sustain: Math.floor(Math.random() * 32767),
+    release: Math.floor(Math.random() * 32767)
+  };
+};
 
 // Convert 0-32767 to 0-100% for display
 const valueToPercent = (value: number): number => Math.round((value / 32767) * 100);
@@ -100,32 +110,42 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
   const svgRef = React.useRef<SVGSVGElement>(null);
   const [activeEnvelope, setActiveEnvelope] = useState<'amp' | 'filter'>('amp');
   const [isDragging, setIsDragging] = useState<string | null>(null);
-  const [selectedPreset, setSelectedPreset] = useState<PresetType>('keys');
+  const [selectedPreset, setSelectedPreset] = useState<PresetType>('random');
 
   const currentEnvelope = activeEnvelope === 'amp' ? ampEnvelope : filterEnvelope;
   const inactiveEnvelope = activeEnvelope === 'amp' ? filterEnvelope : ampEnvelope;
 
-  // Initialize with keys preset if envelopes are empty
+  // Initialize with random preset if envelopes are empty
   useEffect(() => {
     const isEnvelopesEmpty = 
       ampEnvelope.attack === 0 && ampEnvelope.decay === 0 && ampEnvelope.sustain === 0 && ampEnvelope.release === 0 &&
       filterEnvelope.attack === 0 && filterEnvelope.decay === 0 && filterEnvelope.sustain === 0 && filterEnvelope.release === 0;
     
     if (isEnvelopesEmpty) {
-      const keysPreset = ADSR_PRESETS.keys;
-      onAmpEnvelopeChange(keysPreset.amp);
-      onFilterEnvelopeChange(keysPreset.filter);
+      const randomAmp = generateRandomEnvelope();
+      const randomFilter = generateRandomEnvelope();
+      onAmpEnvelopeChange(randomAmp);
+      onFilterEnvelopeChange(randomFilter);
     }
   }, [ampEnvelope, filterEnvelope, onAmpEnvelopeChange, onFilterEnvelopeChange]);
 
   // Handle preset changes
   const handlePresetChange = useCallback((preset: PresetType) => {
     setSelectedPreset(preset);
-    const presetValues = ADSR_PRESETS[preset];
     
-    // Apply preset to both amp and filter envelopes
-    onAmpEnvelopeChange(presetValues.amp);
-    onFilterEnvelopeChange(presetValues.filter);
+    if (preset === 'random') {
+      // Generate random values for both amp and filter envelopes
+      const randomAmp = generateRandomEnvelope();
+      const randomFilter = generateRandomEnvelope();
+      
+      onAmpEnvelopeChange(randomAmp);
+      onFilterEnvelopeChange(randomFilter);
+    } else {
+      // Apply predefined preset
+      const presetValues = ADSR_PRESETS[preset];
+      onAmpEnvelopeChange(presetValues.amp);
+      onFilterEnvelopeChange(presetValues.filter);
+    }
   }, [onAmpEnvelopeChange, onFilterEnvelopeChange]);
 
   // Handle knob value changes for the active envelope
@@ -673,26 +693,64 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
         }}>
           preset
         </span>
-        <select
-          value={selectedPreset}
-          onChange={(e) => handlePresetChange(e.target.value as PresetType)}
-          style={{
-            padding: '0.5rem',
-            fontSize: '0.875rem',
-            border: '1px solid var(--color-border-light)',
-            borderRadius: '3px',
-            backgroundColor: 'var(--color-bg-primary)',
-            color: 'var(--color-text-primary)',
-            cursor: 'pointer',
-            width: '100%'
-          }}
-        >
-          <option value="bass">bass</option>
-          <option value="pad">pad</option>
-          <option value="keys">keys</option>
-          <option value="pluck">pluck</option>
-          <option value="lead">lead</option>
-        </select>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.25rem',
+          width: '100%'
+        }}>
+          <select
+            value={selectedPreset}
+            onChange={(e) => handlePresetChange(e.target.value as PresetType)}
+            style={{
+              padding: '0.5rem',
+              fontSize: '0.875rem',
+              border: '1px solid var(--color-border-light)',
+              borderRadius: '3px',
+              backgroundColor: 'var(--color-bg-primary)',
+              color: 'var(--color-text-primary)',
+              cursor: 'pointer',
+              flex: 1
+            }}
+          >
+            <option value="random">random</option>
+            <option value="bass">bass</option>
+            <option value="keys">keys</option>
+            <option value="lead">lead</option>
+            <option value="pad">pad</option>
+            <option value="pluck">pluck</option>
+          </select>
+          {selectedPreset === 'random' && (
+            <button
+              onClick={() => {
+                const randomAmp = generateRandomEnvelope();
+                const randomFilter = generateRandomEnvelope();
+                onAmpEnvelopeChange(randomAmp);
+                onFilterEnvelopeChange(randomFilter);
+              }}
+              style={{
+                width: '44px',
+                height: '44px',
+                minWidth: '44px',
+                minHeight: '44px',
+                maxWidth: '44px',
+                maxHeight: '44px',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid var(--color-border-medium)',
+                borderRadius: '3px',
+                backgroundColor: 'var(--color-bg-primary)',
+                cursor: 'pointer',
+                flexShrink: 0
+              }}
+              title="generate new random values"
+            >
+              <i className="fas fa-dice" style={{ fontSize: '18px', color: 'var(--color-text-secondary)' }}></i>
+            </button>
+          )}
+        </div>
       </div>
       
       {/* ADSR Control Knobs */}
