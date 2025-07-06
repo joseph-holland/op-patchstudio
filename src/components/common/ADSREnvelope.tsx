@@ -695,7 +695,7 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
         </span>
         <div style={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'stretch',
           gap: '0.25rem',
           width: '100%'
         }}>
@@ -710,7 +710,11 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
               backgroundColor: 'var(--color-bg-primary)',
               color: 'var(--color-text-primary)',
               cursor: 'pointer',
-              flex: 1
+              flex: 1,
+              height: '36px',
+              minHeight: '36px',
+              maxHeight: '36px',
+              boxSizing: 'border-box',
             }}
           >
             <option value="random">random</option>
@@ -720,36 +724,35 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
             <option value="pad">pad</option>
             <option value="pluck">pluck</option>
           </select>
-          {selectedPreset === 'random' && (
-            <button
-              onClick={() => {
-                const randomAmp = generateRandomEnvelope();
-                const randomFilter = generateRandomEnvelope();
-                onAmpEnvelopeChange(randomAmp);
-                onFilterEnvelopeChange(randomFilter);
-              }}
-              style={{
-                width: '44px',
-                height: '44px',
-                minWidth: '44px',
-                minHeight: '44px',
-                maxWidth: '44px',
-                maxHeight: '44px',
-                padding: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px solid var(--color-border-medium)',
-                borderRadius: '3px',
-                backgroundColor: 'var(--color-bg-primary)',
-                cursor: 'pointer',
-                flexShrink: 0
-              }}
-              title="generate new random values"
-            >
-              <i className="fas fa-dice" style={{ fontSize: '18px', color: 'var(--color-text-secondary)' }}></i>
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setSelectedPreset('random');
+              const randomAmp = generateRandomEnvelope();
+              const randomFilter = generateRandomEnvelope();
+              onAmpEnvelopeChange(randomAmp);
+              onFilterEnvelopeChange(randomFilter);
+            }}
+            style={{
+              width: '36px',
+              height: '36px',
+              minWidth: '36px',
+              minHeight: '36px',
+              maxWidth: '36px',
+              maxHeight: '36px',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid var(--color-border-medium)',
+              borderRadius: '3px',
+              backgroundColor: 'var(--color-bg-primary)',
+              cursor: 'pointer',
+              flexShrink: 0
+            }}
+            title="generate new random values"
+          >
+            <i className="fas fa-dice" style={{ fontSize: '18px', color: 'var(--color-text-secondary)' }}></i>
+          </button>
         </div>
       </div>
       
