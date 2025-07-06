@@ -88,6 +88,12 @@ export function MultisamplePresetSettings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [settings, setSettings] = useState<MultisampleAdvancedSettings>(createDefaultSettings());
+  const [initialSettings, setInitialSettings] = useState<MultisampleAdvancedSettings | null>(null);
+  const [expandedSections, setExpandedSections] = useState({
+    essential: true,
+    sound: false,
+    envelopes: true
+  });
 
   useEffect(() => {
     const checkMobile = () => {
@@ -98,6 +104,13 @@ export function MultisamplePresetSettings() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Store initial settings on first load
+  useEffect(() => {
+    if (!initialSettings) {
+      setInitialSettings(settings);
+    }
+  }, [settings, initialSettings]);
 
   const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -157,10 +170,12 @@ export function MultisamplePresetSettings() {
     }
   };
 
-
-
   const handleReset = () => {
-    setSettings(createDefaultSettings());
+    if (initialSettings) {
+      setSettings(initialSettings);
+    } else {
+      setSettings(createDefaultSettings());
+    }
   };
 
   const updateSetting = <K extends keyof MultisampleAdvancedSettings>(
@@ -178,6 +193,10 @@ export function MultisamplePresetSettings() {
     setSettings(prev => ({ ...prev, filterEnvelope: envelope }));
   };
 
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
   // Create baseline settings for comparison (non-envelope settings that should be at defaults)
   const baselineSettings = {
     playmode: 'poly' as const,
@@ -192,8 +211,9 @@ export function MultisamplePresetSettings() {
     tuningRoot: 0,
   };
 
-  // Check if any non-envelope settings have changed from defaults
-  const hasPresetChanges = (
+  // Check if any settings have changed from their initial values
+  const hasPresetChanges = initialSettings ? (
+    // Check non-envelope settings against baseline
     settings.playmode !== baselineSettings.playmode ||
     settings.loopEnabled !== baselineSettings.loopEnabled ||
     settings.transpose !== baselineSettings.transpose ||
@@ -203,9 +223,17 @@ export function MultisamplePresetSettings() {
     settings.highpass !== baselineSettings.highpass ||
     settings.portamentoType !== baselineSettings.portamentoType ||
     settings.portamentoAmount !== baselineSettings.portamentoAmount ||
-    settings.tuningRoot !== baselineSettings.tuningRoot
-    // Note: We don't check envelope changes since they're randomized on load
-  );
+    settings.tuningRoot !== baselineSettings.tuningRoot ||
+    // Check envelope settings against initial values
+    settings.ampEnvelope.attack !== initialSettings.ampEnvelope.attack ||
+    settings.ampEnvelope.decay !== initialSettings.ampEnvelope.decay ||
+    settings.ampEnvelope.sustain !== initialSettings.ampEnvelope.sustain ||
+    settings.ampEnvelope.release !== initialSettings.ampEnvelope.release ||
+    settings.filterEnvelope.attack !== initialSettings.filterEnvelope.attack ||
+    settings.filterEnvelope.decay !== initialSettings.filterEnvelope.decay ||
+    settings.filterEnvelope.sustain !== initialSettings.filterEnvelope.sustain ||
+    settings.filterEnvelope.release !== initialSettings.filterEnvelope.release
+  ) : false;
 
   return (
     <div style={{
@@ -242,169 +270,179 @@ export function MultisamplePresetSettings() {
         padding: isMobile ? '1rem' : '2rem',
       }}>
         {/* Settings Grid */}
-        <div style={{ display: 'grid', gap: '2rem' }}>
+        <div style={{ display: 'grid', gap: '1rem' }}>
           
-          {/* Playback Settings */}
-          <section>
-            <h4 style={{ 
-              marginBottom: '1rem', 
-              color: 'var(--color-text-primary)',
-              fontWeight: '500',
-              borderBottom: '1px solid var(--color-progress-track)',
-              paddingBottom: '0.5rem'
-            }}>
-              playback
-            </h4>
-            
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
-              gap: isMobile ? '1.5rem' : '3rem' 
-            }}>
-              <div>
-                <label style={{ 
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: '500',
-                  fontSize: '0.875rem',
-                  color: 'var(--color-text-primary)'
-                }}>
-                  playmode
-                </label>
-                <div style={{ maxWidth: '150px' }}>
-                  <Select
-                    id="playmode"
-                    labelText=""
-                    value={settings.playmode}
-                    onChange={(e) => updateSetting('playmode', e.target.value as any)}
-                    size="sm"
-                  >
-                    <SelectItem value="poly" text="poly" />
-                    <SelectItem value="mono" text="mono" />
-                    <SelectItem value="legato" text="legato" />
-                  </Select>
+          {/* Essential Settings */}
+          <section style={{
+            border: '1px solid var(--color-border-light)',
+            borderRadius: '6px',
+            marginBottom: '0.75rem',
+            overflow: 'hidden',
+            background: 'var(--color-bg-primary)'
+          }}>
+            {/* Header */}
+            <div
+              onClick={() => toggleSection('essential')}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1rem 1.25rem',
+                background: 'var(--color-bg-secondary)',
+                cursor: 'pointer',
+                userSelect: 'none',
+                borderBottom: expandedSections.essential ? '1px solid var(--color-border-light)' : 'none',
+                transition: 'background 0.2s',
+                borderRadius: '6px 6px 0 0',
+                overflow: 'hidden',
+              }}
+            >
+              <h4 style={{
+                margin: 0,
+                color: 'var(--color-text-primary)',
+                fontWeight: '500',
+                fontSize: '1rem',
+                letterSpacing: '0.01em',
+              }}>essential</h4>
+              <i
+                className="fas fa-chevron-right"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  fontSize: '1rem',
+                  transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1)',
+                  transform: expandedSections.essential ? 'rotate(90deg)' : 'rotate(0deg)'
+                }}
+              />
+            </div>
+            {/* Content */}
+            {expandedSections.essential && (
+              <div style={{ padding: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: isMobile ? '1.5rem' : '2rem' }}>
+                  <div>
+                    <label style={{ 
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontWeight: '500',
+                      fontSize: '0.875rem',
+                      color: 'var(--color-text-primary)'
+                    }}>
+                      playmode
+                    </label>
+                    <div style={{ maxWidth: '150px' }}>
+                      <Select
+                        id="playmode"
+                        labelText=""
+                        value={settings.playmode}
+                        onChange={(e) => updateSetting('playmode', e.target.value as any)}
+                        size="sm"
+                      >
+                        <SelectItem value="poly" text="poly" />
+                        <SelectItem value="mono" text="mono" />
+                        <SelectItem value="legato" text="legato" />
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ 
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontWeight: '500',
+                      fontSize: '0.875rem',
+                      color: 'var(--color-text-primary)'
+                    }}>
+                      loop enabled
+                    </label>
+                    <Toggle
+                      id="multisample-loop-enabled"
+                      labelA="off"
+                      labelB="on"
+                      toggled={settings.loopEnabled}
+                      onToggle={(checked) => updateSetting('loopEnabled', checked)}
+                      size="sm"
+                    />
+                  </div>
                 </div>
               </div>
-
-              <div>
-                <label style={{ 
-                  display: 'block',
-                  marginBottom: '0.5rem',
-                  fontWeight: '500',
-                  fontSize: '0.875rem',
-                  color: 'var(--color-text-primary)'
-                }}>
-                  loop enabled
-                </label>
-                <Toggle
-                  id="multisample-loop-enabled"
-                  labelA="off"
-                  labelB="on"
-                  toggled={settings.loopEnabled}
-                  onToggle={(checked) => updateSetting('loopEnabled', checked)}
-                  size="sm"
-                />
-              </div>
-            </div>
+            )}
           </section>
 
-          {/* Sound Settings */}
-          <section>
-            <h4 style={{ 
-              marginBottom: '1rem', 
-              color: 'var(--color-text-primary)',
-              fontWeight: '500',
-              borderBottom: '1px solid var(--color-progress-track)',
-              paddingBottom: '0.5rem'
-            }}>
-              sound
-            </h4>
-            
-            <div className="drum-preset-grid">
-              {/* Left Column */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '0.5rem', 
-                    fontWeight: '500',
-                    fontSize: '0.875rem',
-                    color: 'var(--color-text-primary)'
-                  }}>
-                    tuning root
-                  </label>
-                  <div style={{ maxWidth: '150px' }}>
-                    <Select
-                      id="tuning-root"
-                      labelText=""
-                      value={settings.tuningRoot.toString()}
-                      onChange={(e) => updateSetting('tuningRoot', parseInt(e.target.value))}
-                      size="sm"
-                    >
-                      {noteNames.map((note, index) => (
-                        <SelectItem key={index} value={index.toString()} text={note} />
-                      ))}
-                    </Select>
+          {/* Advanced Settings */}
+          <section style={{
+            border: '1px solid var(--color-border-light)',
+            borderRadius: '6px',
+            marginBottom: '0.75rem',
+            overflow: 'hidden',
+            background: 'var(--color-bg-primary)'
+          }}>
+            {/* Header */}
+            <div
+              onClick={() => toggleSection('sound')}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1rem 1.25rem',
+                background: 'var(--color-bg-secondary)',
+                cursor: 'pointer',
+                userSelect: 'none',
+                borderBottom: expandedSections.sound ? '1px solid var(--color-border-light)' : 'none',
+                transition: 'background 0.2s',
+                borderRadius: '6px 6px 0 0',
+                overflow: 'hidden',
+              }}
+            >
+              <h4 style={{
+                margin: 0,
+                color: 'var(--color-text-primary)',
+                fontWeight: '500',
+                fontSize: '1rem',
+                letterSpacing: '0.01em',
+              }}>advanced</h4>
+              <i
+                className="fas fa-chevron-right"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  fontSize: '1rem',
+                  transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1)',
+                  transform: expandedSections.sound ? 'rotate(90deg)' : 'rotate(0deg)'
+                }}
+              />
+            </div>
+            {/* Content */}
+            {expandedSections.sound && (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr',
+                  gap: isMobile ? '1.5rem' : '2rem',
+                  padding: '1rem',
+                  backgroundColor: 'var(--color-bg-primary)',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  overflowX: 'auto',
+                }}
+              >
+                {/* Row 1: Tuning root + Transpose */}
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>tuning root</label>
+                    <div style={{ maxWidth: '150px' }}>
+                      <Select
+                        id="tuning-root"
+                        labelText=""
+                        value={settings.tuningRoot.toString()}
+                        onChange={(e) => updateSetting('tuningRoot', parseInt(e.target.value))}
+                        size="sm"
+                      >
+                        {noteNames.map((note, index) => (
+                          <SelectItem key={index} value={index.toString()} text={note} />
+                        ))}
+                      </Select>
+                    </div>
                   </div>
-                </div>
-
-                <div>
-                  <div style={{
-                    fontSize: '0.9rem',
-                    fontWeight: '500',
-                    color: 'var(--color-text-primary)',
-                    marginBottom: '0.5rem'
-                  }}>
-                    velocity sensitivity: {settings.velocitySensitivity}%
-                  </div>
-                  <div style={{ width: '100%' }}>
-                    <Slider
-                      id="multisample-velocity-sensitivity"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={settings.velocitySensitivity}
-                      onChange={({ value }) => updateSetting('velocitySensitivity', value)}
-                      hideTextInput
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{
-                    fontSize: '0.9rem',
-                    fontWeight: '500',
-                    color: 'var(--color-text-primary)',
-                    marginBottom: '0.5rem'
-                  }}>
-                    volume: {settings.volume}%
-                  </div>
-                  <div style={{ width: '100%' }}>
-                    <Slider
-                      id="multisample-volume"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={settings.volume}
-                      onChange={({ value }) => updateSetting('volume', value)}
-                      hideTextInput
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div>
-                  <div style={{
-                    fontSize: '0.9rem',
-                    fontWeight: '500',
-                    color: 'var(--color-text-primary)',
-                    marginBottom: '0.5rem'
-                  }}>
-                    transpose: {settings.transpose}
-                  </div>
-                  <div style={{ width: '100%' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>transpose: {settings.transpose}</label>
                     <Slider
                       id="multisample-transpose"
                       min={-36}
@@ -417,16 +455,10 @@ export function MultisamplePresetSettings() {
                   </div>
                 </div>
 
-                <div>
-                  <div style={{
-                    fontSize: '0.9rem',
-                    fontWeight: '500',
-                    color: 'var(--color-text-primary)',
-                    marginBottom: '0.5rem'
-                  }}>
-                    width: {settings.width}%
-                  </div>
-                  <div style={{ width: '100%' }}>
+                {/* Row 2: Width + Highpass */}
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>width: {settings.width}%</label>
                     <Slider
                       id="multisample-width"
                       min={0}
@@ -437,18 +469,8 @@ export function MultisamplePresetSettings() {
                       hideTextInput
                     />
                   </div>
-                </div>
-
-                <div>
-                  <div style={{
-                    fontSize: '0.9rem',
-                    fontWeight: '500',
-                    color: 'var(--color-text-primary)',
-                    marginBottom: '0.5rem'
-                  }}>
-                    highpass: {settings.highpass}%
-                  </div>
-                  <div style={{ width: '100%' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>highpass: {settings.highpass}%</label>
                     <Slider
                       id="multisample-highpass"
                       min={0}
@@ -460,127 +482,164 @@ export function MultisamplePresetSettings() {
                     />
                   </div>
                 </div>
-              </div>
-            </div>
-          </section>
 
-          {/* Portamento */}
-          <section>
-            <h4 style={{ 
-              marginBottom: '1rem', 
-              color: 'var(--color-text-primary)',
-              fontWeight: '500',
-              borderBottom: '1px solid var(--color-progress-track)',
-              paddingBottom: '0.5rem'
-            }}>
-              portamento
-            </h4>
-            
-            <div className="drum-preset-grid">
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '0.5rem', 
-                  fontWeight: '500',
-                  fontSize: '0.875rem',
-                  color: 'var(--color-text-primary)'
-                }}>
-                  type
-                </label>
-                <div style={{ maxWidth: '150px' }}>
-                  <Select
-                    id="portamento-type"
-                    labelText=""
-                    value={settings.portamentoType}
-                    onChange={(e) => updateSetting('portamentoType', e.target.value as any)}
-                    size="sm"
-                  >
-                    <SelectItem value="linear" text="linear" />
-                    <SelectItem value="exponential" text="exponential" />
-                  </Select>
+                {/* Row 3: Velocity Sensitivity + Volume */}
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>velocity sensitivity: {settings.velocitySensitivity}%</label>
+                    <Slider
+                      id="multisample-velocity-sensitivity"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={settings.velocitySensitivity}
+                      onChange={({ value }) => updateSetting('velocitySensitivity', value)}
+                      hideTextInput
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>volume: {settings.volume}%</label>
+                    <Slider
+                      id="multisample-volume"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={settings.volume}
+                      onChange={({ value }) => updateSetting('volume', value)}
+                      hideTextInput
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <div style={{
-                  fontSize: '0.9rem',
-                  fontWeight: '500',
-                  color: 'var(--color-text-primary)',
-                  marginBottom: '0.5rem'
-                }}>
-                  amount: {settings.portamentoAmount}%
-                </div>
-                <div style={{ width: '100%' }}>
-                  <Slider
-                    id="multisample-portamento-amount"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={settings.portamentoAmount}
-                    onChange={({ value }) => updateSetting('portamentoAmount', value)}
-                    hideTextInput
-                  />
+                {/* Row 4: Portamento Type + Amount */}
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>portamento type</label>
+                    <div style={{ maxWidth: '150px' }}>
+                      <Select
+                        id="portamento-type"
+                        labelText=""
+                        value={settings.portamentoType}
+                        onChange={(e) => updateSetting('portamentoType', e.target.value as any)}
+                        size="sm"
+                      >
+                        <SelectItem value="linear" text="linear" />
+                        <SelectItem value="exponential" text="exponential" />
+                      </Select>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>portamento amount: {settings.portamentoAmount}%</label>
+                    <Slider
+                      id="multisample-portamento-amount"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={settings.portamentoAmount}
+                      onChange={({ value }) => updateSetting('portamentoAmount', value)}
+                      hideTextInput
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </section>
 
           {/* Envelopes and Filters */}
-          <section>
-            <h4 style={{ 
-              marginBottom: '1rem', 
-              color: 'var(--color-text-primary)',
-              fontWeight: '500',
-              borderBottom: '1px solid var(--color-progress-track)',
-              paddingBottom: '0.5rem'
-            }}>
-              envelopes and filters
-            </h4>
-            
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
-              gap: isMobile ? '2rem' : '3rem' 
-            }}>
-              {/* Envelopes */}
-              <div>
-                <ADSREnvelope
-                  ampEnvelope={settings.ampEnvelope}
-                  filterEnvelope={settings.filterEnvelope}
-                  onAmpEnvelopeChange={updateAmpEnvelope}
-                  onFilterEnvelopeChange={updateFilterEnvelope}
-                />
-              </div>
-              
-              {/* Filters (Coming Soon) */}
-              <div style={{
+          <section style={{
+            border: '1px solid var(--color-border-light)',
+            borderRadius: '6px',
+            marginBottom: '0.75rem',
+            overflow: 'hidden',
+            background: 'var(--color-bg-primary)'
+          }}>
+            {/* Header */}
+            <div
+              onClick={() => toggleSection('envelopes')}
+              style={{
                 display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                minHeight: '300px',
-                border: '1px solid var(--color-border-light)',
-                borderRadius: '6px',
-                backgroundColor: 'var(--color-bg-panel)',
-                color: 'var(--color-text-secondary)'
+                padding: '1rem 1.25rem',
+                background: 'var(--color-bg-secondary)',
+                cursor: 'pointer',
+                userSelect: 'none',
+                borderBottom: expandedSections.envelopes ? '1px solid var(--color-border-light)' : 'none',
+                transition: 'background 0.2s',
+                borderRadius: '6px 6px 0 0',
+                overflow: 'hidden',
+              }}
+            >
+              <h4 style={{
+                margin: 0,
+                color: 'var(--color-text-primary)',
+                fontWeight: '500',
+                fontSize: '1rem',
+                letterSpacing: '0.01em',
+              }}>envelopes and filters</h4>
+              <i
+                className="fas fa-chevron-right"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  fontSize: '1rem',
+                  transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1)',
+                  transform: expandedSections.envelopes ? 'rotate(90deg)' : 'rotate(0deg)'
+                }}
+              />
+            </div>
+            {/* Content */}
+            {expandedSections.envelopes && (
+              <div style={{ 
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: isMobile ? '1.5rem' : '3rem',
+                padding: '1rem',
+                border: '1px solid var(--color-border-light)'
               }}>
-                <div style={{
-                  fontSize: '1.1rem',
-                  fontWeight: '500',
-                  marginBottom: '0.5rem',
-                  textAlign: 'center'
+                {/* Envelopes */}
+                <div style={{ 
+                  flex: isMobile ? '1' : '1 1 50%',
+                  minWidth: 0
                 }}>
-                  filters
+                  <ADSREnvelope
+                    ampEnvelope={settings.ampEnvelope}
+                    filterEnvelope={settings.filterEnvelope}
+                    onAmpEnvelopeChange={updateAmpEnvelope}
+                    onFilterEnvelopeChange={updateFilterEnvelope}
+                  />
                 </div>
+                
+                {/* Filters (Coming Soon) */}
                 <div style={{
-                  fontSize: '0.9rem',
-                  opacity: 0.7,
-                  textAlign: 'center'
+                  flex: isMobile ? '1' : '1 1 50%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: isMobile ? '200px' : '300px',
+                  border: '1px solid var(--color-border-light)',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--color-bg-panel)',
+                  color: 'var(--color-text-secondary)'
                 }}>
-                  coming soon
+                  <div style={{
+                    fontSize: '1.1rem',
+                    fontWeight: '500',
+                    marginBottom: '0.5rem',
+                    textAlign: 'center'
+                  }}>
+                    filters
+                  </div>
+                  <div style={{
+                    fontSize: '0.9rem',
+                    opacity: 0.7,
+                    textAlign: 'center'
+                  }}>
+                    coming soon
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </section>
         </div>
 
@@ -590,7 +649,7 @@ export function MultisamplePresetSettings() {
           gap: '1rem',
           justifyContent: isMobile ? 'center' : 'flex-end',
           flexDirection: isMobile ? 'column' : 'row',
-          marginTop: '2rem',
+          marginTop: '1.5rem',
           paddingTop: '1.5rem',
           borderTop: '1px solid var(--color-border-light)',
         }}>

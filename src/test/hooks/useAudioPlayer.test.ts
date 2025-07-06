@@ -6,6 +6,7 @@ import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 vi.mock('../../utils/audioContext', () => ({
   audioContextManager: {
     getAudioContext: vi.fn(),
+    createOfflineContext: vi.fn(),
   },
 }));
 
@@ -15,7 +16,7 @@ describe('useAudioPlayer', () => {
   let mockGainNode: any;
   let mockPanNode: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Create mock audio nodes
     mockSource = {
       buffer: null,
@@ -47,8 +48,8 @@ describe('useAudioPlayer', () => {
     };
 
     // Mock the audioContextManager to return our mock context
-    const { audioContextManager } = require('../../utils/audioContext');
-    audioContextManager.getAudioContext.mockResolvedValue(mockAudioContext);
+    const { audioContextManager } = await import('../../utils/audioContext');
+    (audioContextManager.getAudioContext as any).mockResolvedValue(mockAudioContext);
   });
 
   afterEach(() => {
