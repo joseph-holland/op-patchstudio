@@ -466,16 +466,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
         rootNote: detectedMidiNote, // Set the actual MIDI note number
         note: detectedNote,
         inPoint: 0,
-        outPoint: action.payload.audioBuffer.duration,
+        outPoint: action.payload.metadata.duration, // Use calculated duration from metadata
         // Use loop points from WAV metadata if available, otherwise use defaults
-        loopStart: action.payload.metadata.hasLoopData ? action.payload.metadata.loopStart : action.payload.audioBuffer.duration * 0.2,
-        loopEnd: action.payload.metadata.hasLoopData ? action.payload.metadata.loopEnd : action.payload.audioBuffer.duration * 0.8,
+        loopStart: action.payload.metadata.hasLoopData ? action.payload.metadata.loopStart : action.payload.metadata.duration * 0.2,
+        loopEnd: action.payload.metadata.hasLoopData ? action.payload.metadata.loopEnd : action.payload.metadata.duration * 0.8,
         // Store WAV metadata
         originalBitDepth: action.payload.metadata.bitDepth,
         originalSampleRate: action.payload.metadata.sampleRate,
         originalChannels: action.payload.metadata.channels,
         fileSize: action.payload.metadata.fileSize,
-        duration: action.payload.audioBuffer.duration
+        duration: action.payload.metadata.duration // Use calculated duration from metadata
       };
       
       const updatedFiles = [...state.multisampleFiles, newMultisampleFile];
