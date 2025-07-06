@@ -4,6 +4,39 @@ import { Select, SelectItem, Slider, Toggle } from '@carbon/react';
 import { importPresetFromFile, type MultisamplePresetJson } from '../../utils/presetImport';
 import { ADSREnvelope } from '../common/ADSREnvelope';
 
+// ADSR Presets for different instrument types (copied from ADSREnvelope component)
+const ADSR_PRESETS = {
+  bass: {
+    amp: { attack: 1000, decay: 12000, sustain: 28000, release: 15000 },
+    filter: { attack: 0, decay: 8000, sustain: 20000, release: 12000 }
+  },
+  pad: {
+    amp: { attack: 15000, decay: 20000, sustain: 30000, release: 25000 },
+    filter: { attack: 4000, decay: 15000, sustain: 25000, release: 20000 }
+  },
+  keys: {
+    amp: { attack: 500, decay: 6000, sustain: 22000, release: 12000 },
+    filter: { attack: 0, decay: 5000, sustain: 18000, release: 10000 }
+  },
+  pluck: {
+    amp: { attack: 0, decay: 2000, sustain: 8000, release: 5000 },
+    filter: { attack: 0, decay: 3000, sustain: 12000, release: 8000 }
+  },
+  lead: {
+    amp: { attack: 800, decay: 8000, sustain: 20000, release: 12000 },
+    filter: { attack: 0, decay: 6000, sustain: 18000, release: 10000 }
+  }
+};
+
+type PresetType = keyof typeof ADSR_PRESETS;
+
+// Function to get a random preset
+const getRandomPreset = (): PresetType => {
+  const presetTypes: PresetType[] = ['bass', 'pad', 'keys', 'pluck', 'lead'];
+  const randomIndex = Math.floor(Math.random() * presetTypes.length);
+  return presetTypes[randomIndex];
+};
+
 interface MultisampleAdvancedSettings {
   playmode: 'poly' | 'mono' | 'legato';
   loopEnabled: boolean;
@@ -29,36 +62,32 @@ interface MultisampleAdvancedSettings {
   };
 }
 
-const defaultSettings: MultisampleAdvancedSettings = {
-  playmode: 'poly',
-  loopEnabled: true,
-  transpose: 0,
-  velocitySensitivity: 20,
-  volume: 69,
-  width: 0,
-  highpass: 0,
-  portamentoType: 'linear',
-  portamentoAmount: 0,
-  tuningRoot: 0, // C
-  ampEnvelope: {
-    attack: 0,
-    decay: 0,
-    sustain: 32767, // 100%
-    release: 0,
-  },
-  filterEnvelope: {
-    attack: 0,
-    decay: 0,
-    sustain: 32767, // 100%
-    release: 0,
-  },
+// Function to create default settings with a random preset
+const createDefaultSettings = (): MultisampleAdvancedSettings => {
+  const randomPreset = getRandomPreset();
+  const presetValues = ADSR_PRESETS[randomPreset];
+  
+  return {
+    playmode: 'poly',
+    loopEnabled: true,
+    transpose: 0,
+    velocitySensitivity: 20,
+    volume: 69,
+    width: 0,
+    highpass: 0,
+    portamentoType: 'linear',
+    portamentoAmount: 0,
+    tuningRoot: 0, // C
+    ampEnvelope: presetValues.amp,
+    filterEnvelope: presetValues.filter,
+  };
 };
 
 export function MultisamplePresetSettings() {
   const { dispatch } = useAppContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [settings, setSettings] = useState<MultisampleAdvancedSettings>(defaultSettings);
+  const [settings, setSettings] = useState<MultisampleAdvancedSettings>(createDefaultSettings());
 
   useEffect(() => {
     const checkMobile = () => {
@@ -131,7 +160,7 @@ export function MultisamplePresetSettings() {
 
 
   const handleReset = () => {
-    setSettings(defaultSettings);
+    setSettings(createDefaultSettings());
   };
 
   const updateSetting = <K extends keyof MultisampleAdvancedSettings>(
@@ -149,26 +178,33 @@ export function MultisamplePresetSettings() {
     setSettings(prev => ({ ...prev, filterEnvelope: envelope }));
   };
 
-  // Check if any settings have changed from defaults
+  // Create baseline settings for comparison (non-envelope settings that should be at defaults)
+  const baselineSettings = {
+    playmode: 'poly' as const,
+    loopEnabled: true,
+    transpose: 0,
+    velocitySensitivity: 20,
+    volume: 69,
+    width: 0,
+    highpass: 0,
+    portamentoType: 'linear' as const,
+    portamentoAmount: 0,
+    tuningRoot: 0,
+  };
+
+  // Check if any non-envelope settings have changed from defaults
   const hasPresetChanges = (
-    settings.playmode !== defaultSettings.playmode ||
-    settings.loopEnabled !== defaultSettings.loopEnabled ||
-    settings.transpose !== defaultSettings.transpose ||
-    settings.velocitySensitivity !== defaultSettings.velocitySensitivity ||
-    settings.volume !== defaultSettings.volume ||
-    settings.width !== defaultSettings.width ||
-    settings.highpass !== defaultSettings.highpass ||
-    settings.portamentoType !== defaultSettings.portamentoType ||
-    settings.portamentoAmount !== defaultSettings.portamentoAmount ||
-    settings.tuningRoot !== defaultSettings.tuningRoot ||
-    settings.ampEnvelope.attack !== defaultSettings.ampEnvelope.attack ||
-    settings.ampEnvelope.decay !== defaultSettings.ampEnvelope.decay ||
-    settings.ampEnvelope.sustain !== defaultSettings.ampEnvelope.sustain ||
-    settings.ampEnvelope.release !== defaultSettings.ampEnvelope.release ||
-    settings.filterEnvelope.attack !== defaultSettings.filterEnvelope.attack ||
-    settings.filterEnvelope.decay !== defaultSettings.filterEnvelope.decay ||
-    settings.filterEnvelope.sustain !== defaultSettings.filterEnvelope.sustain ||
-    settings.filterEnvelope.release !== defaultSettings.filterEnvelope.release
+    settings.playmode !== baselineSettings.playmode ||
+    settings.loopEnabled !== baselineSettings.loopEnabled ||
+    settings.transpose !== baselineSettings.transpose ||
+    settings.velocitySensitivity !== baselineSettings.velocitySensitivity ||
+    settings.volume !== baselineSettings.volume ||
+    settings.width !== baselineSettings.width ||
+    settings.highpass !== baselineSettings.highpass ||
+    settings.portamentoType !== baselineSettings.portamentoType ||
+    settings.portamentoAmount !== baselineSettings.portamentoAmount ||
+    settings.tuningRoot !== baselineSettings.tuningRoot
+    // Note: We don't check envelope changes since they're randomized on load
   );
 
   return (
