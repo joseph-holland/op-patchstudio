@@ -35,13 +35,7 @@ export function FeedbackPage() {
               frameBorder="0" 
               marginHeight={0} 
               marginWidth={0}
-              // style={{
-              //   border: '1px solid var(--color-border-light)',
-              //   borderRadius: '6px',
-              //   width: '100%',
-              //   minHeight: '100%',
-              //   background: 'white'
-              // }}
+              
             >
               loading…
             </iframe>

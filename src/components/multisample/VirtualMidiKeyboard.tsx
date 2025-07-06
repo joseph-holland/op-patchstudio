@@ -614,7 +614,7 @@ export function VirtualMidiKeyboard({
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
             <h3 style={{
               margin: 0,
-              color: '#222',
+              color: 'var(--color-text-primary)',
               fontSize: '1.25rem',
               fontWeight: 300,
             }}>
