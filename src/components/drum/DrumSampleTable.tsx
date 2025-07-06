@@ -1,6 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
+import { triggerRotateOverlay } from '../../App';
+import { isMobile as isMobileDevice, isTablet } from 'react-device-detect';
 
 import { SmallWaveform } from '../common/SmallWaveform';
 import { WaveformZoomModal } from '../common/WaveformZoomModal';
@@ -121,8 +123,22 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
   };
 
   const openSettingsModal = (index: number) => {
-    setSelectedSampleIndex(index);
-    setSettingsModalOpen(true);
+    // Check if we're on a mobile device and in portrait mode
+    const mobileOrTablet = isMobileDevice || isTablet;
+    const isPortraitMode = window.innerHeight > window.innerWidth;
+    
+    if (mobileOrTablet && isPortraitMode) {
+      // Show rotate overlay instead of opening modal
+      triggerRotateOverlay(() => {
+        // This callback will be executed when device is rotated to landscape
+        setSelectedSampleIndex(index);
+        setSettingsModalOpen(true);
+      });
+    } else {
+      // Open modal directly on desktop or landscape mobile
+      setSelectedSampleIndex(index);
+      setSettingsModalOpen(true);
+    }
   };
 
   const closeSettingsModal = () => {

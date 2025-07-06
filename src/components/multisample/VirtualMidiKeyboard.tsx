@@ -447,7 +447,7 @@ export function VirtualMidiKeyboard({
               userSelect: 'none',
               boxShadow: isHovered ? '0 2px 4px rgba(0,0,0,0.1)' : '0 2px 6px rgba(0,0,0,0.3)',
             }}
-            onMouseDown={(e) => {
+            onMouseDown={() => {
               // Don't set pressed key if we're starting to drag
               if (!isDragging) {
                 setMousePressedKey(midiNote);
@@ -530,7 +530,7 @@ export function VirtualMidiKeyboard({
               userSelect: 'none',
               boxShadow: isHovered ? '0 3px 8px rgba(0,0,0,0.5)' : '0 2px 4px rgba(0,0,0,0.3)',
             }}
-            onMouseDown={(e) => {
+            onMouseDown={() => {
               // Don't set pressed key if we're starting to drag
               if (!isDragging) {
                 setMousePressedKey(midiNote);

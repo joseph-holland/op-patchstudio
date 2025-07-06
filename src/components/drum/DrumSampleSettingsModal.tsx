@@ -202,38 +202,42 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
         position: 'fixed',
         top: 0,
         left: 0,
-        width: '100%',
-        height: '100%',
+        right: 0,
+        bottom: 0,
         backgroundColor: 'rgba(0,0,0,0.4)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1050,
         fontFamily: 'inherit',
-        padding: '0.5rem',
+        padding: '1rem',
         boxSizing: 'border-box',
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) handleCancel();
       }}
     >
-      <div style={{
-        background: c.bg,
-        borderRadius: '15px',
-        boxShadow: `0 2px 8px ${c.shadow}`,
-        width: '100%',
-        maxWidth: '500px',
-        maxHeight: 'calc(100vh - 1rem)',
-        minHeight: 'auto',
-        overflow: 'hidden',
-        border: `1px solid ${c.border}`,
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative',
-      }}>
+      <div 
+        className="drum-sample-settings-modal"
+        style={{
+          background: c.bg,
+          borderRadius: '15px',
+          boxShadow: `0 2px 8px ${c.shadow}`,
+          width: '90%',
+          maxWidth: '500px',
+          maxHeight: 'calc(100vh - 2rem)',
+          minHeight: 'auto',
+          overflow: 'hidden',
+          border: `1px solid ${c.border}`,
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          margin: '0 1rem',
+        }}
+      >
         {/* Header */}
         <div style={{
-          padding: '1rem 1.5rem 0.75rem 1.5rem',
+          padding: '1rem 1rem 0.75rem 1rem',
           borderBottom: `1px solid ${c.border}`,
           display: 'flex',
           alignItems: 'center',
@@ -259,6 +263,8 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
           overflowY: 'auto',
           flex: 1,
           minHeight: 0,
+          maxHeight: 'calc(100vh - 200px)', // Ensure it doesn't overflow on mobile
+          WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
         }}>
           {/* Playmode */}
           <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -276,13 +282,14 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               style={{
                 flex: 1,
                 minWidth: '180px',
-                padding: '0.25rem 0.5rem',
+                padding: '0.5rem',
                 border: `1px solid ${c.border}`,
                 borderRadius: '6px',
                 fontSize: '0.9rem',
                 color: c.text,
                 background: c.bgAlt,
                 outline: 'none',
+                minHeight: '44px',
               }}
               value={settings.playmode}
               onChange={(e) => setSettings({ ...settings, playmode: e.target.value as any })}
@@ -312,7 +319,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
                 color: c.white,
                 border: 'none',
                 minWidth: '90px',
-                padding: '0.25rem 0.5rem',
+                padding: '0.5rem',
                 borderRadius: '6px',
                 fontSize: '0.9rem',
                 cursor: 'pointer',
@@ -321,6 +328,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
                 outline: 'none',
                 boxShadow: 'none',
                 transition: 'background 0.15s',
+                minHeight: '44px',
               }}
               onClick={() => setSettings({ ...settings, reverse: !settings.reverse })}
             >
@@ -333,7 +341,14 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
           </div>
           {/* Enhanced Waveform Display */}
           {sample?.audioBuffer && (
-            <div style={{ position: 'relative', marginBottom: '1rem', padding: '0.5rem' }}>
+            <div style={{ 
+              position: 'relative', 
+              marginBottom: '1rem', 
+              padding: '0.5rem',
+              width: '100%',
+              minHeight: '60px',
+              overflow: 'hidden'
+            }}>
               <EnhancedWaveformEditor
                 audioBuffer={sample.audioBuffer}
                 inPoint={getInPointSampleIndex()}
@@ -463,7 +478,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
         </div>
         {/* Footer/Actions */}
         <div style={{
-          padding: '0.75rem 1.5rem 1rem 1.5rem',
+          padding: '0.75rem 1rem 1rem 1rem',
           display: 'flex',
           gap: '0.5rem',
           justifyContent: 'flex-end',
@@ -475,17 +490,18 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
           <button
             type="button"
             style={{
-              padding: '0.5rem 1rem',
+              padding: '0.625rem 1rem',
               border: `1px solid ${c.border}`,
               borderRadius: '6px',
               backgroundColor: c.bg,
               color: c.textSecondary,
-              fontSize: '0.8rem',
+              fontSize: '0.875rem',
               fontWeight: 500,
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               fontFamily: 'inherit',
-              minWidth: '70px',
+              minWidth: '80px',
+              minHeight: '44px',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
@@ -508,17 +524,18 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
           <button
             type="button"
             style={{
-              padding: '0.5rem 1rem',
+              padding: '0.625rem 1rem',
               border: 'none',
               borderRadius: '6px',
               backgroundColor: c.text,
               color: c.white,
-              fontSize: '0.8rem',
+              fontSize: '0.875rem',
               fontWeight: '500',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               fontFamily: 'inherit',
-              minWidth: '70px',
+              minWidth: '80px',
+              minHeight: '44px',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
@@ -563,17 +580,18 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
           <button
             type="button"
             style={{
-              padding: '0.5rem 1rem',
+              padding: '0.625rem 1rem',
               border: 'none',
               borderRadius: '6px',
               backgroundColor: c.action,
               color: c.white,
-              fontSize: '0.8rem',
+              fontSize: '0.875rem',
               fontWeight: 500,
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               fontFamily: 'inherit',
-              minWidth: '70px',
+              minWidth: '80px',
+              minHeight: '44px',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
