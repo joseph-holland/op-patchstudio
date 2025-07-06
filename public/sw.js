@@ -2,10 +2,6 @@ const CACHE_NAME = 'op-patchstudio-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/src/main.tsx',
-  '/src/App.tsx',
-  '/src/index.css',
-  '/src/theme/device-themes.scss',
   '/assets/favicon.png',
   '/assets/favicon.svg',
   '/assets/preview-image.png'
