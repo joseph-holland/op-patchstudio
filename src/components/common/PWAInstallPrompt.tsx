@@ -50,10 +50,9 @@ const PWAInstallPrompt: React.FC = () => {
       const lastDismissed = new Date(dismissedDate).getTime();
       const now = new Date().getTime();
       
-      // If dismissed recently, check visit count and time interval
+      // If dismissed within the repropt interval, don't show again
       if (now - lastDismissed < PROMPT_CONFIG.REPROMPT_INTERVAL) {
-        const visitCount = parseInt(localStorage.getItem(STORAGE_KEYS.VISIT_COUNT) || '0');
-        return visitCount >= PROMPT_CONFIG.VISIT_THRESHOLD;
+        return false;
       }
     }
 
@@ -148,7 +147,8 @@ const PWAInstallPrompt: React.FC = () => {
 
   const handleRemindLater = () => {
     handleFadeOut();
-    // Reset visit count to show again after threshold
+    // Clear dismiss state and reset visit count to show again after threshold
+    localStorage.removeItem(STORAGE_KEYS.INSTALL_DISMISSED);
     localStorage.setItem(STORAGE_KEYS.VISIT_COUNT, '0');
   };
 
