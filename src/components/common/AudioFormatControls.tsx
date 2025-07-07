@@ -36,7 +36,7 @@ export function AudioFormatControls({
   
   // Calculate which options should be disabled based on loaded samples
   const disabledOptions = useMemo(() => {
-    const loadedSamples = samples.filter(s => s.isLoaded && s.originalBitDepth && s.originalSampleRate && s.originalChannels);
+    const loadedSamples = samples.filter(s => s && s.isLoaded && s.originalBitDepth && s.originalSampleRate && s.originalChannels);
     
     if (loadedSamples.length === 0) {
       return {

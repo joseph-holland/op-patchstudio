@@ -29,7 +29,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
     return saved === 'true';
   });
 
-  const loadedSamplesCount = state.drumSamples.filter(sample => sample.isLoaded).length;
+  const loadedSamplesCount = state.drumSamples.filter(sample => sample && sample.isLoaded).length;
 
   const togglePin = () => {
     const newPinnedState = !isDrumKeyboardPinned;

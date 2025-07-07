@@ -187,7 +187,7 @@ export function DrumTool() {
         await handleFileUpload(recordingModal.targetIndex, recordedFile);
       } else {
         // Find first empty slot or ask user to choose
-        const emptyIndex = state.drumSamples.findIndex(sample => !sample.isLoaded);
+        const emptyIndex = state.drumSamples.findIndex(sample => !sample || !sample.isLoaded);
         if (emptyIndex !== -1) {
           await handleFileUpload(emptyIndex, recordedFile);
         } else {
@@ -200,8 +200,8 @@ export function DrumTool() {
     }
   };
 
-  const hasLoadedSamples = state.drumSamples.some(s => s.isLoaded);
-  const hasMultipleLoadedSamples = state.drumSamples.filter(s => s.isLoaded).length > 1;
+  const hasLoadedSamples = state.drumSamples.some(s => s && s.isLoaded);
+  const hasMultipleLoadedSamples = state.drumSamples.filter(s => s && s.isLoaded).length > 1;
   const hasPresetName = state.drumSettings.presetName.trim().length > 0;
   const canGeneratePatch = hasLoadedSamples && hasPresetName;
   
@@ -219,7 +219,7 @@ export function DrumTool() {
     state.drumSettings.presetSettings.velocity !== 20 ||
     state.drumSettings.presetSettings.volume !== 69 ||
     state.drumSettings.presetSettings.width !== 0 ||
-    state.drumSamples.some(s => s.hasBeenEdited) // Any individual sample settings changed
+    state.drumSamples.some(s => s && s.hasBeenEdited) // Any individual sample settings changed
   );
 
   return (
@@ -416,8 +416,8 @@ export function DrumTool() {
           hasLoadedSamples={hasLoadedSamples}
           hasPresetName={hasPresetName}
           canGeneratePatch={canGeneratePatch}
-          loadedSamplesCount={state.drumSamples.filter(s => s.isLoaded).length}
-          editedSamplesCount={state.drumSamples.filter(s => s.hasBeenEdited).length}
+          loadedSamplesCount={state.drumSamples.filter(s => s && s.isLoaded).length}
+          editedSamplesCount={state.drumSamples.filter(s => s && s.hasBeenEdited).length}
           presetName={state.drumSettings.presetName}
           onPresetNameChange={handlePresetNameChange}
           hasChangesFromDefaults={hasChangesFromDefaults}

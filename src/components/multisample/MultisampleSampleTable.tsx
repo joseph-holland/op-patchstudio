@@ -509,7 +509,7 @@ export function MultisampleSampleTable({
                     alignItems: 'center',
                     marginBottom: '0.75rem'
                   }}>
-                    {sample.isLoaded ? (
+                    {sample?.isLoaded ? (
                       <div style={{ textAlign: 'left' }}>
                         <input
                           type="text"
@@ -558,7 +558,7 @@ export function MultisampleSampleTable({
                       display: 'flex',
                       gap: '0.25rem'
                     }}>
-                      {sample.isLoaded ? (
+                      {sample?.isLoaded ? (
                         <>
                           <button
                             onClick={() => playSample(index).catch(error => {
@@ -598,7 +598,7 @@ export function MultisampleSampleTable({
                     </div>
                   </div>
 
-                  {sample.isLoaded ? (
+                  {sample?.isLoaded ? (
                     <>
                       <div style={{ 
                         fontWeight: '500', 
@@ -828,7 +828,7 @@ export function MultisampleSampleTable({
                 />
                 
                 <div
-                  draggable={sample.isLoaded}
+                  draggable={sample?.isLoaded}
                   onDragStart={(e) => handleDragStart(e, index)}
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDragLeave={handleDragLeave}
@@ -845,12 +845,12 @@ export function MultisampleSampleTable({
                     alignItems: 'center',
                     minHeight: '54px',
                     opacity: isDragging ? 0.5 : 1,
-                                          cursor: sample.isLoaded ? 'move' : 'default'
-                    }}
-                  >
+                    cursor: sample?.isLoaded ? 'move' : 'default'
+                  }}
+                >
                   {/* Key Column */}
                   <div>
-                    {sample.isLoaded ? (
+                    {sample?.isLoaded ? (
                       <div style={{ textAlign: 'center' }}>
                         <input
                           type="text"
@@ -887,7 +887,7 @@ export function MultisampleSampleTable({
                   </div>
 
                   {/* File Details and Waveform - Combined when empty */}
-                  {sample.isLoaded ? (
+                  {sample?.isLoaded ? (
                     <>
                       {/* File Details Column */}
                       <div style={{
@@ -999,7 +999,7 @@ export function MultisampleSampleTable({
 
                   {/* Actions Column */}
                   <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'center', alignItems: 'center' }}>
-                    {sample.isLoaded ? (
+                    {sample?.isLoaded ? (
                       <>
                         <button
                           onClick={() => playSample(index).catch(error => {
