@@ -306,7 +306,7 @@ export async function generateMultisamplePatch(
 
     const region: MultisampleRegion = {
       framecount: framecount,
-      gain: multisampleGain || 0,
+      gain: multisampleGain,
       hikey: hiKey,
       lokey: lowKey,
       "loop.crossfade": 0,
@@ -340,7 +340,8 @@ export async function generateMultisamplePatch(
               channels: targetChannels === "mono" ? 1 : sample.audioBuffer!.numberOfChannels,
               normalize: state.multisampleSettings.normalize,
               normalizeLevel: state.multisampleSettings.normalizeLevel,
-              gain: multisampleGain
+              gain: multisampleGain,
+              loopEnd: scaledLoopEnd
             });
             
             // Validate that converted buffer frame count matches our calculation
