@@ -148,13 +148,13 @@ export function useSessionManagement() {
       }
 
       // Restore multisample files
-      for (const storedFile of sessionData.multisampleFiles) {
+      const multisampleLoadPromises = sessionData.multisampleFiles.map(async (storedFile) => {
         try {
           // Load the sample from IndexedDB
           const sampleData = await sessionStorageIndexedDB.loadSampleFromSession(storedFile.sampleId);
           if (!sampleData) {
             console.error(`Failed to load multisample file ${storedFile.sampleId}`);
-            continue;
+            return null;
           }
           
           // Load the file into the state
@@ -168,41 +168,48 @@ export function useSessionManagement() {
             }
           });
           
-          // Apply the stored settings (we need to find the file index first)
-          // This is a bit tricky since the files are sorted by rootNote
-          // We'll need to update this after all files are loaded
+          // Return the stored file data for later processing
+          return storedFile;
         } catch (error) {
           console.error(`Failed to restore multisample file ${storedFile.sampleId}:`, error);
-          // Continue with other files instead of failing completely
+          return null;
         }
-      }
+      });
 
-      // Update multisample files with their stored settings
-      // This needs to be done after all files are loaded and sorted
-      setTimeout(() => {
-        sessionData.multisampleFiles.forEach((storedFile, _originalIndex) => {
-          // Find the file in the current state by name and rootNote
-          const currentFiles = state.multisampleFiles;
-          const fileIndex = currentFiles.findIndex(f => 
-            f.name === storedFile.note && f.rootNote === storedFile.rootNote
-          );
-          
-          if (fileIndex !== -1) {
-            dispatch({
-              type: 'UPDATE_MULTISAMPLE_FILE',
-              payload: {
-                index: fileIndex,
-                updates: {
-                  inPoint: storedFile.inPoint,
-                  outPoint: storedFile.outPoint,
-                  loopStart: storedFile.loopStart,
-                  loopEnd: storedFile.loopEnd,
-                }
+      // Wait for all multisample files to be loaded
+      const loadedMultisampleFiles = await Promise.all(multisampleLoadPromises);
+      const validLoadedFiles = loadedMultisampleFiles.filter(file => file !== null);
+
+      // Now apply the stored settings to all loaded files
+      // Use a small delay to ensure React state updates have completed
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      validLoadedFiles.forEach((storedFile) => {
+        if (!storedFile) return;
+        
+        // Find the file in the current state by file name and rootNote
+        const currentFiles = state.multisampleFiles;
+        const fileIndex = currentFiles.findIndex(f => 
+          f.name === storedFile.fileName && f.rootNote === storedFile.rootNote
+        );
+        
+        if (fileIndex !== -1) {
+          dispatch({
+            type: 'UPDATE_MULTISAMPLE_FILE',
+            payload: {
+              index: fileIndex,
+              updates: {
+                inPoint: storedFile.inPoint,
+                outPoint: storedFile.outPoint,
+                loopStart: storedFile.loopStart,
+                loopEnd: storedFile.loopEnd,
               }
-            });
-          }
-        });
-      }, 100);
+            }
+          });
+        } else {
+          console.warn(`Could not find multisample file to update settings for file ${storedFile.fileName} with rootNote ${storedFile.rootNote}`);
+        }
+      });
     } catch (error) {
       console.error('Failed to load session:', error);
     }

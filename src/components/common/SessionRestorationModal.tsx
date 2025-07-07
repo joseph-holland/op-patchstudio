@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 interface SessionRestorationModalProps {
   isOpen: boolean;
   onLoadSession: () => void;
@@ -15,6 +17,57 @@ export function SessionRestorationModal({
   onStartNew,
   sessionInfo 
 }: SessionRestorationModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const firstButtonRef = useRef<HTMLButtonElement>(null);
+  const lastButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Focus management
+  useEffect(() => {
+    if (isOpen) {
+      // Focus the first button when modal opens
+      firstButtonRef.current?.focus();
+      
+      // Prevent body scroll
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isOpen]);
+
+  // Handle keyboard navigation and escape key
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      switch (event.key) {
+        case 'Escape':
+          onStartNew();
+          break;
+        case 'Tab':
+          // Trap focus within the modal
+          if (event.shiftKey) {
+            if (document.activeElement === firstButtonRef.current) {
+              event.preventDefault();
+              lastButtonRef.current?.focus();
+            }
+          } else {
+            if (document.activeElement === lastButtonRef.current) {
+              event.preventDefault();
+              firstButtonRef.current?.focus();
+            }
+          }
+          break;
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, onStartNew]);
+
   if (!isOpen) return null;
 
   const formatSessionInfo = () => {
@@ -29,6 +82,11 @@ export function SessionRestorationModal({
 
   return (
     <div 
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="session-restoration-title"
+      aria-describedby="session-restoration-description"
+      ref={modalRef}
       style={{
         position: 'fixed',
         top: 0,
@@ -59,30 +117,40 @@ export function SessionRestorationModal({
           padding: '1.5rem 1.5rem 1rem 1.5rem',
           borderBottom: '1px solid var(--color-border-light)'
         }}>
-          <h3 style={{
-            margin: '0',
-            fontSize: '1.25rem',
-            fontWeight: '300',
-            color: 'var(--color-text-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            <i className="fas fa-clock-rotate-left" style={{ 
-              color: 'var(--color-text-primary)', 
-              fontSize: '1.25rem' 
-            }}></i>
+          <h3 
+            id="session-restoration-title"
+            style={{
+              margin: '0',
+              fontSize: '1.25rem',
+              fontWeight: '300',
+              color: 'var(--color-text-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <i 
+              className="fas fa-clock-rotate-left" 
+              style={{ 
+                color: 'var(--color-text-primary)', 
+                fontSize: '1.25rem' 
+              }}
+              aria-hidden="true"
+            ></i>
             restore session
           </h3>
         </div>
 
         {/* Content */}
-        <div style={{
-          padding: '1.5rem',
-          color: 'var(--color-text-secondary)',
-          fontSize: '0.95rem',
-          lineHeight: '1.5'
-        }}>
+        <div 
+          id="session-restoration-description"
+          style={{
+            padding: '1.5rem',
+            color: 'var(--color-text-secondary)',
+            fontSize: '0.95rem',
+            lineHeight: '1.5'
+          }}
+        >
           <p style={{ margin: '0 0 1rem 0' }}>
             a previous session was found {formatSessionInfo()}.
           </p>
@@ -99,6 +167,7 @@ export function SessionRestorationModal({
           justifyContent: 'flex-end'
         }}>
           <button
+            ref={firstButtonRef}
             onClick={onStartNew}
             style={{
               padding: '0.625rem 1.25rem',
@@ -127,6 +196,7 @@ export function SessionRestorationModal({
             start new
           </button>
           <button
+            ref={lastButtonRef}
             onClick={onLoadSession}
             style={{
               padding: '0.625rem 1.25rem',

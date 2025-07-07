@@ -35,6 +35,7 @@ export interface SessionData {
   }>;
   multisampleFiles: Array<{
     sampleId: string; // Reference to samples store
+    fileName: string; // File name for matching during restoration
     rootNote: number;
     note?: string;
     inPoint: number;

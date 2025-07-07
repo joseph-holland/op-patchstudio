@@ -29,7 +29,8 @@ export class SessionStorageManagerIndexedDB {
     const timestamp = Date.now();
 
     // First, save all samples to the samples store
-    const sampleIds = new Map<string, string>(); // file name -> sample id
+    const drumSampleIds: string[] = []; // Track drum sample IDs by index
+    const multisampleSampleIds: string[] = []; // Track multisample sample IDs by index
     
     // Save drum samples
     for (let i = 0; i < state.drumSamples.length; i++) {
@@ -37,7 +38,7 @@ export class SessionStorageManagerIndexedDB {
       
       if (sample && sample.isLoaded && sample.file && sample.audioBuffer) {
         const sampleId = uuidv4();
-        sampleIds.set(sample.file.name, sampleId);
+        drumSampleIds[i] = sampleId;
         
         // Convert File to ArrayBuffer
         const arrayBuffer = await this.fileToArrayBuffer(sample.file);
@@ -63,10 +64,11 @@ export class SessionStorageManagerIndexedDB {
     }
 
     // Save multisample files
-    for (const file of state.multisampleFiles) {
+    for (let i = 0; i < state.multisampleFiles.length; i++) {
+      const file = state.multisampleFiles[i];
       if (file.file && file.audioBuffer) {
         const sampleId = uuidv4();
-        sampleIds.set(file.file.name, sampleId);
+        multisampleSampleIds[i] = sampleId;
         
         // Convert File to ArrayBuffer
         const arrayBuffer = await this.fileToArrayBuffer(file.file);
@@ -101,7 +103,7 @@ export class SessionStorageManagerIndexedDB {
       drumSamples: state.drumSamples
         .map((sample, index) => {
           if (sample && sample.isLoaded && sample.file) {
-            const sampleId = sampleIds.get(sample.file!.name);
+            const sampleId = drumSampleIds[index];
             if (sampleId) {
               return {
                 originalIndex: index,
@@ -123,12 +125,13 @@ export class SessionStorageManagerIndexedDB {
         })
         .filter(Boolean) as SessionData['drumSamples'],
       multisampleFiles: state.multisampleFiles
-        .map(file => {
+        .map((file, index) => {
           if (file.file) {
-            const sampleId = sampleIds.get(file.file!.name);
+            const sampleId = multisampleSampleIds[index];
             if (sampleId) {
               return {
                 sampleId,
+                fileName: file.file.name,
                 rootNote: file.rootNote,
                 note: file.note,
                 inPoint: file.inPoint,
