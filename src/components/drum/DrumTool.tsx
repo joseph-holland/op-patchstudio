@@ -12,6 +12,7 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 import { usePatchGeneration } from '../../hooks/usePatchGeneration';
 import { audioBufferToWav } from '../../utils/audio';
 import { DrumKeyboardContainer } from './DrumKeyboardContainer';
+import { savePresetToLibrary } from '../../utils/libraryUtils';
 
 export function DrumTool() {
   const { state, dispatch } = useAppContext();
@@ -98,12 +99,52 @@ export function DrumTool() {
     });
   };
 
-  const handleGeneratePatch = async () => {
+
+
+  const handleSaveToLibrary = async () => {
+    try {
+      const result = await savePresetToLibrary(state, state.drumSettings.presetName, 'drum');
+      if (result.success) {
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: {
+            id: Date.now().toString(),
+            type: 'success',
+            title: 'preset saved',
+            message: `"${state.drumSettings.presetName}" saved to library`
+          }
+        });
+      } else {
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: {
+            id: Date.now().toString(),
+            type: 'error',
+            title: 'save failed',
+            message: result.error || 'failed to save preset to library'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error saving to library:', error);
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'error',
+          title: 'save failed',
+          message: 'failed to save preset to library'
+        }
+      });
+    }
+  };
+
+  const handleDownloadPreset = async () => {
     try {
       const patchName = state.drumSettings.presetName.trim() || 'drum_patch';
       await generateDrumPatchFile(patchName);
     } catch (error) {
-      console.error('Error generating patch:', error);
+      console.error('Error downloading preset:', error);
     }
   };
 
@@ -422,7 +463,8 @@ export function DrumTool() {
           onPresetNameChange={handlePresetNameChange}
           hasChangesFromDefaults={hasChangesFromDefaults}
           onResetAll={handleResetAll}
-          onGeneratePatch={handleGeneratePatch}
+          onSaveToLibrary={handleSaveToLibrary}
+          onDownloadPreset={handleDownloadPreset}
           inputId="preset-name"
         />
       </div>

@@ -1,21 +1,22 @@
 import { useAppContext } from '../../context/AppContext';
 import { DrumTool } from '../drum/DrumTool';
 import { MultisampleTool } from '../multisample/MultisampleTool';
+import { LibraryPage } from './LibraryPage';
 
 export function MainTabs() {
   const { state, dispatch } = useAppContext();
 
-  const handleTabChange = (tabName: 'drum' | 'multisample' | 'feedback') => {
+  const handleTabChange = (tabName: 'drum' | 'multisample' | 'feedback' | 'library') => {
     dispatch({ type: 'SET_TAB', payload: tabName });
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, tabName: 'drum' | 'multisample' | 'feedback') => {
+  const handleKeyDown = (e: React.KeyboardEvent, tabName: 'drum' | 'multisample' | 'feedback' | 'library') => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleTabChange(tabName);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
-      const tabs = ['drum', 'multisample', 'feedback'] as const;
+      const tabs = ['drum', 'multisample', 'library', 'feedback'] as const;
       const currentIndex = tabs.indexOf(state.currentTab as any);
       const direction = e.key === 'ArrowLeft' ? -1 : 1;
       const newIndex = (currentIndex + direction + tabs.length) % tabs.length;
@@ -156,6 +157,28 @@ export function MainTabs() {
           multisample
         </button>
         <button
+          id="library-tab"
+          tabIndex={state.currentTab === 'library' ? 0 : -1}
+          aria-controls="library-tabpanel"
+          style={state.currentTab === 'library' ? activeTabStyle : tabStyle}
+          onClick={() => handleTabChange('library')}
+          onKeyDown={(e) => handleKeyDown(e, 'library')}
+          onMouseEnter={(e) => {
+            if (state.currentTab !== 'library') {
+              e.currentTarget.style.background = 'var(--color-border-subtle)';
+              e.currentTarget.style.color = 'var(--color-text-primary)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (state.currentTab !== 'library') {
+              e.currentTarget.style.background = 'var(--color-bg-secondary)';
+              e.currentTarget.style.color = 'var(--color-text-secondary)';
+            }
+          }}
+        >
+          library
+        </button>
+        <button
           id="feedback-tab"
           tabIndex={state.currentTab === 'feedback' ? 0 : -1}
           aria-controls="feedback-tabpanel"
@@ -282,6 +305,22 @@ export function MainTabs() {
             </div>
           </div>
         </div>
+      </div>
+      <div
+        role="tabpanel"
+        id="library-tabpanel"
+        aria-labelledby="library-tab"
+        style={{
+          background: 'var(--color-bg-primary)',
+          borderRadius: '15px',
+          border: '1px solid var(--color-border-subtle)',
+          borderTop: 'none',
+          minHeight: '500px',
+          overflow: 'hidden',
+          display: state.currentTab === 'library' ? 'block' : 'none'
+        }}
+      >
+        <LibraryPage />
       </div>
     </div>
   );

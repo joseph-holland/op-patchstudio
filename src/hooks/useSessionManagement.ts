@@ -187,16 +187,18 @@ export function useSessionManagement() {
       const validLoadedFiles = loadedMultisampleFiles.filter(file => file !== null);
 
       // Now apply the stored settings to all loaded files
-      // Use a small delay to ensure React state updates have completed
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Use a longer delay to ensure React state updates have completed
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Get the current state after the delay to ensure we have the latest data
+      const currentFiles = state.multisampleFiles;
       
       validLoadedFiles.forEach((storedFile) => {
         if (!storedFile) return;
         
         // Find the file in the current state by file name and rootNote
-        const currentFiles = state.multisampleFiles;
         const fileIndex = currentFiles.findIndex(f => 
-          f.name === storedFile.fileName && f.rootNote === storedFile.rootNote
+          f && f.name === storedFile.fileName && f.rootNote === storedFile.rootNote
         );
         
         if (fileIndex !== -1) {
@@ -213,7 +215,10 @@ export function useSessionManagement() {
             }
           });
         } else {
-          console.warn(`Could not find multisample file to update settings for file ${storedFile.fileName} with rootNote ${storedFile.rootNote}`);
+          // Only log warning if we actually have files loaded but can't find this specific one
+          if (currentFiles.length > 0) {
+            console.warn(`Could not find multisample file to update settings for file ${storedFile.fileName} with rootNote ${storedFile.rootNote}`);
+          }
         }
       });
     } catch (error) {

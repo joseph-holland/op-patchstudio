@@ -13,7 +13,8 @@ interface GeneratePresetSectionProps {
   onPresetNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   hasChangesFromDefaults: boolean;
   onResetAll: () => void;
-  onGeneratePatch: () => void;
+  onSaveToLibrary: () => void;
+  onDownloadPreset: () => void;
   inputId: string;
 }
 
@@ -28,7 +29,8 @@ export function GeneratePresetSection({
   onPresetNameChange,
   hasChangesFromDefaults,
   onResetAll,
-  onGeneratePatch,
+  onSaveToLibrary,
+  onDownloadPreset,
   inputId
 }: GeneratePresetSectionProps) {
   const [isMobile, setIsMobile] = useState(false);
@@ -271,7 +273,48 @@ export function GeneratePresetSection({
             reset all
           </button>
           <button
-            onClick={onGeneratePatch}
+            onClick={onSaveToLibrary}
+            disabled={!canGeneratePatch}
+            style={{
+              minHeight: '44px',
+              minWidth: '44px',
+              padding: '0.75rem 1.5rem',
+              border: '1px solid var(--color-interactive-focus)',
+              borderRadius: '6px',
+              backgroundColor: 'var(--color-bg-primary)',
+              color: canGeneratePatch ? 'var(--color-interactive-focus)' : 'var(--color-border-medium)',
+              fontSize: '0.9rem',
+              fontWeight: '500',
+              cursor: canGeneratePatch ? 'pointer' : 'not-allowed',
+              opacity: canGeneratePatch ? 1 : 0.6,
+              transition: 'all 0.2s ease',
+              fontFamily: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.75rem',
+              width: isMobile ? '100%' : 'auto',
+            }}
+            onMouseEnter={(e) => {
+              if (canGeneratePatch) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                e.currentTarget.style.borderColor = 'var(--color-interactive-dark)';
+                e.currentTarget.style.color = 'var(--color-interactive-dark)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (canGeneratePatch) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+                e.currentTarget.style.borderColor = 'var(--color-interactive-focus)';
+                e.currentTarget.style.color = 'var(--color-interactive-focus)';
+              }
+            }}
+          >
+            <i className="fas fa-save" style={{ fontSize: '1rem' }}></i>
+            save to library
+          </button>
+          <button
+            onClick={onDownloadPreset}
             disabled={!canGeneratePatch}
             style={{
               minHeight: '44px',
@@ -305,7 +348,7 @@ export function GeneratePresetSection({
             }}
           >
             <i className="fas fa-download" style={{ fontSize: '1rem' }}></i>
-            save preset
+            download preset
           </button>
         </div>
       </div>

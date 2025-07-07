@@ -13,6 +13,7 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 import { usePatchGeneration } from '../../hooks/usePatchGeneration';
 import { audioBufferToWav } from '../../utils/audio';
 import { cookieUtils, COOKIE_KEYS } from '../../utils/cookies';
+import { savePresetToLibrary } from '../../utils/libraryUtils';
 
 
 export function MultisampleTool() {
@@ -160,12 +161,52 @@ export function MultisampleTool() {
     });
   };
 
-  const handleGeneratePatch = async () => {
+
+
+  const handleSaveToLibrary = async () => {
+    try {
+      const result = await savePresetToLibrary(state, state.multisampleSettings.presetName, 'multisample');
+      if (result.success) {
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: {
+            id: Date.now().toString(),
+            type: 'success',
+            title: 'preset saved',
+            message: `"${state.multisampleSettings.presetName}" saved to library`
+          }
+        });
+      } else {
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: {
+            id: Date.now().toString(),
+            type: 'error',
+            title: 'save failed',
+            message: result.error || 'failed to save preset to library'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error saving to library:', error);
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'error',
+          title: 'save failed',
+          message: 'failed to save preset to library'
+        }
+      });
+    }
+  };
+
+  const handleDownloadPreset = async () => {
     try {
       const patchName = state.multisampleSettings.presetName.trim() || 'multisample_patch';
       await generateMultisamplePatchFile(patchName);
     } catch (error) {
-      console.error('Error generating patch:', error);
+      console.error('Error downloading preset:', error);
     }
   };
 
@@ -588,7 +629,8 @@ export function MultisampleTool() {
           onPresetNameChange={handlePresetNameChange}
           hasChangesFromDefaults={hasChangesFromDefaults}
           onResetAll={handleResetAll}
-          onGeneratePatch={handleGeneratePatch}
+          onSaveToLibrary={handleSaveToLibrary}
+          onDownloadPreset={handleDownloadPreset}
           inputId="preset-name-multi"
         />
       </div>
