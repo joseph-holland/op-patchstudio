@@ -194,6 +194,138 @@ export interface ConversionOptions {
   normalize?: boolean;
   normalizeLevel?: number; // dB
   gain?: number; // dB
+  cutAtLoopEnd?: boolean;
+  loopEnd?: number; // Sample position to trim at (if cutAtLoopEnd is true)
+}
+
+/**
+ * Normalize an AudioBuffer to a target level in dBFS using RMS
+ * @param audioBuffer - The audio buffer to normalize
+ * @param targetLevelDB - Target level in dBFS (default: -6.0)
+ * @returns The normalized audio buffer
+ */
+export async function normalizeAudioBuffer(audioBuffer: AudioBuffer, targetLevelDB: number = -6.0): Promise<AudioBuffer> {
+  // Calculate RMS across all channels
+  let sumOfSquares = 0;
+  let totalSamples = 0;
+  
+  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+    const channelData = audioBuffer.getChannelData(ch);
+    for (let i = 0; i < channelData.length; i++) {
+      sumOfSquares += channelData[i] * channelData[i];
+      totalSamples++;
+    }
+  }
+  
+  if (totalSamples === 0) {
+    return audioBuffer;
+  }
+  
+  const rms = Math.sqrt(sumOfSquares / totalSamples);
+  
+  if (rms === 0) {
+    return audioBuffer;
+  }
+  
+  // Calculate normalization gain to reach the target level
+  const targetAmplitude = Math.pow(10, targetLevelDB / 20);
+  const normalizeGain = targetAmplitude / rms;
+  
+  // Create a new audio buffer with the same properties
+  const audioContext = await audioContextManager.getAudioContext();
+  const normalizedBuffer = audioContext.createBuffer(
+    audioBuffer.numberOfChannels,
+    audioBuffer.length,
+    audioBuffer.sampleRate
+  );
+  
+  // Apply the gain to all channels
+  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+    const inputChannel = audioBuffer.getChannelData(ch);
+    const outputChannel = normalizedBuffer.getChannelData(ch);
+    
+    for (let i = 0; i < inputChannel.length; i++) {
+      outputChannel[i] = inputChannel[i] * normalizeGain;
+    }
+  }
+  
+  return normalizedBuffer;
+}
+
+/**
+ * Calculate RMS normalization gain factor for an AudioBuffer
+ * @param audioBuffer - The audio buffer to analyze
+ * @param targetLevelDB - Target level in dBFS (default: -6.0)
+ * @returns The gain factor to apply, or 1.0 if no normalization needed
+ */
+export function calculateNormalizationGain(audioBuffer: AudioBuffer, targetLevelDB: number = -6.0): number {
+  // Calculate RMS across all channels
+  let sumOfSquares = 0;
+  let totalSamples = 0;
+  
+  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+    const channelData = audioBuffer.getChannelData(ch);
+    for (let i = 0; i < channelData.length; i++) {
+      sumOfSquares += channelData[i] * channelData[i];
+      totalSamples++;
+    }
+  }
+  
+  if (totalSamples === 0) {
+    return 1.0;
+  }
+  
+  const rms = Math.sqrt(sumOfSquares / totalSamples);
+  
+  if (rms === 0) {
+    return 1.0;
+  }
+  
+  // Calculate normalization gain to reach the target level
+  const targetAmplitude = Math.pow(10, targetLevelDB / 20);
+  const normalizeGain = targetAmplitude / rms;
+  
+  return normalizeGain;
+}
+
+/**
+ * Trim audio at loop end position
+ * @param audioBuffer - The audio buffer to trim
+ * @param loopEnd - The loop end position in samples
+ * @returns The trimmed audio buffer
+ */
+export async function cutAudioAtLoopEnd(audioBuffer: AudioBuffer, loopEnd: number): Promise<AudioBuffer> {
+  // Validate loop end position
+  if (loopEnd <= 0 || loopEnd >= audioBuffer.length) {
+    return audioBuffer;
+  }
+
+  // Trim point is loopEnd + 5 samples (matching reference implementation)
+  const cutPoint = loopEnd + 5;
+  
+  if (cutPoint >= audioBuffer.length) {
+    return audioBuffer;
+  }
+
+  // Create a new audio buffer with the cut length
+  const audioContext = await audioContextManager.getAudioContext();
+  const cutBuffer = audioContext.createBuffer(
+    audioBuffer.numberOfChannels,
+    cutPoint,
+    audioBuffer.sampleRate
+  );
+
+  // Copy the audio data up to the cut point
+  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+    const inputChannel = audioBuffer.getChannelData(ch);
+    const outputChannel = cutBuffer.getChannelData(ch);
+    
+    for (let i = 0; i < cutPoint; i++) {
+      outputChannel[i] = inputChannel[i];
+    }
+  }
+
+  return cutBuffer;
 }
 
 export async function convertAudioFormat(
@@ -228,24 +360,19 @@ export async function convertAudioFormat(
 
   // Apply normalization if enabled
   if (normalize) {
-    // Find the peak amplitude
-    let peak = 0;
-    for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
-      const channelData = audioBuffer.getChannelData(ch);
-      for (let i = 0; i < channelData.length; i++) {
-        peak = Math.max(peak, Math.abs(channelData[i]));
-      }
-    }
-    
-    if (peak > 0) {
-      // Calculate normalization gain to reach the target level
-      const targetAmplitude = Math.pow(10, normalizeLevel / 20);
-      const normalizeGain = targetAmplitude / peak;
-      gainValue *= normalizeGain;
-    }
+    const normalizeGain = calculateNormalizationGain(audioBuffer, normalizeLevel);
+    gainValue *= normalizeGain;
   }
 
   gainNode.gain.value = gainValue;
+
+  // Apply trim to loop end if enabled
+  let processedBuffer = audioBuffer;
+  if (options.cutAtLoopEnd && options.loopEnd) {
+    processedBuffer = await cutAudioAtLoopEnd(audioBuffer, options.loopEnd);
+    // Update source buffer to use the cut version
+    source.buffer = processedBuffer;
+  }
 
   // Handle channel conversion
   if (targetChannels !== audioBuffer.numberOfChannels) {

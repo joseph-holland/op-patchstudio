@@ -387,8 +387,8 @@ export function MultisamplePresetSettings() {
                   <div style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
-                    alignItems: 'center',
-                    textAlign: 'center'
+                    alignItems: 'flex-start',
+                    textAlign: 'left'
                   }}>
                     <label style={{ 
                       display: 'block',
@@ -417,8 +417,8 @@ export function MultisamplePresetSettings() {
                   <div style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
-                    alignItems: 'center',
-                    textAlign: 'center'
+                    alignItems: 'flex-start',
+                    textAlign: 'left'
                   }}>
                     <label style={{ 
                       display: 'block',
@@ -442,8 +442,8 @@ export function MultisamplePresetSettings() {
                   <div style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
-                    alignItems: 'center',
-                    textAlign: 'center'
+                    alignItems: 'flex-start',
+                    textAlign: 'left'
                   }}>
                     <label style={{ 
                       display: 'block',

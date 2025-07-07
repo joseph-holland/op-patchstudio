@@ -11,12 +11,28 @@ import {
   findNearestZeroCrossing,
   NOTE_NAMES,
   NOTE_OFFSET,
-  convertAudioFormat
+  convertAudioFormat,
+  calculateNormalizationGain,
+  normalizeAudioBuffer,
+  cutAudioAtLoopEnd
 } from '../../utils/audio'
 
 // Mock AudioContext for testing
 const mockAudioContext = {
-  decodeAudioData: vi.fn()
+  decodeAudioData: vi.fn(),
+  createBuffer: vi.fn((channels, length, sampleRate) => ({
+    length,
+    sampleRate,
+    numberOfChannels: channels,
+    duration: length / sampleRate,
+    getChannelData: (_channel: number) => {
+      const data = new Float32Array(length);
+      // Return silent buffer by default
+      return data;
+    },
+    copyFromChannel: vi.fn(),
+    copyToChannel: vi.fn()
+  }))
 }
 
 // Track test context for the mock
@@ -92,7 +108,7 @@ const createMockAudioBuffer = (length: number = 100, sampleRate: number = 44100)
   sampleRate,
   numberOfChannels: 1,
   duration: length / sampleRate,
-  getChannelData: (_channel: number) => {
+  getChannelData: () => {
     // Create a simple test signal with zero crossings
     const data = new Float32Array(length)
     for (let i = 0; i < length; i++) {
@@ -461,6 +477,182 @@ describe('audio utilities', () => {
       // Should normalize 0.25 to 0.5, then apply +6dB to get 1.0
       const resultData = result.getChannelData(0);
       expect(resultData[0]).toBeCloseTo(1.0, 2);
+    });
+  })
+
+  describe('Audio Normalization', () => {
+    describe('calculateNormalizationGain', () => {
+      it('should return 1.0 for silent audio', () => {
+        // Create a truly silent buffer
+        const silentBuffer = {
+          ...createMockAudioBuffer(1000),
+          getChannelData: (_channel: number) => new Float32Array(1000) // all zeros
+        };
+        const gain = calculateNormalizationGain(silentBuffer, -6.0);
+        expect(gain).toBe(1.0);
+      });
+
+      it('should calculate correct gain for RMS 0.5', () => {
+        // Create an audio buffer with all values at 0.5
+        const buffer = {
+          ...createMockAudioBuffer(1000),
+          getChannelData: (_channel: number) => {
+            const data = new Float32Array(1000);
+            data.fill(0.5);
+            return data;
+          }
+        };
+        
+        const gain = calculateNormalizationGain(buffer, -6.0);
+        // Target amplitude for -6 dBFS = 10^(-6/20) = 0.5012
+        // RMS = 0.5, Gain = 0.5012 / 0.5 = 1.0024
+        expect(gain).toBeCloseTo(1.0024, 3);
+      });
+
+      it('should calculate correct gain for RMS 1.0', () => {
+        // Create an audio buffer with all values at 1.0
+        const buffer = {
+          ...createMockAudioBuffer(1000),
+          getChannelData: (_channel: number) => {
+            const data = new Float32Array(1000);
+            data.fill(1.0);
+            return data;
+          }
+        };
+        
+        const gain = calculateNormalizationGain(buffer, -6.0);
+        // Target amplitude for -6 dBFS = 10^(-6/20) = 0.5012
+        // RMS = 1.0, Gain = 0.5012 / 1.0 = 0.5012
+        expect(gain).toBeCloseTo(0.5012, 3);
+      });
+
+      it('should find RMS across multiple channels', () => {
+        // Create a stereo audio buffer with channel 0 at 0.3, channel 1 at 0.8
+        const buffer = {
+          ...createMockAudioBuffer(1000),
+          numberOfChannels: 2,
+          getChannelData: (_channel: number) => {
+            const data = new Float32Array(1000);
+            if (_channel === 0) {
+              data.fill(0.3);
+            } else if (_channel === 1) {
+              data.fill(0.8);
+            }
+            return data;
+          }
+        };
+        
+        const gain = calculateNormalizationGain(buffer, -6.0);
+        // Target amplitude for -6 dBFS = 0.5012
+        // RMS = sqrt((0.3^2 + 0.8^2) / 2) = sqrt((0.09 + 0.64) / 2) = sqrt(0.365) = 0.604
+        // Gain = 0.5012 / 0.604 = 0.83
+        expect(gain).toBeCloseTo(0.83, 2);
+      });
+    });
+
+    describe('normalizeAudioBuffer', () => {
+      it('should return original buffer for silent audio', async () => {
+        // Create a truly silent buffer
+        const silentBuffer = {
+          ...createMockAudioBuffer(1000),
+          getChannelData: (_channel: number) => new Float32Array(1000) // all zeros
+        };
+        const normalized = await normalizeAudioBuffer(silentBuffer, -6.0);
+        // Should return a buffer with the same values and properties
+        expect(normalized.length).toBe(silentBuffer.length);
+        expect(normalized.sampleRate).toBe(silentBuffer.sampleRate);
+        expect(normalized.numberOfChannels).toBe(silentBuffer.numberOfChannels);
+        expect(Array.from(normalized.getChannelData(0))).toEqual(Array.from(silentBuffer.getChannelData(0)));
+      });
+
+      it('should normalize audio to target level', async () => {
+        // Create an audio buffer with all values at 0.5
+        const buffer = {
+          ...createMockAudioBuffer(1000),
+          getChannelData: (_channel: number) => {
+            const data = new Float32Array(1000);
+            data.fill(0.5);
+            return data;
+          }
+        };
+        // Calculate expected gain
+        const expectedGain = calculateNormalizationGain(buffer, -6.0);
+        expect(expectedGain).toBeCloseTo(1.0024, 3);
+      });
+
+      it('should preserve buffer properties', async () => {
+        const originalBuffer = {
+          ...createMockAudioBuffer(2000),
+          numberOfChannels: 2,
+          sampleRate: 48000
+        };
+        const normalized = await normalizeAudioBuffer(originalBuffer, -6.0);
+        
+        expect(normalized.numberOfChannels).toBe(originalBuffer.numberOfChannels);
+        expect(normalized.length).toBe(originalBuffer.length);
+        expect(normalized.sampleRate).toBe(originalBuffer.sampleRate);
+      });
+    });
+  })
+
+  describe('Audio Trim to Loop End', () => {
+          it('should trim the buffer at loopEnd + 5', async () => {
+      const length = 100;
+      const channelData = new Float32Array(length);
+      for (let i = 0; i < length; i++) channelData[i] = i;
+      const buffer = {
+        ...createMockAudioBuffer(length),
+        getChannelData: (_channel: number) => channelData
+      };
+      
+      // Override the mock for this specific test
+      const originalCreateBuffer = mockAudioContext.createBuffer;
+      mockAudioContext.createBuffer = vi.fn((channels, length, sampleRate) => ({
+        length,
+        sampleRate,
+        numberOfChannels: channels,
+        duration: length / sampleRate,
+        getChannelData: (_channel: number) => {
+          const data = new Float32Array(length);
+          // For the cut test, return sequential values
+          for (let i = 0; i < length; i++) {
+            data[i] = i;
+          }
+          return data;
+        },
+        copyFromChannel: vi.fn(),
+        copyToChannel: vi.fn()
+      }));
+      
+      // loopEnd = 50, cutPoint = 55
+      const cutBuffer = await cutAudioAtLoopEnd(buffer, 50);
+      expect(cutBuffer.length).toBe(55);
+      const cutData = cutBuffer.getChannelData(0);
+      for (let i = 0; i < 55; i++) {
+        expect(cutData[i]).toBe(i);
+      }
+      
+      // Restore original mock
+      mockAudioContext.createBuffer = originalCreateBuffer;
+    });
+
+          it('should not trim if loopEnd is <= 0', async () => {
+      const buffer = createMockAudioBuffer(100);
+      const cutBuffer = await cutAudioAtLoopEnd(buffer, 0);
+      expect(cutBuffer.length).toBe(buffer.length);
+    });
+
+          it('should not trim if loopEnd is >= buffer.length', async () => {
+      const buffer = createMockAudioBuffer(100);
+      const cutBuffer = await cutAudioAtLoopEnd(buffer, 100);
+      expect(cutBuffer.length).toBe(buffer.length);
+    });
+
+    it('should not cut if cutPoint is >= buffer.length', async () => {
+      const buffer = createMockAudioBuffer(60);
+      // loopEnd = 58, cutPoint = 63 (beyond buffer)
+      const cutBuffer = await cutAudioAtLoopEnd(buffer, 58);
+      expect(cutBuffer.length).toBe(buffer.length);
     });
   })
 })

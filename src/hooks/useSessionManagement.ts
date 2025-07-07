@@ -5,6 +5,7 @@ import { sessionStorageIndexedDB } from '../utils/sessionStorageIndexedDB';
 export function useSessionManagement() {
   const { state, dispatch } = useAppContext();
   const saveSessionRef = useRef<(() => Promise<void>) | null>(null);
+  const hasUserDeclinedSessionRef = useRef(false);
 
   // Save current session
   const saveSession = useCallback(async () => {
@@ -21,6 +22,11 @@ export function useSessionManagement() {
   // Check for previous session on app startup
   useEffect(() => {
     const checkForPreviousSession = async () => {
+      // Don't check if user has already declined to restore a session
+      if (hasUserDeclinedSessionRef.current) {
+        return;
+      }
+
       if (await sessionStorageIndexedDB.hasPreviousSession()) {
         const currentSessionId = sessionStorageIndexedDB.getCurrentSessionId();
         if (currentSessionId) {
@@ -217,6 +223,8 @@ export function useSessionManagement() {
 
   // Start new session (clear current session)
   const startNewSession = useCallback(() => {
+    // Mark that user has declined to restore session to prevent future prompts
+    hasUserDeclinedSessionRef.current = true;
     sessionStorageIndexedDB.clearCurrentSession();
     dispatch({ type: 'SET_SESSION_RESTORATION_MODAL_OPEN', payload: false });
     dispatch({ type: 'SET_SESSION_INFO', payload: null });
