@@ -306,7 +306,7 @@ export async function generateMultisamplePatch(
 
     const region: MultisampleRegion = {
       framecount: framecount,
-      gain: multisampleGain,
+      gain: typeof multisampleGain === 'number' ? multisampleGain : 0,
       hikey: hiKey,
       lokey: lowKey,
       "loop.crossfade": 0,
