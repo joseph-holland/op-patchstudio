@@ -43,7 +43,9 @@ vi.mock('../../context/AppContext', () => ({
         },
       notifications: [],
       importedDrumPreset: null,
-      importedMultisamplePreset: null
+      importedMultisamplePreset: null,
+      isSessionRestorationModalOpen: false,
+      sessionInfo: null
     },
     dispatch: vi.fn()
   }))
@@ -117,7 +119,9 @@ describe('useFileUpload', () => {
         },
         notifications: [],
         importedDrumPreset: null,
-        importedMultisamplePreset: null
+        importedMultisamplePreset: null,
+        isSessionRestorationModalOpen: false,
+        sessionInfo: null
       },
       dispatch: mockDispatch 
     })

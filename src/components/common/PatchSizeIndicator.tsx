@@ -16,8 +16,8 @@ export function PatchSizeIndicator({ type, className = '' }: PatchSizeIndicatorP
 
   // Get relevant audio buffers and settings based on type
   const audioBuffers = type === 'drum' 
-    ? state.drumSamples.filter(s => s.audioBuffer).map(s => s.audioBuffer!)
-    : state.multisampleFiles.filter(f => f.audioBuffer).map(f => f.audioBuffer!);
+    ? state.drumSamples.filter(s => s && s.audioBuffer).map(s => s!.audioBuffer!)
+    : state.multisampleFiles.filter(f => f && f.audioBuffer).map(f => f!.audioBuffer!);
 
   const settings = type === 'drum' ? state.drumSettings : state.multisampleSettings;
 

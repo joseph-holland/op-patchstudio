@@ -6,6 +6,8 @@ import { AppContextProvider, useAppContext } from './context/AppContext';
 import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import { Footer } from './components/common/Footer';
 import { FeedbackPage } from './components/common/FeedbackPage';
+import { SessionRestorationModal } from './components/common/SessionRestorationModal';
+import { useSessionManagement } from './hooks/useSessionManagement';
 import './theme/device-themes.scss';
 import { useState, useEffect } from 'react';
 import { isMobile, isTablet } from 'react-device-detect';
@@ -42,6 +44,9 @@ function AppContent() {
     // Initialize route from URL hash
     return window.location.hash === '#/feedback' ? 'feedback' : 'home';
   });
+
+  // Session management
+  const { loadSession, startNewSession, isSessionRestorationModalOpen, sessionInfo } = useSessionManagement();
 
   // Set up global control
   useEffect(() => {
@@ -139,6 +144,14 @@ function AppContent() {
           </Content>
         </div>
       </Theme>
+      
+      {/* Session Restoration Modal */}
+      <SessionRestorationModal
+        isOpen={isSessionRestorationModalOpen}
+        onLoadSession={loadSession}
+        onStartNew={startNewSession}
+        sessionInfo={sessionInfo}
+      />
       <div 
         className="app-block-overlay" 
         style={{ 

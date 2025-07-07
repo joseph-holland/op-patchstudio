@@ -103,6 +103,10 @@ export interface AppState {
   // Imported preset settings (for patch generation)
   importedDrumPreset: any | null;
   importedMultisamplePreset: any | null;
+  
+  // Session management
+  isSessionRestorationModalOpen: boolean;
+  sessionInfo: { timestamp: number; drumSamplesCount: number; multisampleFilesCount: number } | null;
 }
 
 // Define enhanced action types
@@ -144,7 +148,10 @@ export type AppAction =
   | { type: 'SET_IMPORTED_DRUM_PRESET'; payload: any | null }
   | { type: 'SET_IMPORTED_MULTISAMPLE_PRESET'; payload: any | null }
   | { type: 'TOGGLE_DRUM_KEYBOARD_PIN' }
-  | { type: 'TOGGLE_MULTISAMPLE_KEYBOARD_PIN' };
+  | { type: 'TOGGLE_MULTISAMPLE_KEYBOARD_PIN' }
+  | { type: 'RESTORE_SESSION'; payload: { drumSettings: AppState['drumSettings']; multisampleSettings: AppState['multisampleSettings']; drumSamples: DrumSample[]; multisampleFiles: MultisampleFile[]; selectedMultisample: number | null; isDrumKeyboardPinned: boolean; isMultisampleKeyboardPinned: boolean } }
+  | { type: 'SET_SESSION_RESTORATION_MODAL_OPEN'; payload: boolean }
+  | { type: 'SET_SESSION_INFO'; payload: { timestamp: number; drumSamplesCount: number; multisampleFilesCount: number } | null };
 
 // Initial state
 const initialDrumSample: DrumSample = {
@@ -227,7 +234,7 @@ const initialState: AppState = {
     loopEnabled: true,
     loopOnRelease: true
   },
-  drumSamples: Array(24).fill(null).map(() => ({ ...initialDrumSample })),
+  drumSamples: Array.from({ length: 24 }, () => ({ ...initialDrumSample })),
   multisampleFiles: [], // Dynamic array, 1-24 samples max
   selectedMultisample: null,
   isLoading: false,
@@ -236,7 +243,9 @@ const initialState: AppState = {
   isMultisampleKeyboardPinned: getInitialPinState(COOKIE_KEYS.MULTISAMPLE_KEYBOARD_PINNED),
   notifications: [],
   importedDrumPreset: null,
-  importedMultisamplePreset: null
+  importedMultisamplePreset: null,
+  isSessionRestorationModalOpen: false,
+  sessionInfo: null
 };
 
 // Enhanced reducer function
@@ -544,6 +553,26 @@ function appReducer(state: AppState, action: AppAction): AppState {
       
     case 'TOGGLE_MULTISAMPLE_KEYBOARD_PIN':
       return { ...state, isMultisampleKeyboardPinned: !state.isMultisampleKeyboardPinned };
+      
+    case 'RESTORE_SESSION':
+      return {
+        ...state,
+        drumSettings: action.payload.drumSettings,
+        multisampleSettings: action.payload.multisampleSettings,
+        drumSamples: action.payload.drumSamples,
+        multisampleFiles: action.payload.multisampleFiles,
+        selectedMultisample: action.payload.selectedMultisample,
+        isDrumKeyboardPinned: action.payload.isDrumKeyboardPinned,
+        isMultisampleKeyboardPinned: action.payload.isMultisampleKeyboardPinned,
+        isSessionRestorationModalOpen: false,
+        sessionInfo: null
+      };
+      
+    case 'SET_SESSION_RESTORATION_MODAL_OPEN':
+      return { ...state, isSessionRestorationModalOpen: action.payload };
+      
+    case 'SET_SESSION_INFO':
+      return { ...state, sessionInfo: action.payload };
       
     default:
       return state;

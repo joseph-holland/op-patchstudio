@@ -63,7 +63,9 @@ const defaultMockState = {
     },
     notifications: [],
     importedDrumPreset: null,
-    importedMultisamplePreset: null
+    importedMultisamplePreset: null,
+    isSessionRestorationModalOpen: false,
+    sessionInfo: null
   },
   dispatch: mockDispatch
 }
@@ -199,7 +201,9 @@ describe('usePatchGeneration', () => {
         },
         notifications: [],
         importedDrumPreset: null,
-        importedMultisamplePreset: null
+        importedMultisamplePreset: null,
+        isSessionRestorationModalOpen: false,
+        sessionInfo: null
       },
       dispatch: mockDispatch
     })
@@ -575,7 +579,9 @@ describe('usePatchGeneration', () => {
       ...defaultMockState,
       state: {
         ...defaultMockState.state,
-        importedMultisamplePreset: null // No preset imported
+        importedMultisamplePreset: null, // No preset imported
+        isSessionRestorationModalOpen: false,
+        sessionInfo: null
       }
     });
 

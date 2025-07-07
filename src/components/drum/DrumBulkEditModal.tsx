@@ -25,12 +25,12 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
     pan: 0
   });
 
-  const loadedSamplesCount = state.drumSamples.filter(sample => sample.isLoaded).length;
+  const loadedSamplesCount = state.drumSamples.filter(sample => sample && sample.isLoaded).length;
 
   const handleSave = () => {
     // Apply settings to all loaded samples
     state.drumSamples.forEach((sample, index) => {
-      if (sample.isLoaded) {
+      if (sample && sample.isLoaded) {
         // Check if any values actually changed from the sample's current values
         const originalValues = {
           playmode: sample.playmode || 'oneshot',
