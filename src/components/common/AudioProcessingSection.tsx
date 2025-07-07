@@ -99,8 +99,8 @@ export function AudioProcessingSection({
       <div style={{
         paddingLeft: isMobile ? '1rem' : '2rem',
         paddingRight: isMobile ? '1rem' : '2rem',
-        paddingTop: isMobile ? '1rem' : '2rem',
-        paddingBottom: isMobile ? '1rem' : '2rem',
+        paddingTop: isMobile ? '1.5rem' : '2rem',
+        paddingBottom: isMobile ? '1.5rem' : '2rem',
         width: '100%',
         boxSizing: 'border-box',
       }}>
@@ -109,8 +109,8 @@ export function AudioProcessingSection({
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: isMobile ? '1.25rem' : '2rem',
-            marginBottom: isMobile ? '1.25rem' : '2rem',
+            gap: '1rem',
+            marginBottom: '1rem',
           }}
         >
           <AudioFormatControls
@@ -126,52 +126,35 @@ export function AudioProcessingSection({
           />
         </div>
 
-        {/* Processing Controls */}
+        {/* Processing Controls - now grid layout */}
         <div
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: isMobile ? '1.25rem' : '2rem',
-            marginBottom: isMobile ? '1.25rem' : '2rem',
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: '1rem',
+            marginBottom: '1rem',
+            alignItems: 'start',
           }}
         >
           {/* Normalization Row */}
-          <div style={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? '1rem' : '2rem',
-            alignItems: isMobile ? 'center' : 'flex-start',
-          }}>
-            {/* Normalization Toggle - Left Side */}
-            <div style={{ 
-              flex: isMobile ? 'none' : '1',
-              width: isMobile ? '100%' : 'auto',
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '1rem', 
-              justifyContent: isMobile ? 'center' : 'flex-start' 
-            }}>
-              <div style={{ fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                normalization
-              </div>
-              <Toggle
-                id="normalize-toggle"
-                labelA="off"
-                labelB="on"
-                toggled={normalize}
-                onToggle={onNormalizeChange}
-                size="sm"
-              />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+            <div style={{ fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+              normalization
             </div>
-            
-            {/* Normalization Level Slider - Right Side */}
-            <div style={{ 
-              flex: isMobile ? 'none' : '1',
-              width: isMobile ? '100%' : 'auto'
-            }}>
-              <div style={{ fontSize: isMobile ? '0.9rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left' }}>
-                normalization level: {normalizeLevel.toFixed(1)} db
-              </div>
+            <Toggle
+              id="normalize-toggle"
+              labelA="off"
+              labelB="on"
+              toggled={normalize}
+              onToggle={onNormalizeChange}
+              size="sm"
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
+            <div style={{ fontSize: isMobile ? '0.9rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left', width: '100%' }}>
+              normalization level: {normalizeLevel.toFixed(1)} db
+            </div>
+            <div style={{ width: isMobile ? '90%' : '100%', margin: isMobile ? '0 auto' : undefined }}>
               <Slider
                 id="normalize-level"
                 min={-6.0}
@@ -182,62 +165,75 @@ export function AudioProcessingSection({
                 hideTextInput
                 style={{ width: '100%' }}
               />
-              <style>{`
-                #normalize-level .cds--slider__track {
-                  background: linear-gradient(to right, var(--color-bg-slider-track) 0%, var(--color-interactive-secondary) 100%) !important;
-                }
-                #normalize-level .cds--slider__filled-track {
-                  background: var(--color-interactive-dark) !important;
-                }
-                #normalize-level .cds--slider__thumb {
-                  background: var(--color-interactive-dark) !important;
-                  border: 2px solid var(--color-interactive-dark) !important;
-                }
-                #normalize-level .cds--slider__thumb:hover {
-                  background: var(--color-text-primary) !important;
-                  border-color: var(--color-text-primary) !important;
-                }
-              `}</style>
             </div>
+            <style>{`
+              #normalize-level .cds--slider__track {
+                background: linear-gradient(to right, var(--color-bg-slider-track) 0%, var(--color-interactive-secondary) 100%) !important;
+              }
+              #normalize-level .cds--slider__filled-track {
+                background: var(--color-interactive-dark) !important;
+              }
+              #normalize-level .cds--slider__thumb {
+                background: var(--color-interactive-dark) !important;
+                border: 2px solid var(--color-interactive-dark) !important;
+              }
+              #normalize-level .cds--slider__thumb:hover {
+                background: var(--color-text-primary) !important;
+                border-color: var(--color-text-primary) !important;
+              }
+            `}</style>
           </div>
-          {/* Gain Control (only for multisample) */}
+
+          {/* Trim to Loop End + Gain Row (multisample only) */}
           {type === 'multisample' && (
-            <div style={{
-              display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              gap: isMobile ? '1rem' : '2rem',
-              alignItems: isMobile ? 'center' : 'flex-start',
-            }}>
-              <div style={{ 
-                flex: isMobile ? 'none' : '1',
-                width: isMobile ? '100%' : 'auto',
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '1rem', 
-                justifyContent: isMobile ? 'center' : 'flex-start' 
-              }}>
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
                 <div style={{ fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                  gain
+                  trim to loop end
                 </div>
+                <Toggle
+                  id="cut-loop-toggle"
+                  labelA="off"
+                  labelB="on"
+                  toggled={cutAtLoopEnd}
+                  onToggle={onCutAtLoopEndChange || (() => {})}
+                  size="sm"
+                />
+                <style>{`
+                  #cut-loop-toggle .cds--toggle-input__appearance {
+                    background-color: var(--color-bg-slider-track) !important;
+                  }
+                  #cut-loop-toggle .cds--toggle-input__appearance:before {
+                    background-color: var(--color-interactive-secondary) !important;
+                  }
+                  #cut-loop-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance {
+                    background-color: var(--color-interactive-dark) !important;
+                  }
+                  #cut-loop-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
+                    background-color: var(--color-bg-primary) !important;
+                  }
+                  #cut-loop-toggle .cds--toggle__text--off,
+                  #cut-loop-toggle .cds--toggle__text--on {
+                    color: var(--color-interactive-secondary) !important;
+                  }
+                `}</style>
               </div>
-              
-              <div style={{ 
-                flex: isMobile ? 'none' : '1',
-                width: isMobile ? '100%' : 'auto'
-              }}>
-                <div style={{ fontSize: isMobile ? '0.9rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
+                <div style={{ fontSize: isMobile ? '0.9rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left', width: '100%' }}>
                   gain: {gain} db
                 </div>
-                <Slider
-                  id="gain-slider"
-                  min={-30}
-                  max={20}
-                  step={1}
-                  value={gain}
-                  onChange={({ value }) => onGainChange?.(value)}
-                  hideTextInput
-                  style={{ width: '100%' }}
-                />
+                <div style={{ width: isMobile ? '90%' : '100%', margin: isMobile ? '0 auto' : undefined }}>
+                  <Slider
+                    id="gain-slider"
+                    min={-30}
+                    max={20}
+                    step={1}
+                    value={gain}
+                    onChange={({ value }) => onGainChange?.(value)}
+                    hideTextInput
+                    style={{ width: '100%' }}
+                  />
+                </div>
                 <style>{`
                   #gain-slider .cds--slider__track {
                     background: linear-gradient(to right, var(--color-bg-slider-track) 0%, var(--color-interactive-secondary) 100%) !important;
@@ -255,41 +251,7 @@ export function AudioProcessingSection({
                   }
                 `}</style>
               </div>
-            </div>
-          )}
-          {/* Loop End Cut Toggle (new row, only for multisample) */}
-          {type === 'multisample' && (
-            <div style={{ width: isMobile ? '100%' : 'auto', display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: isMobile ? 'center' : 'flex-start' }}>
-              <div style={{ fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                loop end cut
-              </div>
-              <Toggle
-                id="cut-loop-toggle"
-                labelA="off"
-                labelB="on"
-                toggled={cutAtLoopEnd}
-                onToggle={onCutAtLoopEndChange || (() => {})}
-                size="sm"
-              />
-              <style>{`
-                #cut-loop-toggle .cds--toggle-input__appearance {
-                  background-color: var(--color-bg-slider-track) !important;
-                }
-                #cut-loop-toggle .cds--toggle-input__appearance:before {
-                  background-color: var(--color-interactive-secondary) !important;
-                }
-                #cut-loop-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance {
-                  background-color: var(--color-interactive-dark) !important;
-                }
-                #cut-loop-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
-                  background-color: var(--color-bg-primary) !important;
-                }
-                #cut-loop-toggle .cds--toggle__text--off,
-                #cut-loop-toggle .cds--toggle__text--on {
-                  color: var(--color-interactive-secondary) !important;
-                }
-              `}</style>
-            </div>
+            </>
           )}
         </div>
         

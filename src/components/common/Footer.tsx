@@ -30,13 +30,7 @@ export function Footer() {
         >
           github repo
         </a>
-        <span style={{ color: 'var(--color-text-tertiary)' }}>|</span>
-        <a 
-          href="#/feedback" 
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
-          bugs and suggestions
-        </a>
+
       </div>
       <div style={{ marginTop: '0.5rem' }}>
         crafted with fidelity by{' '}

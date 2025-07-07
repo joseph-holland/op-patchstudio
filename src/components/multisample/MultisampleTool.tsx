@@ -321,7 +321,7 @@ export function MultisampleTool() {
     state.multisampleSettings.channels !== 0 ||
     state.multisampleSettings.normalize !== false || // Normalize settings changed
     state.multisampleSettings.normalizeLevel !== -6.0 ||
-    state.multisampleSettings.cutAtLoopEnd !== false // Cut at loop end changed
+            state.multisampleSettings.cutAtLoopEnd !== false // Trim to loop end changed
     // Note: Multisample preset settings are handled in MultisamplePresetSettings component
   );
 

@@ -195,7 +195,7 @@ export interface ConversionOptions {
   normalizeLevel?: number; // dB
   gain?: number; // dB
   cutAtLoopEnd?: boolean;
-  loopEnd?: number; // Sample position to cut at (if cutAtLoopEnd is true)
+  loopEnd?: number; // Sample position to trim at (if cutAtLoopEnd is true)
 }
 
 /**
@@ -289,29 +289,23 @@ export function calculateNormalizationGain(audioBuffer: AudioBuffer, targetLevel
 }
 
 /**
- * Cut audio at loop end position
- * @param audioBuffer - The audio buffer to cut
+ * Trim audio at loop end position
+ * @param audioBuffer - The audio buffer to trim
  * @param loopEnd - The loop end position in samples
- * @returns The cut audio buffer
+ * @returns The trimmed audio buffer
  */
 export async function cutAudioAtLoopEnd(audioBuffer: AudioBuffer, loopEnd: number): Promise<AudioBuffer> {
   // Validate loop end position
   if (loopEnd <= 0 || loopEnd >= audioBuffer.length) {
-    console.log("🔪 No cutting - invalid loop end position");
     return audioBuffer;
   }
 
-  // Cut point is loopEnd + 5 samples (matching reference implementation)
+  // Trim point is loopEnd + 5 samples (matching reference implementation)
   const cutPoint = loopEnd + 5;
   
   if (cutPoint >= audioBuffer.length) {
-    console.log("🔪 Cut point beyond audio length - keeping original");
     return audioBuffer;
   }
-
-  console.log(`🔪 Cutting audio at sample ${cutPoint} (loopEnd ${loopEnd} + 5)`);
-  console.log(`🔪 Original length: ${audioBuffer.length} samples`);
-  console.log(`🔪 New length: ${cutPoint} samples`);
 
   // Create a new audio buffer with the cut length
   const audioContext = await audioContextManager.getAudioContext();
@@ -331,7 +325,6 @@ export async function cutAudioAtLoopEnd(audioBuffer: AudioBuffer, loopEnd: numbe
     }
   }
 
-  console.log(`🔪 Audio cut completed - new length: ${cutBuffer.length} samples`);
   return cutBuffer;
 }
 
@@ -373,7 +366,7 @@ export async function convertAudioFormat(
 
   gainNode.gain.value = gainValue;
 
-  // Apply loop end cut if enabled
+  // Apply trim to loop end if enabled
   let processedBuffer = audioBuffer;
   if (options.cutAtLoopEnd && options.loopEnd) {
     processedBuffer = await cutAudioAtLoopEnd(audioBuffer, options.loopEnd);

@@ -13,7 +13,8 @@ import {
   NOTE_OFFSET,
   convertAudioFormat,
   calculateNormalizationGain,
-  normalizeAudioBuffer
+  normalizeAudioBuffer,
+  cutAudioAtLoopEnd
 } from '../../utils/audio'
 
 // Mock AudioContext for testing
@@ -591,6 +592,67 @@ describe('audio utilities', () => {
         expect(normalized.length).toBe(originalBuffer.length);
         expect(normalized.sampleRate).toBe(originalBuffer.sampleRate);
       });
+    });
+  })
+
+  describe('Audio Trim to Loop End', () => {
+          it('should trim the buffer at loopEnd + 5', async () => {
+      const length = 100;
+      const channelData = new Float32Array(length);
+      for (let i = 0; i < length; i++) channelData[i] = i;
+      const buffer = {
+        ...createMockAudioBuffer(length),
+        getChannelData: (_channel: number) => channelData
+      };
+      
+      // Override the mock for this specific test
+      const originalCreateBuffer = mockAudioContext.createBuffer;
+      mockAudioContext.createBuffer = vi.fn((channels, length, sampleRate) => ({
+        length,
+        sampleRate,
+        numberOfChannels: channels,
+        duration: length / sampleRate,
+        getChannelData: (_channel: number) => {
+          const data = new Float32Array(length);
+          // For the cut test, return sequential values
+          for (let i = 0; i < length; i++) {
+            data[i] = i;
+          }
+          return data;
+        },
+        copyFromChannel: vi.fn(),
+        copyToChannel: vi.fn()
+      }));
+      
+      // loopEnd = 50, cutPoint = 55
+      const cutBuffer = await cutAudioAtLoopEnd(buffer, 50);
+      expect(cutBuffer.length).toBe(55);
+      const cutData = cutBuffer.getChannelData(0);
+      for (let i = 0; i < 55; i++) {
+        expect(cutData[i]).toBe(i);
+      }
+      
+      // Restore original mock
+      mockAudioContext.createBuffer = originalCreateBuffer;
+    });
+
+          it('should not trim if loopEnd is <= 0', async () => {
+      const buffer = createMockAudioBuffer(100);
+      const cutBuffer = await cutAudioAtLoopEnd(buffer, 0);
+      expect(cutBuffer.length).toBe(buffer.length);
+    });
+
+          it('should not trim if loopEnd is >= buffer.length', async () => {
+      const buffer = createMockAudioBuffer(100);
+      const cutBuffer = await cutAudioAtLoopEnd(buffer, 100);
+      expect(cutBuffer.length).toBe(buffer.length);
+    });
+
+    it('should not cut if cutPoint is >= buffer.length', async () => {
+      const buffer = createMockAudioBuffer(60);
+      // loopEnd = 58, cutPoint = 63 (beyond buffer)
+      const cutBuffer = await cutAudioAtLoopEnd(buffer, 58);
+      expect(cutBuffer.length).toBe(buffer.length);
     });
   })
 })
