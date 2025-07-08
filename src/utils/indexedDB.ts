@@ -46,6 +46,7 @@ export interface SessionData {
   selectedMultisample: number | null;
   isDrumKeyboardPinned: boolean;
   isMultisampleKeyboardPinned: boolean;
+  savedToLibrary?: boolean; // Track if this session has been saved to library
 }
 
 export interface SampleData {

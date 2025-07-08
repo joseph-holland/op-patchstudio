@@ -14,6 +14,7 @@ import { usePatchGeneration } from '../../hooks/usePatchGeneration';
 import { audioBufferToWav } from '../../utils/audio';
 import { cookieUtils, COOKIE_KEYS } from '../../utils/cookies';
 import { savePresetToLibrary } from '../../utils/libraryUtils';
+import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 
 
 export function MultisampleTool() {
@@ -176,6 +177,8 @@ export function MultisampleTool() {
             message: `"${state.multisampleSettings.presetName}" saved to library`
           }
         });
+        // Trigger library refresh event
+        window.dispatchEvent(new CustomEvent('library-refresh'));
       } else {
         dispatch({
           type: 'ADD_NOTIFICATION',
@@ -210,24 +213,26 @@ export function MultisampleTool() {
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     setConfirmDialog({
       isOpen: true,
       message: 'are you sure you want to clear all loaded samples?',
-      onConfirm: () => {
+      onConfirm: async () => {
         for (let i = state.multisampleFiles.length - 1; i >= 0; i--) {
           clearMultisampleFile(i);
         }
+        // Reset saved to library flag since we're starting fresh
+        await sessionStorageIndexedDB.resetSavedToLibraryFlag();
         setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
       }
     });
   };
 
-  const handleResetAll = () => {
+  const handleResetAll = async () => {
     setConfirmDialog({
       isOpen: true,
       message: 'are you sure you want to reset everything to defaults? this will clear all samples, reset preset name, and audio settings.',
-      onConfirm: () => {
+      onConfirm: async () => {
         // Clear all samples
         for (let i = state.multisampleFiles.length - 1; i >= 0; i--) {
           clearMultisampleFile(i);
@@ -248,6 +253,9 @@ export function MultisampleTool() {
         dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: 0 });
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: true });
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE', payload: true });
+        
+        // Reset saved to library flag since we're starting fresh
+        await sessionStorageIndexedDB.resetSavedToLibraryFlag();
         
         setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
       }

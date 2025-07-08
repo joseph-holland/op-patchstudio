@@ -32,6 +32,11 @@ export function useSessionManagement() {
         if (currentSessionId) {
           const sessionData = await sessionStorageIndexedDB.loadSession(currentSessionId);
           if (sessionData) {
+            // Don't show restore prompt if session has been saved to library
+            if (sessionData.savedToLibrary) {
+              return;
+            }
+            
             // Check if session is within the last 12 hours (12 * 60 * 60 * 1000 ms)
             const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
             const now = Date.now();

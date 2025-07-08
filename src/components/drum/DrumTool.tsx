@@ -13,6 +13,7 @@ import { usePatchGeneration } from '../../hooks/usePatchGeneration';
 import { audioBufferToWav } from '../../utils/audio';
 import { DrumKeyboardContainer } from './DrumKeyboardContainer';
 import { savePresetToLibrary } from '../../utils/libraryUtils';
+import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 
 export function DrumTool() {
   const { state, dispatch } = useAppContext();
@@ -114,6 +115,8 @@ export function DrumTool() {
             message: `"${state.drumSettings.presetName}" saved to library`
           }
         });
+        // Trigger library refresh event
+        window.dispatchEvent(new CustomEvent('library-refresh'));
       } else {
         dispatch({
           type: 'ADD_NOTIFICATION',
@@ -148,24 +151,26 @@ export function DrumTool() {
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     setConfirmDialog({
       isOpen: true,
       message: 'are you sure you want to clear all loaded samples?',
-      onConfirm: () => {
+      onConfirm: async () => {
         for (let i = 0; i < 24; i++) {
           clearDrumSample(i);
         }
+        // Reset saved to library flag since we're starting fresh
+        await sessionStorageIndexedDB.resetSavedToLibraryFlag();
         setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
       }
     });
   };
 
-  const handleResetAll = () => {
+  const handleResetAll = async () => {
     setConfirmDialog({
       isOpen: true,
       message: 'are you sure you want to reset everything to defaults? this will clear all samples, reset preset name, audio settings and preset settings.',
-      onConfirm: () => {
+      onConfirm: async () => {
         // Clear all samples
         for (let i = 0; i < 24; i++) {
           clearDrumSample(i);
@@ -189,6 +194,9 @@ export function DrumTool() {
         dispatch({ type: 'SET_DRUM_PRESET_VELOCITY', payload: 20 });
         dispatch({ type: 'SET_DRUM_PRESET_VOLUME', payload: 69 });
         dispatch({ type: 'SET_DRUM_PRESET_WIDTH', payload: 0 });
+        
+        // Reset saved to library flag since we're starting fresh
+        await sessionStorageIndexedDB.resetSavedToLibraryFlag();
         
         setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
       }

@@ -1,5 +1,6 @@
 import { indexedDB, STORES } from './indexedDB';
 import type { AppState } from '../context/AppContext';
+import { sessionStorageIndexedDB } from './sessionStorageIndexedDB';
 
 // --- AudioBuffer <-> Blob utilities ---
 // You must have a utility to convert AudioBuffer to WAV ArrayBuffer
@@ -89,6 +90,9 @@ export async function savePresetToLibrary(
     };
 
     await indexedDB.add(STORES.PRESETS, preset);
+
+    // Mark the current session as saved to library to prevent restore prompt
+    await sessionStorageIndexedDB.markSessionAsSavedToLibrary();
 
     return {
       success: true

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { indexedDB, STORES } from '../../utils/indexedDB';
-import { generateDrumPatch, generateMultisamplePatch } from '../../utils/patchGeneration';
+import { generateDrumPatch, generateMultisamplePatch, downloadBlob } from '../../utils/patchGeneration';
 import type { LibraryPreset } from '../../utils/libraryUtils';
 import { blobToAudioBuffer } from '../../utils/libraryUtils';
+import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 
 export function LibraryPage() {
   const { state, dispatch } = useAppContext();
@@ -17,10 +18,56 @@ export function LibraryPage() {
   const [selectedPresets, setSelectedPresets] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
+  const loadPresets = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const allPresets = await indexedDB.getAll<LibraryPreset>(STORES.PRESETS);
+      setPresets(allPresets);
+    } catch (error) {
+      console.error('Failed to load presets:', error);
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'error',
+          title: 'load failed',
+          message: 'failed to load presets from library'
+        }
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [dispatch]);
+
   // Load presets from IndexedDB
   useEffect(() => {
     loadPresets();
-  }, []);
+  }, [loadPresets]);
+
+  // Refresh presets when switching to library tab
+  useEffect(() => {
+    if (state.currentTab === 'library') {
+      // Add a small delay to ensure any pending save operations complete
+      const timer = setTimeout(() => {
+        loadPresets();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [state.currentTab, loadPresets]);
+
+  // Listen for library refresh events
+  useEffect(() => {
+    const handleLibraryRefresh = () => {
+      if (state.currentTab === 'library') {
+        loadPresets();
+      }
+    };
+
+    window.addEventListener('library-refresh', handleLibraryRefresh);
+    return () => {
+      window.removeEventListener('library-refresh', handleLibraryRefresh);
+    };
+  }, [state.currentTab, loadPresets]);
 
   // Filter and sort presets
   useEffect(() => {
@@ -64,27 +111,6 @@ export function LibraryPage() {
 
     setFilteredPresets(filtered);
   }, [presets, searchTerm, filterType, filterFavorites, sortBy, sortOrder]);
-
-  const loadPresets = async () => {
-    try {
-      setIsLoading(true);
-      const allPresets = await indexedDB.getAll<LibraryPreset>(STORES.PRESETS);
-      setPresets(allPresets);
-    } catch (error) {
-      console.error('Failed to load presets:', error);
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          id: Date.now().toString(),
-          type: 'error',
-          title: 'load failed',
-          message: 'failed to load presets from library'
-        }
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleLoadPreset = async (preset: LibraryPreset) => {
     try {
@@ -166,6 +192,9 @@ export function LibraryPage() {
         }
       }
 
+      // Mark the current session as saved to library since we're working with a saved preset
+      await sessionStorageIndexedDB.markSessionAsSavedToLibrary();
+
       dispatch({
         type: 'ADD_NOTIFICATION',
         payload: {
@@ -193,37 +222,82 @@ export function LibraryPage() {
     try {
       // Generate the actual patch file for download
       let patchBlob: Blob;
+      const audioContext = window.AudioContext ? new window.AudioContext() : new (window as any).webkitAudioContext();
+
+      // Helper to restore audioBuffers from blobs (same as in handleLoadPreset)
+      async function restoreAudioBuffers(samples: any[]) {
+        return Promise.all(samples.map(async (sample) => {
+          if (sample && sample.audioBlob) {
+            const audioBuffer = await blobToAudioBuffer(sample.audioBlob, audioContext);
+            const { audioBlob, ...rest } = sample;
+            return { ...rest, audioBuffer };
+          }
+          return sample;
+        }));
+      }
+
       if (preset.type === 'drum') {
         // Create a temporary state with the saved preset data
         const presetData = preset.data as any;
+        
+        // Restore audio buffers from blobs
+        const drumSamples = await restoreAudioBuffers(presetData.drumSamples || []);
+        const importedDrumPreset = presetData.importedDrumPreset ? 
+          await restoreAudioBuffers(presetData.importedDrumPreset) : null;
+        
         const tempState = {
           ...state,
           drumSettings: presetData.drumSettings,
-          drumSamples: presetData.drumSamples,
-          importedDrumPreset: presetData.importedDrumPreset
+          drumSamples,
+          importedDrumPreset
         };
-        patchBlob = await generateDrumPatch(tempState, preset.name);
+        
+        // Get audio format settings from drum settings
+        const targetSampleRate = presetData.drumSettings.sampleRate || undefined;
+        const targetBitDepth = presetData.drumSettings.bitDepth || undefined;
+        const targetChannels = presetData.drumSettings.channels === 1 ? "mono" : "keep";
+        
+        patchBlob = await generateDrumPatch(
+          tempState, 
+          preset.name,
+          targetSampleRate,
+          targetBitDepth,
+          targetChannels
+        );
       } else {
         // Create a temporary state with the saved preset data
         const presetData = preset.data as any;
+        
+        // Restore audio buffers from blobs
+        const multisampleFiles = await restoreAudioBuffers(presetData.multisampleFiles || []);
+        const importedMultisamplePreset = presetData.importedMultisamplePreset ? 
+          await restoreAudioBuffers(presetData.importedMultisamplePreset) : null;
+        
         const tempState = {
           ...state,
           multisampleSettings: presetData.multisampleSettings,
-          multisampleFiles: presetData.multisampleFiles,
-          importedMultisamplePreset: presetData.importedMultisamplePreset
+          multisampleFiles,
+          importedMultisamplePreset
         };
-        patchBlob = await generateMultisamplePatch(tempState, preset.name);
+        
+        // Get audio format settings from multisample settings
+        const targetSampleRate = presetData.multisampleSettings.sampleRate || undefined;
+        const targetBitDepth = presetData.multisampleSettings.bitDepth || undefined;
+        const targetChannels = presetData.multisampleSettings.channels === 1 ? "mono" : "keep";
+        const multisampleGain = presetData.multisampleSettings.gain || 0;
+        
+        patchBlob = await generateMultisamplePatch(
+          tempState, 
+          preset.name,
+          targetSampleRate,
+          targetBitDepth,
+          targetChannels,
+          multisampleGain
+        );
       }
       
-      // Download the generated patch
-      const url = URL.createObjectURL(patchBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${preset.name}.preset.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Use the downloadBlob function from patchGeneration utils
+      downloadBlob(patchBlob, `${preset.name}.preset.zip`);
 
       dispatch({
         type: 'ADD_NOTIFICATION',
@@ -561,8 +635,6 @@ export function LibraryPage() {
                 {/* Presets Table */}
                 <div style={{
                   overflowX: 'auto',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '15px'
                 }}>
                   <table style={{
                     width: '100%',
