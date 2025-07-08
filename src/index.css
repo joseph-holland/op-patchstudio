@@ -518,3 +518,20 @@ body {
     overflow: hidden !important;
   }
 }
+
+@media (max-width: 768px) {
+  .tab-bar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tab-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-bar > button {
+    flex: 0 0 auto;
+    min-width: 44px;
+  }
+}

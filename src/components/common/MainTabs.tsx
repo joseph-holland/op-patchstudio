@@ -104,6 +104,7 @@ export function MainTabs() {
       <div 
         role="tablist"
         aria-label="main navigation tabs"
+        className="tab-bar"
         style={{ 
         display: 'flex',
         marginBottom: '0',
