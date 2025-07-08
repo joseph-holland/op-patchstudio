@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LibraryPage } from '../../components/common/LibraryPage';
 import { AppContextProvider } from '../../context/AppContext';
@@ -42,46 +42,6 @@ Object.defineProperty(window, 'removeEventListener', {
 });
 
 describe('LibraryPage', () => {
-  const mockDispatch = vi.fn();
-  
-  const mockState = {
-    currentTab: 'library',
-    drumSettings: {
-      presetName: 'Test Drum Kit',
-      sampleRate: 44100,
-      bitDepth: 16,
-      channels: 2,
-      normalize: false,
-      normalizeLevel: 0,
-      presetSettings: {
-        playmode: 'poly',
-        transpose: 0,
-        velocity: 20,
-        volume: 69,
-        width: 0
-      }
-    },
-    drumSamples: [],
-    multisampleSettings: {
-      presetName: 'Test Multisample',
-      sampleRate: 44100,
-      bitDepth: 16,
-      channels: 2,
-      normalize: false,
-      normalizeLevel: 0,
-      gain: 0,
-      loopEnabled: false,
-      loopOnRelease: false
-    },
-    multisampleFiles: [],
-    selectedMultisample: null,
-    isDrumKeyboardPinned: false,
-    isMultisampleKeyboardPinned: false,
-    notifications: [],
-    loading: false,
-    error: null
-  };
-
   const mockPresets = [
     {
       id: '1',

@@ -324,23 +324,22 @@ export function DrumTool() {
 
           {/* Content */}
           <div style={{ 
-            padding: isMobile ? '1rem' : '2rem',
+            padding: isMobile ? '1rem' : '0',
           }}>
             <DrumSampleTable 
               onFileUpload={handleFileUpload}
               onClearSample={handleClearSample}
               onRecordSample={handleOpenRecording}
             />
-            
-            {/* Action Buttons Below Table */}
+            {/* Action Buttons Below Table - RESTORED */}
             <div style={{
               display: 'flex',
               gap: '1rem',
-              justifyContent: isMobile ? 'center' : 'flex-end',
-              flexDirection: isMobile ? 'column' : 'row',
-              marginTop: '2rem',
-              paddingTop: '1.5rem',
-              borderTop: '1px solid var(--color-border-light)',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              // padding: '1rem 0 0 0',
+              padding: '1.75rem',
+              flexDirection: isMobile ? 'column' : 'row'
             }}>
               <button
                 onClick={handleClearAll}
@@ -381,7 +380,7 @@ export function DrumTool() {
                 }}
               >
                 <i className="fas fa-trash" style={{ fontSize: '1rem' }}></i>
-                clear all samples
+                clear all
               </button>
               <button
                 onClick={() => setBulkEditModal(true)}
@@ -418,7 +417,7 @@ export function DrumTool() {
                 }}
               >
                 <i className="fas fa-pencil" style={{ fontSize: '1rem' }}></i>
-                bulk edit samples
+                bulk edit
               </button>
             </div>
           </div>

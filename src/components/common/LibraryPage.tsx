@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
+import { ConfirmationModal } from './ConfirmationModal';
+import { LibraryTable } from './LibraryTable';
 import { useAppContext } from '../../context/AppContext';
 import { indexedDB, STORES } from '../../utils/indexedDB';
 import { generateDrumPatch, generateMultisamplePatch, downloadBlob } from '../../utils/patchGeneration';
 import type { LibraryPreset } from '../../utils/libraryUtils';
 import { blobToAudioBuffer } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
+import { IconButton } from './IconButton';
 
 export function LibraryPage() {
   const { state, dispatch } = useAppContext();
@@ -17,6 +20,8 @@ export function LibraryPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedPresets, setSelectedPresets] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [presetToDelete, setPresetToDelete] = useState<LibraryPreset | null>(null);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   const loadPresets = useCallback(async () => {
     try {
@@ -111,6 +116,15 @@ export function LibraryPage() {
 
     setFilteredPresets(filtered);
   }, [presets, searchTerm, filterType, filterFavorites, sortBy, sortOrder]);
+
+  const handleSort = (column: 'name' | 'date' | 'type') => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder(column === 'date' ? 'desc' : 'asc');
+    }
+  };
 
   const handleLoadPreset = async (preset: LibraryPreset) => {
     try {
@@ -332,65 +346,88 @@ export function LibraryPage() {
     }
   };
 
-  const handleDeletePreset = async (preset: LibraryPreset) => {
-    try {
-      await indexedDB.delete(STORES.PRESETS, preset.id);
-      await loadPresets();
-      
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          id: Date.now().toString(),
-          type: 'success',
-          title: 'preset deleted',
-          message: `"${preset.name}" removed from library`
-        }
-      });
-    } catch (error) {
-      console.error('Failed to delete preset:', error);
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          id: Date.now().toString(),
-          type: 'error',
-          title: 'delete failed',
-          message: 'failed to delete preset'
-        }
-      });
-    }
+  const handleDeletePreset = (preset: LibraryPreset) => {
+    setPresetToDelete(preset);
+    setIsConfirmModalOpen(true);
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedPresets.size === 0) return;
+  const handleBulkDelete = () => {
+    // We set a placeholder preset to indicate bulk delete mode
+    setPresetToDelete({ id: 'bulk', name: 'bulk', type: 'drum', data: {}, sampleCount: 0, isFavorite: false, createdAt: 0, updatedAt: 0 });
+    setIsConfirmModalOpen(true);
+  };
 
-    try {
-      for (const presetId of selectedPresets) {
-        await indexedDB.delete(STORES.PRESETS, presetId);
+  const handleConfirmDelete = async () => {
+    if (presetToDelete) {
+      if (presetToDelete.id === 'bulk') {
+        // Bulk delete logic
+        try {
+          await Promise.all(
+            Array.from(selectedPresets).map(id => indexedDB.delete(STORES.PRESETS, id))
+          );
+          dispatch({
+            type: 'ADD_NOTIFICATION',
+            payload: {
+              id: Date.now().toString(),
+              type: 'success',
+              title: 'presets deleted',
+              message: `successfully deleted ${selectedPresets.size} presets`
+            }
+          });
+          clearSelection();
+        } catch (error) {
+          console.error('Failed to bulk delete presets:', error);
+          dispatch({
+            type: 'ADD_NOTIFICATION',
+            payload: {
+              id: Date.now().toString(),
+              type: 'error',
+              title: 'delete failed',
+              message: 'could not delete selected presets'
+            }
+          });
+        }
+      } else {
+        // Single delete logic
+        try {
+          await indexedDB.delete(STORES.PRESETS, presetToDelete.id);
+          dispatch({
+            type: 'ADD_NOTIFICATION',
+            payload: {
+              id: Date.now().toString(),
+              type: 'success',
+              title: 'preset deleted',
+              message: `successfully deleted '${presetToDelete.name}'`
+            }
+          });
+          // Also remove from selection if it was selected
+          if (selectedPresets.has(presetToDelete.id)) {
+            const newSelected = new Set(selectedPresets);
+            newSelected.delete(presetToDelete.id);
+            setSelectedPresets(newSelected);
+          }
+        } catch (error) {
+          console.error('Failed to delete preset:', error);
+          dispatch({
+            type: 'ADD_NOTIFICATION',
+            payload: {
+              id: Date.now().toString(),
+              type: 'error',
+              title: 'delete failed',
+              message: `could not delete '${presetToDelete.name}'`
+            }
+          });
+        }
       }
-      await loadPresets();
-      setSelectedPresets(new Set());
-      
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          id: Date.now().toString(),
-          type: 'success',
-          title: 'presets deleted',
-          message: `${selectedPresets.size} presets removed from library`
-        }
-      });
-    } catch (error) {
-      console.error('Failed to delete presets:', error);
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          id: Date.now().toString(),
-          type: 'error',
-          title: 'delete failed',
-          message: 'failed to delete selected presets'
-        }
-      });
+      loadPresets();
     }
+    setIsConfirmModalOpen(false);
+    setPresetToDelete(null);
+  };
+
+  const handleCancelDelete = () => {
+    setIsConfirmModalOpen(false);
+    setPresetToDelete(null);
   };
 
   const formatDate = (timestamp: number) => {
@@ -422,220 +459,121 @@ export function LibraryPage() {
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: 'var(--color-bg-primary)',
-      padding: '1rem',
-      maxWidth: '1400px',
-      margin: '0 auto',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between'
-    }}>
-      <div>
-        {/* Integrated Library Container */}
-        <div style={{
-          backgroundColor: 'var(--color-bg-primary)',
-          borderRadius: '15px',
-          marginTop: '2rem',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-          border: '1px solid var(--color-border-light)',
-          overflow: 'hidden'
-        }}>
-          {/* Header */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr auto auto auto auto auto',
-            gap: '1rem',
-            padding: '1rem',
-            background: 'var(--color-bg-secondary)',
-            borderBottom: '1px solid var(--color-border-light)',
-            alignItems: 'center'
-          }}>
-            <h2 style={{
-              margin: 0,
-              color: 'var(--color-text-primary)',
-              fontSize: '1.5rem',
-              fontWeight: '300'
-            }}>
-              library
-            </h2>
-            
-            {/* Search */}
-            <div style={{ minWidth: '200px' }}>
-              <input
-                type="text"
-                placeholder="search presets..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--color-bg-primary)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: '0.9rem'
-                }}
-              />
-            </div>
+    <>
+      <div style={{ 
+        minHeight: '100vh', 
+        backgroundColor: 'var(--color-bg-primary)',
+        padding: '1rem',
+        maxWidth: '1400px',
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ marginTop: '2rem' }}>
+                  <LibraryTable
+          title="presets"
+            headerContent={
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                {/* Search */}
+                <div style={{ minWidth: '200px' }}>
+                  <input
+                    type="text"
+                    placeholder="search presets..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem',
+                      border: '1px solid var(--color-border-light)',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--color-bg-primary)',
+                      color: 'var(--color-text-primary)',
+                      fontSize: '0.9rem'
+                    }}
+                  />
+                </div>
 
-            {/* Type Filter */}
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              style={{
-                padding: '0.5rem',
-                border: '1px solid var(--color-border-light)',
-                borderRadius: '6px',
-                backgroundColor: 'var(--color-bg-primary)',
-                color: 'var(--color-text-primary)',
-                fontSize: '0.9rem'
-              }}
-            >
-              <option value="all">all types</option>
-              <option value="drum">drum</option>
-              <option value="multisample">multisample</option>
-            </select>
-
-            {/* Favorites Filter */}
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              color: 'var(--color-text-secondary)'
-            }}>
-              <input
-                type="checkbox"
-                checked={filterFavorites}
-                onChange={(e) => setFilterFavorites(e.target.checked)}
-                style={{ margin: 0 }}
-              />
-              favorites
-            </label>
-
-            {/* Sort Controls */}
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                style={{
-                  padding: '0.5rem',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--color-bg-primary)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: '0.9rem'
-                }}
-              >
-                <option value="date">date</option>
-                <option value="name">name</option>
-                <option value="type">type</option>
-              </select>
-              <button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                style={{
-                  padding: '0.5rem',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--color-bg-primary)',
-                  color: 'var(--color-text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem'
-                }}
-              >
-                <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'}`}></i>
-              </button>
-            </div>
-          </div>
-
-          {/* Bulk Actions */}
-          {selectedPresets.size > 0 && (
-            <div style={{
-              padding: '0.75rem 1rem',
-              background: 'var(--color-interactive-focus)',
-              borderBottom: '1px solid var(--color-border-light)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <span style={{ color: 'white', fontSize: '0.9rem' }}>
-                {selectedPresets.size} preset{selectedPresets.size !== 1 ? 's' : ''} selected
-              </span>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  onClick={clearSelection}
+                {/* Type Filter */}
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value as any)}
                   style={{
-                    padding: '0.5rem 1rem',
-                    border: '1px solid rgba(255,255,255,0.3)',
+                    padding: '0.5rem',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '6px',
-                    backgroundColor: 'transparent',
-                    color: 'white',
-                    cursor: 'pointer',
-                    fontSize: '0.85rem'
+                    backgroundColor: 'var(--color-bg-primary)',
+                    color: 'var(--color-text-primary)',
+                    fontSize: '0.9rem'
                   }}
                 >
-                  clear
-                </button>
+                  <option value="all">all types</option>
+                  <option value="drum">drum</option>
+                  <option value="multisample">multisample</option>
+                </select>
+
+                {/* Favorites Filter */}
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  color: 'var(--color-text-secondary)'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={filterFavorites}
+                    onChange={(e) => setFilterFavorites(e.target.checked)}
+                    style={{ margin: 0 }}
+                  />
+                  favorites
+                </label>
+                
+                {/* Bulk Actions */}
                 <button
                   onClick={handleBulkDelete}
+                  disabled={selectedPresets.size === 0}
                   style={{
                     padding: '0.5rem 1rem',
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    border: 'none',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '0.85rem'
+                    backgroundColor: 'var(--color-bg-primary)',
+                    color: selectedPresets.size === 0 ? 'var(--color-text-secondary)' : 'var(--color-text-primary)',
+                    cursor: selectedPresets.size === 0 ? 'not-allowed' : 'pointer',
+                    fontSize: '0.85rem',
+                    opacity: selectedPresets.size === 0 ? 0.5 : 1,
+                    transition: 'opacity 0.2s',
                   }}
                 >
                   delete
                 </button>
               </div>
+            }
+          isLoading={isLoading}
+          emptyState={
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '200px',
+              color: 'var(--color-text-secondary)',
+              textAlign: 'center'
+            }}>
+              <i className="fas fa-folder-open" style={{ fontSize: '2rem', marginBottom: '1rem' }}></i>
+              <p>no presets found</p>
+              <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                {searchTerm || filterType !== 'all' || filterFavorites 
+                  ? 'try adjusting your search or filters' 
+                  : 'create your first preset by saving from the drum or multisample tools'}
+              </p>
             </div>
-          )}
-
-          {/* Table Container */}
-          <div style={{
-            minHeight: '400px'
-          }}>
-            {isLoading ? (
-              <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '200px',
-                color: 'var(--color-text-secondary)'
-              }}>
-                <i className="fas fa-spinner fa-spin" style={{ marginRight: '0.5rem' }}></i>
-                loading presets...
-              </div>
-            ) : filteredPresets.length === 0 ? (
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '200px',
-                color: 'var(--color-text-secondary)',
-                textAlign: 'center'
-              }}>
-                <i className="fas fa-folder-open" style={{ fontSize: '2rem', marginBottom: '1rem' }}></i>
-                <p>no presets found</p>
-                <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                  {searchTerm || filterType !== 'all' || filterFavorites 
-                    ? 'try adjusting your search or filters' 
-                    : 'create your first preset by saving from the drum or multisample tools'}
-                </p>
-              </div>
-            ) : (
-              <div>
-                {/* Presets Table */}
-                <div style={{
-                  overflowX: 'auto',
-                }}>
+          }
+          tableContent={
+            filteredPresets.length > 0
+              ? (
+                <div style={{ overflowX: 'auto' }}>
                   <table style={{
                     width: '100%',
                     borderCollapse: 'collapse',
@@ -652,24 +590,58 @@ export function LibraryPage() {
                           fontSize: '0.85rem',
                           fontWeight: '500',
                           color: 'var(--color-text-primary)',
-                          borderRight: '1px solid var(--color-border-light)'
                         }}>
                           <input
                             type="checkbox"
                             checked={selectedPresets.size === filteredPresets.length && filteredPresets.length > 0}
-                            onChange={selectAllPresets}
-                            style={{ margin: 0 }}
+                            onChange={e => e.target.checked ? selectAllPresets() : clearSelection()}
+                            style={{
+                              margin: 0,
+                              width: '16px',
+                              height: '16px',
+                              accentColor: 'var(--color-text-secondary)',
+                              cursor: 'pointer',
+                            }}
                           />
                         </th>
-                        <th style={{
-                          padding: '0.75rem',
-                          textAlign: 'left',
-                          fontSize: '0.85rem',
-                          fontWeight: '500',
-                          color: 'var(--color-text-primary)',
-                          borderRight: '1px solid var(--color-border-light)'
-                        }}>
-                          name
+                        <th 
+                          style={{
+                            padding: '0.75rem',
+                            textAlign: 'left',
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            color: 'var(--color-text-primary)',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => handleSort('name')}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span>name</span>
+                            {sortBy === 'name' ? (
+                              <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'}`}></i>
+                            ) : (
+                              <i className="fas fa-sort" style={{ color: 'var(--color-text-secondary)', opacity: 0.5 }}></i>
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          style={{
+                            padding: '0.75rem',
+                            textAlign: 'center',
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            color: 'var(--color-text-primary)',
+                          }}
+                          onClick={() => handleSort('type')}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
+                            <span>type</span>
+                            {sortBy === 'type' ? (
+                              <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'}`}></i>
+                            ) : (
+                              <i className="fas fa-sort" style={{ color: 'var(--color-text-secondary)', opacity: 0.5 }}></i>
+                            )}
+                          </div>
                         </th>
                         <th style={{
                           padding: '0.75rem',
@@ -677,39 +649,28 @@ export function LibraryPage() {
                           fontSize: '0.85rem',
                           fontWeight: '500',
                           color: 'var(--color-text-primary)',
-                          borderRight: '1px solid var(--color-border-light)'
-                        }}>
-                          type
-                        </th>
-                        <th style={{
-                          padding: '0.75rem',
-                          textAlign: 'left',
-                          fontSize: '0.85rem',
-                          fontWeight: '500',
-                          color: 'var(--color-text-primary)',
-                          borderRight: '1px solid var(--color-border-light)'
                         }}>
                           samples
                         </th>
-                        <th style={{
-                          padding: '0.75rem',
-                          textAlign: 'left',
-                          fontSize: '0.85rem',
-                          fontWeight: '500',
-                          color: 'var(--color-text-primary)',
-                          borderRight: '1px solid var(--color-border-light)'
-                        }}>
-                          updated
-                        </th>
-                        <th style={{
-                          padding: '0.75rem',
-                          textAlign: 'center',
-                          fontSize: '0.85rem',
-                          fontWeight: '500',
-                          color: 'var(--color-text-primary)',
-                          borderRight: '1px solid var(--color-border-light)'
-                        }}>
-                          favorite
+                        <th 
+                          style={{
+                            padding: '0.75rem',
+                            textAlign: 'left',
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            color: 'var(--color-text-primary)',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => handleSort('date')}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span>updated</span>
+                            {sortBy === 'date' ? (
+                              <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'}`}></i>
+                            ) : (
+                              <i className="fas fa-sort" style={{ color: 'var(--color-text-secondary)', opacity: 0.5 }}></i>
+                            )}
+                          </div>
                         </th>
                         <th style={{
                           padding: '0.75rem',
@@ -728,7 +689,7 @@ export function LibraryPage() {
                           key={preset.id}
                           style={{
                             backgroundColor: selectedPresets.has(preset.id) 
-                              ? 'var(--color-interactive-focus)' 
+                              ? 'var(--color-bg-secondary)' 
                               : 'var(--color-bg-primary)',
                             borderBottom: '1px solid var(--color-border-light)',
                             transition: 'all 0.2s ease'
@@ -736,53 +697,60 @@ export function LibraryPage() {
                         >
                           <td style={{
                             padding: '0.75rem',
-                            borderRight: '1px solid var(--color-border-light)',
                             verticalAlign: 'top'
                           }}>
                             <input
                               type="checkbox"
                               checked={selectedPresets.has(preset.id)}
                               onChange={() => togglePresetSelection(preset.id)}
-                              style={{ margin: 0 }}
+                              style={{
+                                margin: 0,
+                                width: '16px',
+                                height: '16px',
+                                accentColor: 'var(--color-text-secondary)',
+                                cursor: 'pointer',
+                              }}
                             />
                           </td>
                           <td style={{
                             padding: '0.75rem',
-                            borderRight: '1px solid var(--color-border-light)',
                             verticalAlign: 'top'
                           }}>
                             <div style={{
-                              fontSize: '1rem',
-                              fontWeight: '500',
-                              color: 'var(--color-text-primary)'
+                              fontSize: '0.9rem',
+                              fontWeight: 400,
+                              color: 'var(--color-text-primary)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              fontFamily: 'Montserrat, Arial, sans-serif'
                             }}>
                               {preset.name}
                             </div>
                           </td>
-                                                  <td style={{
-                          padding: '0.75rem',
-                          borderRight: '1px solid var(--color-border-light)',
-                          verticalAlign: 'top',
-                          textAlign: 'center'
-                        }}>
-                          <i 
-                            className={`fas fa-${preset.type === 'drum' ? 'drum' : 'keyboard'}`}
-                            style={{
-                              fontSize: '1.2rem',
-                              color: 'var(--color-text-secondary)'
-                            }}
-                            title={preset.type}
-                          ></i>
-                        </td>
                           <td style={{
                             padding: '0.75rem',
-                            borderRight: '1px solid var(--color-border-light)',
+                            verticalAlign: 'top',
+                            textAlign: 'center'
+                          }}>
+                            <i 
+                              className={`fas fa-${preset.type === 'drum' ? 'drum' : 'keyboard'}`}
+                              style={{
+                                fontSize: '1.2rem',
+                                color: 'var(--color-text-secondary)'
+                              }}
+                              title={preset.type}
+                            ></i>
+                          </td>
+                          <td style={{
+                            padding: '0.75rem',
                             verticalAlign: 'top',
                             fontSize: '0.85rem',
-                            color: 'var(--color-text-secondary)'
+                            color: 'var(--color-text-secondary)',
+                            textAlign: 'center'
                           }}>
                             {preset.sampleCount !== undefined ? (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
                                 <i className="fas fa-music"></i>
                                 {preset.sampleCount}
                               </div>
@@ -790,31 +758,11 @@ export function LibraryPage() {
                           </td>
                           <td style={{
                             padding: '0.75rem',
-                            borderRight: '1px solid var(--color-border-light)',
                             verticalAlign: 'top',
                             fontSize: '0.85rem',
                             color: 'var(--color-text-secondary)'
                           }}>
                             {formatDate(preset.updatedAt)}
-                          </td>
-                          <td style={{
-                            padding: '0.75rem',
-                            borderRight: '1px solid var(--color-border-light)',
-                            verticalAlign: 'top',
-                            textAlign: 'center'
-                          }}>
-                            <button
-                              onClick={() => handleToggleFavorite(preset)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: preset.isFavorite ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                                fontSize: '1rem'
-                              }}
-                            >
-                              <i className={`fas fa-star${preset.isFavorite ? '' : '-o'}`}></i>
-                            </button>
                           </td>
                           <td style={{
                             padding: '0.75rem',
@@ -825,53 +773,30 @@ export function LibraryPage() {
                               gap: '0.5rem',
                               justifyContent: 'center'
                             }}>
-                              <button
+                              <IconButton
+                                icon={preset.isFavorite ? 'fas fa-star' : 'far fa-star'}
+                                onClick={() => handleToggleFavorite(preset)}
+                                title={preset.isFavorite ? 'remove from favorites' : 'add to favorites'}
+                                color={preset.isFavorite ? 'var(--color-text-primary)' : 'var(--color-text-secondary)'}
+                              />
+                              <IconButton
+                                icon="fas fa-folder-open"
                                 onClick={() => handleLoadPreset(preset)}
-                                style={{
-                                  padding: '0.5rem',
-                                  backgroundColor: 'var(--color-interactive-focus)',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontSize: '0.85rem',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '0.3rem'
-                                }}
-                              >
-                                <i className="fas fa-play"></i>
-                                load
-                              </button>
-                              <button
+                                title="load preset"
+                                color="var(--color-interactive-focus)"
+                              />
+                              <IconButton
+                                icon="fas fa-download"
                                 onClick={() => handleDownloadPreset(preset)}
-                                style={{
-                                  padding: '0.5rem',
-                                  border: '1px solid var(--color-border-light)',
-                                  backgroundColor: 'var(--color-bg-primary)',
-                                  color: 'var(--color-text-secondary)',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontSize: '0.85rem'
-                                }}
-                              >
-                                <i className="fas fa-download"></i>
-                              </button>
-                              <button
+                                title="download preset"
+                                color="var(--color-text-secondary)"
+                              />
+                              <IconButton
+                                icon="fas fa-trash"
                                 onClick={() => handleDeletePreset(preset)}
-                                style={{
-                                  padding: '0.5rem',
-                                  border: '1px solid #dc3545',
-                                  backgroundColor: 'var(--color-bg-primary)',
-                                  color: '#dc3545',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontSize: '0.85rem'
-                                }}
-                              >
-                                <i className="fas fa-trash"></i>
-                              </button>
+                                title="delete preset"
+                                color="var(--color-text-secondary)"
+                              />
                             </div>
                           </td>
                         </tr>
@@ -879,11 +804,22 @@ export function LibraryPage() {
                     </tbody>
                   </table>
                 </div>
-              </div>
-            )}
-          </div>
+              )
+              : null
+          }
+        />
         </div>
       </div>
-    </div>
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        message={
+          presetToDelete?.id === 'bulk'
+            ? `are you sure you want to delete the ${selectedPresets.size} selected presets? this action cannot be undone.`
+            : `are you sure you want to delete "${presetToDelete?.name}"? this action cannot be undone.`
+        }
+      />
+    </>
   );
 } 

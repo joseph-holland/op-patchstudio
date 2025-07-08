@@ -602,6 +602,25 @@ export function sanitizeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9 #\-().]+/g, "");
 }
 
+/**
+ * Check if a preset name contains only valid characters for OP-XY/OP-1 devices
+ * @param name - The preset name to validate
+ * @returns true if the name contains only valid characters, false otherwise
+ */
+export function isValidPresetName(name: string): boolean {
+  return /^[a-zA-Z0-9 #\-().]*$/.test(name);
+}
+
+/**
+ * Get invalid characters from a preset name
+ * @param name - The preset name to check
+ * @returns Array of invalid characters found in the name
+ */
+export function getInvalidPresetNameChars(name: string): string[] {
+  const invalidChars = name.match(/[^a-zA-Z0-9 #\-().]/g);
+  return invalidChars ? [...new Set(invalidChars)] : [];
+}
+
 export function parseFilename(filename: string): [string, number] {
   const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
   const match = nameWithoutExt.match(/(.+?)[\s\-]*([A-G](?:b|#)?\d|\d{1,3})$/i);

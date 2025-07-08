@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { TextInput } from '@carbon/react';
 import { PatchSizeIndicator } from './PatchSizeIndicator';
+import { PresetNameInput } from './PresetNameInput';
 
 interface GeneratePresetSectionProps {
   type: 'drum' | 'multisample';
@@ -87,35 +87,33 @@ export function GeneratePresetSection({
           borderBottom: '1px solid var(--color-border-light)'
         }}>
           <div style={{ 
-            width: isMobile ? '100%' : '300px'
+            width: isMobile ? '100%' : '33.333%'
           }}>
             <div style={{ width: '100%' }}>
-              <TextInput
+              <PresetNameInput
                 id={inputId}
                 labelText="preset name"
-                placeholder="enter preset name..."
                 value={presetName}
-                onChange={onPresetNameChange}
+                onChange={(value) => onPresetNameChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>)}
+                placeholder="enter preset name..."
+                className="preset-name-input-wide"
               />
               <style>{`
-                #${inputId} {
+                .preset-name-input-wide input.cds--text-input {
                   width: 100% !important;
-                  min-width: 100% !important;
+                  min-width: 0 !important;
+                  max-width: none !important;
+                  box-sizing: border-box;
                 }
-                input#${inputId}.cds--text-input {
-                  width: 100% !important;
-                  min-width: 100% !important;
-                  background-color: var(--color-bg-primary) !important;
-                  background: var(--color-bg-primary) !important;
-                  text-align: left !important;
+                @media (min-width: 769px) {
+                  .preset-name-input-wide {
+                    width: 100%;
+                  }
                 }
-                input#${inputId}.cds--text-input:focus {
-                  background-color: var(--color-bg-primary) !important;
-                  background: var(--color-bg-primary) !important;
-                  text-align: left !important;
-                }
-                input#${inputId}.cds--text-input::placeholder {
-                  text-align: left !important;
+                @media (max-width: 768px) {
+                  .preset-name-input-wide {
+                    width: 100%;
+                  }
                 }
               `}</style>
             </div>
