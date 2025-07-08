@@ -700,7 +700,10 @@ export function MultisampleSampleTable({
   // Desktop Layout
   return (
     <div style={{
-      fontFamily: '"Montserrat", "Arial", sans-serif'
+      fontFamily: '"Montserrat", "Arial", sans-serif',
+      // Remove or reduce padding/margin so table stretches to section edges
+      padding: 0,
+      margin: 0
     }}>
       <input
         ref={browseFileInputRef}
@@ -714,12 +717,10 @@ export function MultisampleSampleTable({
       {/* Header */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '100px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
+        gridTemplateColumns: '100px minmax(200px, 1fr) minmax(200px, 1fr) 120px',
         gap: '0.5rem',
         padding: '0.75rem',
         background: c.bgAlt,
-        borderRadius: '6px 6px 0 0',
-        border: `1px solid ${c.border}`,
         borderBottom: 'none',
         fontSize: '0.8rem',
         fontWeight: 'bold',
@@ -759,15 +760,18 @@ export function MultisampleSampleTable({
           </Tooltip>
         </div>
         <div>file details</div>
-        <div>waveform</div>
-        <div>actions</div>
+        <div style={{ paddingLeft: '10px' }}>waveform</div>
+        <div style={{ paddingLeft: '25px' }}>actions</div>
       </div>
 
       {/* Sample Rows */}
       <div style={{
-        border: `1px solid ${c.border}`,
-        borderRadius: '0 0 6px 6px',
-        overflow: 'hidden'
+        borderTop: `1px solid ${c.border}`,
+        borderBottom: `1px solid ${c.border}`,
+        overflow: 'hidden',
+        padding: 0,
+        margin: 0
+        // borderRadius removed to keep table bottom square
       }}>
         {state.multisampleFiles.length === 0 ? (
           // Empty state with large drop area
@@ -781,7 +785,6 @@ export function MultisampleSampleTable({
               justifyContent: 'center',
               background: isDragOver ? c.bgAlt : c.bg,
               transition: 'background 0.2s ease',
-              borderRadius: '0 0 6px 6px',
               position: 'relative'
             }}
             onDragOver={handleTableDragOver}
@@ -836,9 +839,9 @@ export function MultisampleSampleTable({
                   onDragEnd={handleDragEnd}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '100px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
+                    gridTemplateColumns: '100px minmax(200px, 1fr) minmax(200px, 1fr) 120px',
                     gap: '0.5rem',
-                    padding: '0.75rem',
+                    padding: 0, // Remove row padding
                     background: isDraggedOver ? c.bgAlt : c.bg,
                     borderBottom: reversedIndex < state.multisampleFiles.length - 1 ? `1px solid ${c.border}` : 'none',
                     transition: 'background 0.2s ease',
@@ -847,9 +850,24 @@ export function MultisampleSampleTable({
                     opacity: isDragging ? 0.5 : 1,
                     cursor: sample?.isLoaded ? 'move' : 'default'
                   }}
+                  onMouseEnter={(e) => {
+                    if (!isDragging) {
+                      e.currentTarget.style.background = c.bgAlt;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isDragging) {
+                      e.currentTarget.style.background = c.bg;
+                    }
+                  }}
                 >
                   {/* Key Column */}
-                  <div>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    paddingLeft: '16px'
+                  }}>
                     {sample?.isLoaded ? (
                       <div style={{ textAlign: 'center' }}>
                         <input
@@ -917,7 +935,8 @@ export function MultisampleSampleTable({
                       <div style={{
                         height: '44px',
                         display: 'flex',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        paddingRight: '8px'
                       }}>
                         {sample.audioBuffer ? (
                           <SmallWaveform
@@ -965,7 +984,7 @@ export function MultisampleSampleTable({
                     </>
                   ) : (
                     // Empty state - spans both columns
-                    <div style={{ gridColumn: 'span 2' }}>
+                    <div style={{ gridColumn: 'span 2', paddingRight: '8px' }}>
                       <button
                         onClick={() => openFileDialog(index)}
                         style={{
@@ -998,7 +1017,13 @@ export function MultisampleSampleTable({
                   )}
 
                   {/* Actions Column */}
-                  <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'center', alignItems: 'center' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '0.25rem', 
+                    justifyContent: 'center', 
+                    alignItems: 'center',
+                    paddingRight: '16px'
+                  }}>
                     {sample?.isLoaded ? (
                       <>
                         <button
@@ -1061,19 +1086,19 @@ export function MultisampleSampleTable({
             );
           })
         )}
-              </div>
-
-        {/* Waveform Zoom Modal */}
-        <WaveformZoomModal
-          isOpen={zoomModalOpen}
-          onClose={closeZoomModal}
-          audioBuffer={state.multisampleFiles[zoomSampleIndex]?.audioBuffer || null}
-          initialInPoint={state.multisampleFiles[zoomSampleIndex]?.inPoint || 0}
-          initialOutPoint={state.multisampleFiles[zoomSampleIndex]?.outPoint || (state.multisampleFiles[zoomSampleIndex]?.audioBuffer ? state.multisampleFiles[zoomSampleIndex].audioBuffer!.length / state.multisampleFiles[zoomSampleIndex].audioBuffer!.sampleRate : 0)}
-          initialLoopStart={state.multisampleFiles[zoomSampleIndex]?.loopStart || 0}
-          initialLoopEnd={state.multisampleFiles[zoomSampleIndex]?.loopEnd || (state.multisampleFiles[zoomSampleIndex]?.audioBuffer ? state.multisampleFiles[zoomSampleIndex].audioBuffer!.length / state.multisampleFiles[zoomSampleIndex].audioBuffer!.sampleRate : 0)}
-          onSave={handleZoomSave}
-        />
       </div>
-    );
-  }
+
+      {/* Waveform Zoom Modal */}
+      <WaveformZoomModal
+        isOpen={zoomModalOpen}
+        onClose={closeZoomModal}
+        audioBuffer={state.multisampleFiles[zoomSampleIndex]?.audioBuffer || null}
+        initialInPoint={state.multisampleFiles[zoomSampleIndex]?.inPoint || 0}
+        initialOutPoint={state.multisampleFiles[zoomSampleIndex]?.outPoint || (state.multisampleFiles[zoomSampleIndex]?.audioBuffer ? state.multisampleFiles[zoomSampleIndex].audioBuffer!.length / state.multisampleFiles[zoomSampleIndex].audioBuffer!.sampleRate : 0)}
+        initialLoopStart={state.multisampleFiles[zoomSampleIndex]?.loopStart || 0}
+        initialLoopEnd={state.multisampleFiles[zoomSampleIndex]?.loopEnd || (state.multisampleFiles[zoomSampleIndex]?.audioBuffer ? state.multisampleFiles[zoomSampleIndex].audioBuffer!.length / state.multisampleFiles[zoomSampleIndex].audioBuffer!.sampleRate : 0)}
+        onSave={handleZoomSave}
+      />
+    </div>
+  );
+}

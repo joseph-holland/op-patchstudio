@@ -401,7 +401,7 @@ export function RecordingModal({
               color: 'var(--color-accent-primary)',
               fontSize: '1.25rem'
             }}></i>
-            record audio sample
+            record sample
           </h3>
         </div>
 

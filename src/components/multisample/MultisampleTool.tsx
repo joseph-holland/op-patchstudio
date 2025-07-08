@@ -451,7 +451,7 @@ export function MultisampleTool() {
 
           {/* Content */}
           <div style={{ 
-            padding: isMobile ? '1rem' : '2rem',
+            padding: 0,
           }}>
             <MultisampleSampleTable 
               onFileUpload={handleFileUpload}
@@ -460,130 +460,135 @@ export function MultisampleTool() {
               onFilesSelected={handleFilesSelected}
               onBrowseFilesRef={browseFilesRef}
             />
-            
-            {/* Action Buttons Below Table */}
-            <div style={{
-              display: 'flex',
-              gap: '1rem',
-              justifyContent: isMobile ? 'center' : 'flex-end',
-              flexDirection: isMobile ? 'column' : 'row',
-              marginTop: '2rem',
-              paddingTop: '1.5rem',
-              borderTop: '1px solid var(--color-border-light)',
-            }}>
-              <button
-                onClick={handleClearAll}
-                disabled={!hasLoadedSamples}
-                style={{
-                  minHeight: '44px',
-                  minWidth: '44px',
-                  padding: '0.75rem 1.5rem',
-                  border: '1px solid var(--color-interactive-focus-ring)',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--color-bg-primary)',
-                  color: hasLoadedSamples ? 'var(--color-interactive-secondary)' : 'var(--color-border-medium)',
-                  fontSize: '0.9rem',
-                  fontWeight: '500',
-                  cursor: hasLoadedSamples ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.2s ease',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.75rem',
-                  opacity: hasLoadedSamples ? 1 : 0.6,
-                  width: isMobile ? '100%' : 'auto',
-                }}
-                onMouseEnter={(e) => {
-                  if (hasLoadedSamples) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                    e.currentTarget.style.borderColor = 'var(--color-border-medium)';
-                    e.currentTarget.style.color = 'var(--color-interactive-dark)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (hasLoadedSamples) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
-                    e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
-                    e.currentTarget.style.color = 'var(--color-interactive-secondary)';
-                  }
-                }}
-              >
-                <i className="fas fa-trash" style={{ fontSize: '1rem' }}></i>
-                clear all samples
-              </button>
-              <button
-                onClick={() => setRecordingModal({ isOpen: true, targetIndex: null })}
-                style={{
-                  minHeight: '44px',
-                  minWidth: '44px',
-                  padding: '0.75rem 1.5rem',
-                  border: '1px solid var(--color-interactive-focus-ring)',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--color-bg-primary)',
-                  color: 'var(--color-interactive-secondary)',
-                  fontSize: '0.9rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.75rem',
-                  width: isMobile ? '100%' : 'auto',
-                }}
-                onMouseEnter={(e) => {
+          </div>
+
+          {/* Action Buttons Below Table */}
+          <div style={{
+            display: 'flex',
+            gap: '1rem',
+            justifyContent: isMobile ? 'center' : 'flex-end',
+            flexDirection: isMobile ? 'column' : 'row',
+            marginTop: 0, // flush with table
+            marginBottom: '0',
+            borderRadius: '0 0 15px 15px', // Only round bottom corners
+            boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
+            background: 'var(--color-bg-primary)',
+            padding: isMobile ? '1rem' : '1.75',
+            width: '100%',
+            maxWidth: '100%',
+          }}>
+            <button
+              onClick={handleClearAll}
+              disabled={!hasLoadedSamples}
+              style={{
+                minHeight: '44px',
+                minWidth: '44px',
+                padding: '0.75rem 1.5rem',
+                border: '1px solid var(--color-interactive-focus-ring)',
+                borderRadius: '6px',
+                backgroundColor: 'var(--color-bg-primary)',
+                color: hasLoadedSamples ? 'var(--color-interactive-secondary)' : 'var(--color-border-medium)',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                cursor: hasLoadedSamples ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s ease',
+                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem',
+                opacity: hasLoadedSamples ? 1 : 0.6,
+                width: isMobile ? '100%' : 'auto',
+              }}
+              onMouseEnter={(e) => {
+                if (hasLoadedSamples) {
                   e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
                   e.currentTarget.style.borderColor = 'var(--color-border-medium)';
                   e.currentTarget.style.color = 'var(--color-interactive-dark)';
-                }}
-                onMouseLeave={(e) => {
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (hasLoadedSamples) {
                   e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
                   e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
                   e.currentTarget.style.color = 'var(--color-interactive-secondary)';
-                }}
-              >
-                <i className="fas fa-microphone" style={{ fontSize: '1rem' }}></i>
-                record sample
-              </button>
-              <button
-                onClick={() => {
-                  // Trigger the browse files function from MultisampleSampleTable
-                  if (browseFilesRef.current) {
-                    browseFilesRef.current();
-                  }
-                }}
-                style={{
-                  minHeight: '44px',
-                  minWidth: '44px',
-                  padding: '0.75rem 1.5rem',
-                  border: 'none',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--color-interactive-focus)',
-                  color: 'var(--color-white)',
-                  fontSize: '0.9rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.75rem',
-                  width: isMobile ? '100%' : 'auto',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
-                }}
-              >
-                <i className="fas fa-folder-open" style={{ fontSize: '1rem' }}></i>
-                browse files
-              </button>
-            </div>
+                }
+              }}
+            >
+              <i className="fas fa-trash" style={{ fontSize: '1rem' }}></i>
+              clear all
+            </button>
+            <button
+              onClick={() => setRecordingModal({ isOpen: true, targetIndex: null })}
+              style={{
+                minHeight: '44px',
+                minWidth: '44px',
+                padding: '0.75rem 1.5rem',
+                border: '1px solid var(--color-interactive-focus-ring)',
+                borderRadius: '6px',
+                backgroundColor: 'var(--color-bg-primary)',
+                color: 'var(--color-interactive-secondary)',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem',
+                width: isMobile ? '100%' : 'auto',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                e.currentTarget.style.color = 'var(--color-interactive-dark)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+                e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
+                e.currentTarget.style.color = 'var(--color-interactive-secondary)';
+              }}
+            >
+              <i className="fas fa-microphone" style={{ fontSize: '1rem', color: 'var(--color-accent-primary)' }}></i>
+              record
+            </button>
+            <button
+              onClick={() => {
+                // Trigger the browse files function from MultisampleSampleTable
+                if (browseFilesRef.current) {
+                  browseFilesRef.current();
+                }
+              }}
+              style={{
+                minHeight: '44px',
+                minWidth: '44px',
+                padding: '0.75rem 1.5rem',
+                border: 'none',
+                borderRadius: '6px',
+                backgroundColor: 'var(--color-interactive-focus)',
+                color: 'var(--color-white)',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem',
+                width: isMobile ? '100%' : 'auto',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
+              }}
+            >
+              <i className="fas fa-folder-open" style={{ fontSize: '1rem' }}></i>
+              browse
+            </button>
           </div>
         </div>
       </div>
