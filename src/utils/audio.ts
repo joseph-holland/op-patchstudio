@@ -338,16 +338,22 @@ export async function convertAudioFormat(
   const normalizeLevel = options.normalizeLevel || 0;
   const gain = options.gain || 0;
   
-  // Create offline context for conversion
+  // Apply trim to loop end if enabled (do this first to get correct duration)
+  let processedBuffer = audioBuffer;
+  if (options.cutAtLoopEnd && options.loopEnd) {
+    processedBuffer = await cutAudioAtLoopEnd(audioBuffer, options.loopEnd);
+  }
+
+  // Create offline context for conversion with correct duration
   const offlineContext = audioContextManager.createOfflineContext(
     targetChannels,
-    Math.ceil(audioBuffer.duration * targetSampleRate),
+    Math.ceil(processedBuffer.duration * targetSampleRate),
     targetSampleRate
   );
 
   // Create buffer source
   const source = offlineContext.createBufferSource();
-  source.buffer = audioBuffer;
+  source.buffer = processedBuffer;
 
   // Create gain node for normalization and gain
   const gainNode = offlineContext.createGain();
@@ -365,14 +371,6 @@ export async function convertAudioFormat(
   }
 
   gainNode.gain.value = gainValue;
-
-  // Apply trim to loop end if enabled
-  let processedBuffer = audioBuffer;
-  if (options.cutAtLoopEnd && options.loopEnd) {
-    processedBuffer = await cutAudioAtLoopEnd(audioBuffer, options.loopEnd);
-    // Update source buffer to use the cut version
-    source.buffer = processedBuffer;
-  }
 
   // Handle channel conversion
   if (targetChannels !== audioBuffer.numberOfChannels) {

@@ -304,8 +304,13 @@ export async function generateMultisamplePatch(
     const sampleStart = getClamped(Math.floor(framecount * (prop(sample.inPoint, 0) / duration)), 0, framecount - 1);
     const sampleEnd = getClamped(Math.floor(framecount * (prop(sample.outPoint, duration) / duration)), sampleStart + 1, framecount);
 
+    // Calculate the actual framecount for the region (accounting for cut at loop end)
+    const actualFramecount = state.multisampleSettings.cutAtLoopEnd 
+      ? scaledLoopEnd + 5 
+      : framecount;
+    
     const region: MultisampleRegion = {
-      framecount: framecount,
+      framecount: actualFramecount,
       gain: multisampleGain,
       hikey: hiKey,
       lokey: lowKey,
@@ -317,7 +322,7 @@ export async function generateMultisamplePatch(
       "pitch.keycenter": sampleNote,
       reverse: false,
       sample: outputName,
-      "sample.end": sampleEnd,
+      "sample.end": state.multisampleSettings.cutAtLoopEnd ? actualFramecount : sampleEnd,
       "sample.start": sampleStart,
       tune: 0,
     };
@@ -328,6 +333,7 @@ export async function generateMultisamplePatch(
       (targetBitDepth && targetBitDepth !== sample.originalBitDepth) ||
       (targetChannels === "mono" && sample.audioBuffer.numberOfChannels > 1) ||
       state.multisampleSettings.normalize ||
+      state.multisampleSettings.cutAtLoopEnd ||
       multisampleGain !== 0;
 
     if (needsConversion) {
@@ -341,11 +347,15 @@ export async function generateMultisamplePatch(
               normalize: state.multisampleSettings.normalize,
               normalizeLevel: state.multisampleSettings.normalizeLevel,
               gain: multisampleGain,
+              cutAtLoopEnd: state.multisampleSettings.cutAtLoopEnd,
               loopEnd: scaledLoopEnd
             });
             
             // Validate that converted buffer frame count matches our calculation
-            const expectedFramecount = Math.floor(duration * effectiveSampleRate);
+            // If cutting is enabled, expect the cut length, otherwise expect the full duration
+            const expectedFramecount = state.multisampleSettings.cutAtLoopEnd 
+              ? scaledLoopEnd + 5 
+              : Math.floor(duration * effectiveSampleRate);
             validateFrameCount(sample.name, expectedFramecount, convertedBuffer.length, region);
             
             // Convert to WAV blob
@@ -355,6 +365,27 @@ export async function generateMultisamplePatch(
             patchJson.regions.push(region);
           } catch (error) {
             console.error(`Failed to convert sample ${sample.name}:`, error);
+            // If conversion fails, fall back to using the original file
+            return new Promise<void>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                if (e.target?.result) {
+                  zip.file(outputName, e.target.result);
+                  // Use the original framecount for the region if conversion failed
+                  region.framecount = framecount;
+                  region["sample.end"] = sampleEnd;
+                  patchJson.regions.push(region);
+                  resolve();
+                } else {
+                  reject(new Error(`Failed to read ${sample.name}`));
+                }
+              };
+              reader.onerror = () => {
+                console.error(`Failed to read original file for ${sample.name}`);
+                reject(new Error(`Failed to read ${sample.name}`));
+              };
+              reader.readAsArrayBuffer(sample.file!);
+            });
           }
         })()
       );
