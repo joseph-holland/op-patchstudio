@@ -809,7 +809,8 @@ export function LibraryPage() {
                     <table style={{
                       width: '100%',
                       borderCollapse: 'collapse',
-                      backgroundColor: 'var(--color-bg-primary)'
+                      backgroundColor: 'var(--color-bg-primary)',
+                      borderBottom: '1px solid #000'
                     }}>
                       <thead>
                         <tr style={{
@@ -1043,7 +1044,7 @@ export function LibraryPage() {
                         alignItems: 'center',
                         background: 'var(--color-bg-primary)',
                         borderTop: '1px solid var(--color-border-light)',
-                        padding: '1rem',
+                        padding: '1.75rem',
                         borderBottomLeftRadius: '0',
                         borderBottomRightRadius: '0',
                         minHeight: '64px',
@@ -1057,12 +1058,24 @@ export function LibraryPage() {
                           padding: '0.75rem 1.5rem',
                           borderRadius: '6px',
                           border: '1px solid var(--color-border-light)',
-                          background: 'var(--color-bg-primary)',
-                          color: currentPage === 1 ? 'var(--color-text-secondary)' : 'var(--color-text-primary)',
+                          background: currentPage === 1 ? 'var(--color-bg-primary)' : 'var(--color-interactive-focus)',
+                          color: currentPage === 1 ? 'var(--color-text-secondary)' : 'var(--color-white)',
                           cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
                           fontSize: '1rem',
                           opacity: currentPage === 1 ? 0.5 : 1,
                           transition: 'background 0.2s, color 0.2s',
+                        }}
+                        onMouseEnter={e => {
+                          if (currentPage !== 1) {
+                            e.currentTarget.style.background = 'var(--color-interactive-focus)';
+                            e.currentTarget.style.color = 'var(--color-white)';
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (currentPage !== 1) {
+                            e.currentTarget.style.background = 'var(--color-interactive-focus)';
+                            e.currentTarget.style.color = 'var(--color-white)';
+                          }
                         }}
                       >
                         Previous
@@ -1077,12 +1090,24 @@ export function LibraryPage() {
                           padding: '0.75rem 1.5rem',
                           borderRadius: '6px',
                           border: '1px solid var(--color-border-light)',
-                          background: 'var(--color-bg-primary)',
-                          color: (currentPage === Math.ceil(filteredPresets.length / pageSize) || filteredPresets.length === 0) ? 'var(--color-text-secondary)' : 'var(--color-text-primary)',
+                          background: (currentPage === Math.ceil(filteredPresets.length / pageSize) || filteredPresets.length === 0) ? 'var(--color-bg-primary)' : 'var(--color-interactive-focus)',
+                          color: (currentPage === Math.ceil(filteredPresets.length / pageSize) || filteredPresets.length === 0) ? 'var(--color-text-secondary)' : 'var(--color-white)',
                           cursor: (currentPage === Math.ceil(filteredPresets.length / pageSize) || filteredPresets.length === 0) ? 'not-allowed' : 'pointer',
                           fontSize: '1rem',
                           opacity: (currentPage === Math.ceil(filteredPresets.length / pageSize) || filteredPresets.length === 0) ? 0.5 : 1,
                           transition: 'background 0.2s, color 0.2s',
+                        }}
+                        onMouseEnter={e => {
+                          if (!(currentPage === Math.ceil(filteredPresets.length / pageSize) || filteredPresets.length === 0)) {
+                            e.currentTarget.style.background = 'var(--color-interactive-focus)';
+                            e.currentTarget.style.color = 'var(--color-white)';
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (!(currentPage === Math.ceil(filteredPresets.length / pageSize) || filteredPresets.length === 0)) {
+                            e.currentTarget.style.background = 'var(--color-interactive-focus)';
+                            e.currentTarget.style.color = 'var(--color-white)';
+                          }
                         }}
                       >
                         Next
@@ -1104,12 +1129,24 @@ export function LibraryPage() {
                 padding: '0.75rem 1.5rem',
                 borderRadius: '6px',
                 border: '1px solid var(--color-border-light)',
-                background: 'var(--color-bg-primary)',
-                color: currentPage === 1 ? 'var(--color-text-secondary)' : 'var(--color-text-primary)',
+                background: currentPage === 1 ? 'var(--color-bg-primary)' : 'var(--color-interactive-focus)',
+                color: currentPage === 1 ? 'var(--color-text-secondary)' : 'var(--color-white)',
                 cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
                 fontSize: '1rem',
                 opacity: currentPage === 1 ? 0.5 : 1,
                 transition: 'background 0.2s, color 0.2s',
+              }}
+              onMouseEnter={e => {
+                if (currentPage !== 1) {
+                  e.currentTarget.style.background = 'var(--color-interactive-focus)';
+                  e.currentTarget.style.color = 'var(--color-white)';
+                }
+              }}
+              onMouseLeave={e => {
+                if (currentPage !== 1) {
+                  e.currentTarget.style.background = 'var(--color-interactive-focus)';
+                  e.currentTarget.style.color = 'var(--color-white)';
+                }
               }}
             >
               Previous
@@ -1122,12 +1159,24 @@ export function LibraryPage() {
                 padding: '0.75rem 1.5rem',
                 borderRadius: '6px',
                 border: '1px solid var(--color-border-light)',
-                background: 'var(--color-bg-primary)',
-                color: currentPage === Math.ceil(filteredPresets.length / pageSize) ? 'var(--color-text-secondary)' : 'var(--color-text-primary)',
+                background: currentPage === Math.ceil(filteredPresets.length / pageSize) ? 'var(--color-bg-primary)' : 'var(--color-interactive-focus)',
+                color: currentPage === Math.ceil(filteredPresets.length / pageSize) ? 'var(--color-text-secondary)' : 'var(--color-white)',
                 cursor: currentPage === Math.ceil(filteredPresets.length / pageSize) ? 'not-allowed' : 'pointer',
                 fontSize: '1rem',
                 opacity: currentPage === Math.ceil(filteredPresets.length / pageSize) ? 0.5 : 1,
                 transition: 'background 0.2s, color 0.2s',
+              }}
+              onMouseEnter={e => {
+                if (currentPage !== Math.ceil(filteredPresets.length / pageSize)) {
+                  e.currentTarget.style.background = 'var(--color-interactive-focus)';
+                  e.currentTarget.style.color = 'var(--color-white)';
+                }
+              }}
+              onMouseLeave={e => {
+                if (currentPage !== Math.ceil(filteredPresets.length / pageSize)) {
+                  e.currentTarget.style.background = 'var(--color-interactive-focus)';
+                  e.currentTarget.style.color = 'var(--color-white)';
+                }
               }}
             >
               Next
