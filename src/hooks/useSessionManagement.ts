@@ -1,23 +1,32 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
+import type { AppState, MultisampleFile } from '../context/AppContext';
 import { sessionStorageIndexedDB } from '../utils/sessionStorageIndexedDB';
 
 export function useSessionManagement() {
   const { state, dispatch } = useAppContext();
   const saveSessionRef = useRef<(() => Promise<void>) | null>(null);
   const hasUserDeclinedSessionRef = useRef(false);
+  const currentStateRef = useRef<AppState>(state);
 
   // Save current session
   const saveSession = useCallback(async () => {
     try {
+      // Debug: Log what we're about to save
+      console.log('Saving session with settings:', {
+        drumSettings: state.drumSettings,
+        multisampleSettings: state.multisampleSettings
+      });
+      
       await sessionStorageIndexedDB.saveSession(state);
     } catch (error) {
       console.error('Failed to save session:', error);
     }
   }, [state]);
 
-  // Update the ref whenever saveSession changes
+  // Update the refs whenever they change
   saveSessionRef.current = saveSession;
+  currentStateRef.current = state;
 
   // Check for previous session on app startup
   useEffect(() => {
@@ -68,23 +77,18 @@ export function useSessionManagement() {
 
   // Auto-save session when samples are loaded or changed
   useEffect(() => {
-    // Only save if there are loaded samples or files
-    const hasDrumSamples = state.drumSamples.some(s => s && s.isLoaded);
-    const hasMultisampleFiles = state.multisampleFiles.length > 0;
-    
-    if (hasDrumSamples || hasMultisampleFiles) {
-      // Debounce the save to avoid excessive saves during rapid changes
-      const timeoutId = setTimeout(() => {
-        if (saveSessionRef.current) {
-          saveSessionRef.current();
-        }
-      }, 1000); // 1 second debounce
+    // Always save session when relevant state changes
+    // Debounce the save to avoid excessive saves during rapid changes
+    const timeoutId = setTimeout(() => {
+      if (saveSessionRef.current) {
+        saveSessionRef.current();
+      }
+    }, 1000); // 1 second debounce
 
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    }
-  }, [state.drumSamples, state.multisampleFiles]);
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [state.drumSamples, state.multisampleFiles, state.drumSettings, state.multisampleSettings]);
 
   // Load session
   const loadSession = useCallback(async () => {
@@ -97,6 +101,12 @@ export function useSessionManagement() {
         console.log('No session data available to restore');
         return;
       }
+
+      // Debug: Log what we're about to restore
+      console.log('Restoring session settings:', {
+        drumSettings: sessionData.drumSettings,
+        multisampleSettings: sessionData.multisampleSettings
+      });
 
       // Restore settings
       dispatch({
@@ -195,14 +205,14 @@ export function useSessionManagement() {
       // Use a longer delay to ensure React state updates have completed
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Get the current state after the delay to ensure we have the latest data
-      const currentFiles = state.multisampleFiles;
+      // Get the current state from the ref to avoid stale closure issues
+      const currentState = currentStateRef.current;
       
       validLoadedFiles.forEach((storedFile) => {
         if (!storedFile) return;
         
         // Find the file in the current state by file name and rootNote
-        const fileIndex = currentFiles.findIndex(f => 
+        const fileIndex = currentState.multisampleFiles.findIndex((f: MultisampleFile | null) => 
           f && f.name === storedFile.fileName && f.rootNote === storedFile.rootNote
         );
         
@@ -221,7 +231,7 @@ export function useSessionManagement() {
           });
         } else {
           // Only log warning if we actually have files loaded but can't find this specific one
-          if (currentFiles.length > 0) {
+          if (currentState.multisampleFiles.length > 0) {
             console.warn(`Could not find multisample file to update settings for file ${storedFile.fileName} with rootNote ${storedFile.rootNote}`);
           }
         }
@@ -229,7 +239,7 @@ export function useSessionManagement() {
     } catch (error) {
       console.error('Failed to load session:', error);
     }
-  }, [dispatch, state.multisampleFiles]);
+  }, [dispatch]);
 
   // Start new session (clear current session)
   const startNewSession = useCallback(() => {
@@ -243,19 +253,14 @@ export function useSessionManagement() {
   // Auto-save session periodically (as backup)
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
-      // Only save if there are loaded samples or files
-      const hasDrumSamples = state.drumSamples.some(s => s && s.isLoaded);
-      const hasMultisampleFiles = state.multisampleFiles.length > 0;
-      
-      if (hasDrumSamples || hasMultisampleFiles) {
-        if (saveSessionRef.current) {
-          saveSessionRef.current();
-        }
+      // Always save session periodically as backup
+      if (saveSessionRef.current) {
+        saveSessionRef.current();
       }
     }, 30000); // Save every 30 seconds
 
     return () => clearInterval(autoSaveInterval);
-  }, [state.drumSamples, state.multisampleFiles]);
+  }, [state.drumSamples, state.multisampleFiles, state.drumSettings, state.multisampleSettings]);
 
   return {
     saveSession,

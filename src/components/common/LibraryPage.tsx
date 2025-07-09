@@ -9,6 +9,51 @@ import { blobToAudioBuffer } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 import { IconButton } from './IconButton';
 
+// Default values for clean state restoration
+const defaultDrumSettings = {
+  sampleRate: 44100,
+  bitDepth: 16,
+  channels: 2,
+  presetName: '',
+  normalize: false,
+  normalizeLevel: -6.0,
+  presetSettings: {
+    playmode: 'poly' as const,
+    transpose: 0,
+    velocity: 20,
+    volume: 69,
+    width: 0
+  }
+};
+
+const defaultMultisampleSettings = {
+  sampleRate: 44100,
+  bitDepth: 16,
+  channels: 2,
+  presetName: '',
+  normalize: false,
+  normalizeLevel: -6.0,
+  cutAtLoopEnd: false,
+  gain: 0,
+  loopEnabled: true,
+  loopOnRelease: true
+};
+
+const defaultDrumSample = {
+  file: null,
+  audioBuffer: null,
+  name: '',
+  isLoaded: false,
+  inPoint: 0,
+  outPoint: 0,
+  playmode: 'oneshot' as const,
+  reverse: false,
+  tune: 0,
+  pan: 0,
+  gain: 0,
+  hasBeenEdited: false
+};
+
 export function LibraryPage() {
   const { state, dispatch } = useAppContext();
   const [presets, setPresets] = useState<LibraryPreset[]>([]);
@@ -154,62 +199,63 @@ export function LibraryPage() {
       }
 
       if (preset.type === 'drum') {
-        // Restore drum settings
-        Object.entries(presetData.drumSettings).forEach(([key, value]) => {
-          if (key === 'presetSettings') {
-            Object.entries(value as any).forEach(([settingKey, settingValue]) => {
-              dispatch({ 
-                type: `SET_DRUM_PRESET_${settingKey.toUpperCase()}` as any, 
-                payload: settingValue 
-              });
-            });
-          } else {
-            dispatch({ 
-              type: `SET_DRUM_${key.toUpperCase()}` as any, 
-              payload: value 
-            });
-          }
-        });
         // Restore drum samples (with audioBuffer)
         const drumSamples = await restoreAudioBuffers(presetData.drumSamples || []);
+        
+        // Create a clean state for drum preset - clear multisample data
+        const cleanMultisampleFiles: any[] = [];
+        
+        // Use RESTORE_SESSION to properly restore the complete state
         dispatch({ type: 'RESTORE_SESSION', payload: {
           drumSettings: presetData.drumSettings,
-          multisampleSettings: state.multisampleSettings,
+          multisampleSettings: defaultMultisampleSettings,
           drumSamples,
-          multisampleFiles: state.multisampleFiles,
-          selectedMultisample: state.selectedMultisample,
+          multisampleFiles: cleanMultisampleFiles,
+          selectedMultisample: null,
           isDrumKeyboardPinned: state.isDrumKeyboardPinned,
           isMultisampleKeyboardPinned: state.isMultisampleKeyboardPinned
         }});
-        // Restore imported preset
+        
+        // Restore imported preset if it exists
         if (presetData.importedDrumPreset) {
           const importedDrumPreset = await restoreAudioBuffers(presetData.importedDrumPreset);
           dispatch({ type: 'SET_IMPORTED_DRUM_PRESET', payload: importedDrumPreset });
+        } else {
+          // Clear any existing imported drum preset
+          dispatch({ type: 'SET_IMPORTED_DRUM_PRESET', payload: null });
         }
+        
+        // Clear any existing imported multisample preset
+        dispatch({ type: 'SET_IMPORTED_MULTISAMPLE_PRESET', payload: null });
       } else {
-        // Restore multisample settings
-        Object.entries(presetData.multisampleSettings).forEach(([key, value]) => {
-          dispatch({ 
-            type: `SET_MULTISAMPLE_${key.toUpperCase()}` as any, 
-            payload: value 
-          });
-        });
         // Restore multisample files (with audioBuffer)
         const multisampleFiles = await restoreAudioBuffers(presetData.multisampleFiles || []);
+        
+        // Create a clean state for multisample preset - clear drum data
+        const cleanDrumSamples = Array(24).fill(null).map(() => ({ ...defaultDrumSample }));
+        
+        // Use RESTORE_SESSION to properly restore the complete state
         dispatch({ type: 'RESTORE_SESSION', payload: {
-          drumSettings: state.drumSettings,
+          drumSettings: defaultDrumSettings,
           multisampleSettings: presetData.multisampleSettings,
-          drumSamples: state.drumSamples,
+          drumSamples: cleanDrumSamples,
           multisampleFiles,
           selectedMultisample: state.selectedMultisample,
           isDrumKeyboardPinned: state.isDrumKeyboardPinned,
           isMultisampleKeyboardPinned: state.isMultisampleKeyboardPinned
         }});
-        // Restore imported preset
+        
+        // Restore imported preset if it exists
         if (presetData.importedMultisamplePreset) {
           const importedMultisamplePreset = await restoreAudioBuffers(presetData.importedMultisamplePreset);
           dispatch({ type: 'SET_IMPORTED_MULTISAMPLE_PRESET', payload: importedMultisamplePreset });
+        } else {
+          // Clear any existing imported multisample preset
+          dispatch({ type: 'SET_IMPORTED_MULTISAMPLE_PRESET', payload: null });
         }
+        
+        // Clear any existing imported drum preset
+        dispatch({ type: 'SET_IMPORTED_DRUM_PRESET', payload: null });
       }
 
       // Mark the current session as saved to library since we're working with a saved preset
@@ -823,10 +869,10 @@ export function LibraryPage() {
                             fontSize: '0.85rem',
                             fontWeight: '500',
                             color: 'var(--color-text-primary)',
-                          }}>
+                          }} scope="col">
                             <input
                               type="checkbox"
-                              checked={selectedPresets.size === filteredPresets.length && filteredPresets.length > 0}
+                              checked={filteredPresets.length > 0 && filteredPresets.every(preset => selectedPresets.has(preset.id))}
                               onChange={e => e.target.checked ? selectAllPresets() : clearSelection()}
                               style={{
                                 margin: 0,
@@ -847,6 +893,7 @@ export function LibraryPage() {
                               cursor: 'pointer'
                             }}
                             onClick={() => handleSort('name')}
+                            scope="col"
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <span>name</span>
@@ -866,6 +913,7 @@ export function LibraryPage() {
                               color: 'var(--color-text-primary)',
                             }}
                             onClick={() => handleSort('type')}
+                            scope="col"
                           >
                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
                               <span>type</span>
@@ -882,7 +930,7 @@ export function LibraryPage() {
                             fontSize: '0.85rem',
                             fontWeight: '500',
                             color: 'var(--color-text-primary)',
-                          }}>
+                          }} scope="col">
                             samples
                           </th>
                           <th 
@@ -895,6 +943,7 @@ export function LibraryPage() {
                               cursor: 'pointer'
                             }}
                             onClick={() => handleSort('date')}
+                            scope="col"
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                               <span>updated</span>
@@ -911,7 +960,7 @@ export function LibraryPage() {
                             fontSize: '0.85rem',
                             fontWeight: '500',
                             color: 'var(--color-text-primary)'
-                          }}>
+                          }} scope="col">
                             actions
                           </th>
                         </tr>
