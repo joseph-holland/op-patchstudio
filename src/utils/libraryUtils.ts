@@ -125,7 +125,7 @@ export async function savePresetToLibrary(
     };
     
     const preset: LibraryPreset = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 2 + 9)}`,
       name: presetName,
       type,
       data: presetData,
