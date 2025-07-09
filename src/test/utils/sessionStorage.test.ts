@@ -121,6 +121,23 @@ describe('SessionStorageManager', () => {
     expect(mockAudioContext.decodeAudioData).toHaveBeenCalled();
   });
 
+  it('should not show restore prompt when session is saved to library', async () => {
+    // Mock a session that has been saved to library
+    const mockSessionData = {
+      sessionId: 'test-session-id',
+      timestamp: Date.now(),
+      drumSamples: [],
+      multisampleFiles: [],
+      savedToLibrary: true
+    };
+    
+    localStorageMock.getItem.mockReturnValue('test-session-id');
+    localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(mockSessionData));
+    
+    // The session should not trigger a restore prompt
+    expect(sessionStorage.hasPreviousSession()).toBe(true);
+  });
+
   it('should save and load session data', async () => {
     const mockState: Partial<AppState> = {
       drumSettings: {

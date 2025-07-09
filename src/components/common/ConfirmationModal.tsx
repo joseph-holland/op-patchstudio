@@ -1,7 +1,9 @@
+import React from 'react';
+
 interface ConfirmationModalProps {
   isOpen: boolean;
   message: string;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -11,6 +13,19 @@ export function ConfirmationModal({
   onConfirm, 
   onCancel 
 }: ConfirmationModalProps) {
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    try {
+      await onConfirm();
+    } catch (error) {
+      console.error('Error in confirmation callback:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -83,59 +98,75 @@ export function ConfirmationModal({
         }}>
           <button
             onClick={onCancel}
+            disabled={isLoading}
             style={{
               padding: '0.625rem 1.25rem',
               border: '1px solid var(--color-border-medium)',
               borderRadius: '3px',
               backgroundColor: 'var(--color-bg-primary)',
-              color: 'var(--color-text-secondary)',
+              color: isLoading ? 'var(--color-border-medium)' : 'var(--color-text-secondary)',
               fontSize: '0.875rem',
               fontWeight: '500',
-              cursor: 'pointer',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
               fontFamily: 'inherit',
-              minWidth: '80px'
+              minWidth: '80px',
+              opacity: isLoading ? 0.6 : 1
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-              e.currentTarget.style.borderColor = 'var(--color-border-medium)';
-              e.currentTarget.style.color = 'var(--color-interactive-dark)';
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+                e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                e.currentTarget.style.color = 'var(--color-interactive-dark)';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
-              e.currentTarget.style.borderColor = 'var(--color-border-medium)';
-              e.currentTarget.style.color = 'var(--color-text-secondary)';
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+                e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                e.currentTarget.style.color = 'var(--color-text-secondary)';
+              }
             }}
           >
             cancel
           </button>
           <button
-            onClick={onConfirm}
+            onClick={handleConfirm}
+            disabled={isLoading}
             style={{
               padding: '0.625rem 1.25rem',
               border: 'none',
               borderRadius: '3px',
-              backgroundColor: 'var(--color-interactive-focus)',
+              backgroundColor: isLoading ? 'var(--color-border-medium)' : 'var(--color-interactive-focus)',
               color: 'var(--color-white)',
               fontSize: '0.875rem',
               fontWeight: '500',
-              cursor: 'pointer',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
               fontFamily: 'inherit',
-              minWidth: '80px'
+              minWidth: '80px',
+              opacity: isLoading ? 0.6 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }
             }}
           >
-            ok
+            {isLoading && <i className="fas fa-spinner fa-spin" style={{ fontSize: '0.875rem' }}></i>}
+            {isLoading ? 'processing...' : 'ok'}
           </button>
         </div>
       </div>

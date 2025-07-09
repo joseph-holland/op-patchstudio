@@ -29,15 +29,6 @@ const ADSR_PRESETS = {
   }
 };
 
-type PresetType = keyof typeof ADSR_PRESETS;
-
-// Function to get a random preset
-const getRandomPreset = (): PresetType => {
-  const presetTypes: PresetType[] = ['bass', 'pad', 'keys', 'pluck', 'lead'];
-  const randomIndex = Math.floor(Math.random() * presetTypes.length);
-  return presetTypes[randomIndex];
-};
-
 interface MultisampleAdvancedSettings {
   playmode: 'poly' | 'mono' | 'legato';
   loopEnabled: boolean;
@@ -64,28 +55,6 @@ interface MultisampleAdvancedSettings {
   };
 }
 
-// Function to create default settings with a random preset
-const createDefaultSettings = (): MultisampleAdvancedSettings => {
-  const randomPreset = getRandomPreset();
-  const presetValues = ADSR_PRESETS[randomPreset];
-  
-  return {
-    playmode: 'poly',
-    loopEnabled: true,
-    loopOnRelease: true,
-    transpose: 0,
-    velocitySensitivity: 20,
-    volume: 69,
-    width: 0,
-    highpass: 0,
-    portamentoType: 'linear',
-    portamentoAmount: 0,
-    tuningRoot: 0, // C
-    ampEnvelope: presetValues.amp,
-    filterEnvelope: presetValues.filter,
-  };
-};
-
 // Function to create true default settings (non-random, consistent values)
 const createTrueDefaultSettings = (): MultisampleAdvancedSettings => {
   return {
@@ -106,10 +75,33 @@ const createTrueDefaultSettings = (): MultisampleAdvancedSettings => {
 };
 
 export function MultisamplePresetSettings() {
-  const { dispatch } = useAppContext();
+  const { state, dispatch } = useAppContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [settings, setSettings] = useState<MultisampleAdvancedSettings>(createDefaultSettings());
+  
+  // Initialize settings from global state instead of random defaults
+  const [settings, setSettings] = useState<MultisampleAdvancedSettings>(() => {
+    // Use global state if available, otherwise use true defaults
+    if (state.multisampleSettings) {
+      return {
+        playmode: 'poly', // This is not stored in global state, use default
+        loopEnabled: state.multisampleSettings.loopEnabled,
+        loopOnRelease: state.multisampleSettings.loopOnRelease,
+        transpose: 0, // Not stored in global state
+        velocitySensitivity: 20, // Not stored in global state
+        volume: 69, // Not stored in global state
+        width: 0, // Not stored in global state
+        highpass: 0, // Not stored in global state
+        portamentoType: 'linear', // Not stored in global state
+        portamentoAmount: 0, // Not stored in global state
+        tuningRoot: 0, // Not stored in global state
+        ampEnvelope: ADSR_PRESETS.keys.amp, // Use consistent default
+        filterEnvelope: ADSR_PRESETS.keys.filter, // Use consistent default
+      };
+    }
+    return createTrueDefaultSettings();
+  });
+  
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
     sound: false,
@@ -126,10 +118,19 @@ export function MultisamplePresetSettings() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Dispatch initial settings to app context on mount
+  // Update local settings when global state changes (e.g., during session restoration)
+  useEffect(() => {
+    setSettings(prevSettings => ({
+      ...prevSettings,
+      loopEnabled: state.multisampleSettings.loopEnabled,
+      loopOnRelease: state.multisampleSettings.loopOnRelease,
+    }));
+  }, [state.multisampleSettings.loopEnabled, state.multisampleSettings.loopOnRelease]);
+
+  // Dispatch settings to app context whenever settings change
   useEffect(() => {
     dispatchSettingsToContext(settings);
-  }, []); // Only run once on mount
+  }, [settings, dispatch]); // Run whenever settings change
 
   const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -192,7 +193,6 @@ export function MultisamplePresetSettings() {
   const handleReset = () => {
     const resetSettings = createTrueDefaultSettings();
     setSettings(resetSettings);
-    dispatchSettingsToContext(resetSettings);
   };
 
   const updateSetting = <K extends keyof MultisampleAdvancedSettings>(
@@ -201,7 +201,6 @@ export function MultisamplePresetSettings() {
   ) => {
     setSettings(prev => {
       const newSettings = { ...prev, [key]: value };
-      dispatchSettingsToContext(newSettings);
       return newSettings;
     });
   };
@@ -250,7 +249,6 @@ export function MultisamplePresetSettings() {
   const updateAmpEnvelope = (envelope: MultisampleAdvancedSettings['ampEnvelope']) => {
     setSettings(prev => {
       const newSettings = { ...prev, ampEnvelope: envelope };
-      dispatchSettingsToContext(newSettings);
       return newSettings;
     });
   };
@@ -258,7 +256,6 @@ export function MultisamplePresetSettings() {
   const updateFilterEnvelope = (envelope: MultisampleAdvancedSettings['filterEnvelope']) => {
     setSettings(prev => {
       const newSettings = { ...prev, filterEnvelope: envelope };
-      dispatchSettingsToContext(newSettings);
       return newSettings;
     });
   };

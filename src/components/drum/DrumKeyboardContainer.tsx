@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { DrumKeyboard } from './DrumKeyboard';
-import { Tooltip } from '../common/Tooltip';
+import { EnhancedTooltip } from '../common/EnhancedTooltip';
 import { cookieUtils, COOKIE_KEYS } from '../../utils/cookies';
 
 interface DrumKeyboardContainerProps {
@@ -55,15 +55,17 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
 
   const tooltipContent = isMobile ? (
     <>
-      <strong>load:</strong> tap empty keys to browse and select files<br />
-      <strong>play:</strong> tap keys to play loaded samples<br />
-      <strong>pin:</strong> use the pin icon to keep the keyboard at the top of the screen
+      <h3>keyboard controls</h3>
+      <p><strong>load:</strong> tap empty keys to browse and select files</p>
+      <p><strong>play:</strong> tap keys to play loaded samples</p>
+      <p><strong>pin:</strong> use the pin icon to keep the keyboard at the top of the screen</p>
     </>
   ) : (
     <>
-      <strong>load:</strong> click empty keys to browse files or drag and drop audio files directly onto any key<br />
-      <strong>play:</strong> use keyboard keys (<strong>A-J, W, E, R, Y, U</strong>) to trigger samples and <strong>Z</strong> / <strong>X</strong> to switch octaves<br />
-      <strong>pin:</strong> use the pin icon to keep the keyboard at the top of the screen
+      <h3>keyboard controls</h3>
+      <p><strong>load:</strong> click empty keys to browse files or drag and drop audio files directly onto any key</p>
+      <p><strong>play:</strong> use keyboard keys (<strong>A-J, W, E, R, Y, U</strong>) to trigger samples and <strong>Z</strong> / <strong>X</strong> to switch octaves</p>
+      <p><strong>pin:</strong> use the pin icon to keep the keyboard at the top of the screen</p>
     </>
   );
 
@@ -165,7 +167,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
             >
               load and play samples
             </h3>
-            <Tooltip
+            <EnhancedTooltip
               isVisible={isTooltipVisible}
               content={tooltipContent}
             >
@@ -187,7 +189,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                   }}
                 />
               </span>
-            </Tooltip>
+                          </EnhancedTooltip>
           </div>
           <div
             style={{

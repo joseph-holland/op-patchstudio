@@ -8,6 +8,7 @@ import { SmallWaveform } from '../common/SmallWaveform';
 import { WaveformZoomModal } from '../common/WaveformZoomModal';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { DrumSampleSettingsModal } from './DrumSampleSettingsModal';
+import { IconButton } from '../common/IconButton';
 
 interface DrumSampleTableProps {
   onFileUpload: (index: number, file: File) => void;
@@ -37,24 +38,7 @@ const c = {
   actionHover: 'var(--color-interactive-dark)',
 };
 
-// Style for action buttons to ensure accessibility (44x44px target)
-const actionButtonStyle: React.CSSProperties = {
-  width: '44px',
-  height: '44px',
-  minWidth: '44px',
-  minHeight: '44px',
-  maxWidth: '44px',
-  maxHeight: '44px',
-  padding: 0,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  border: `1px solid ${c.borderMed}`,
-  borderRadius: '3px',
-  backgroundColor: c.bg,
-  cursor: 'pointer',
-  flexShrink: 0
-};
+
 
 export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }: DrumSampleTableProps) {
   const { state, dispatch } = useAppContext();
@@ -261,50 +245,33 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                        display: 'flex',
                        gap: '0.25rem'
                      }}>
-                       <button
-                         disabled={!isLoaded}
-                         onClick={() => playSample(index).catch(error => {
-                           console.error('Error playing sample:', error);
-                         })}
-                         style={{
-                           ...actionButtonStyle,
-                           color: isLoaded ? c.action : c.textSecondary
-                         }}
+                       <IconButton
+                         icon="fas fa-play"
+                         onClick={() => playSample(index).catch(error => { console.error('Error playing sample:', error); })}
                          title="play"
-                       >
-                         <i className="fas fa-play" style={{ fontSize: '18px' }}></i>
-                       </button>
-                       <button
+                         color={isLoaded ? c.action : c.textSecondary}
                          disabled={!isLoaded}
+                       />
+                       <IconButton
+                         icon="fas fa-times"
                          onClick={() => onClearSample(index)}
-                         style={{
-                           ...actionButtonStyle,
-                           color: isLoaded ? c.action : c.textSecondary
-                         }}
                          title="clear"
-                       >
-                         <i className="fas fa-times" style={{ fontSize: '18px' }}></i>
-                       </button>
-                       <button
-                         onClick={() => onRecordSample?.(index)}
-                         style={{
-                           ...actionButtonStyle,
-                         }}
-                         title="record"
-                       >
-                         <i className="fas fa-microphone" style={{ fontSize: '18px', color: 'var(--color-accent-primary)' }}></i>
-                       </button>
-                       <button
+                         color={isLoaded ? c.action : c.textSecondary}
                          disabled={!isLoaded}
+                       />
+                       <IconButton
+                         icon="fas fa-microphone"
+                         onClick={() => onRecordSample?.(index)}
+                         title="record"
+                         color="var(--color-accent-primary)"
+                       />
+                       <IconButton
+                         icon="fas fa-cog"
                          onClick={() => openSettingsModal(index)}
-                         style={{
-                           ...actionButtonStyle,
-                           color: isLoaded ? c.action : c.textSecondary
-                         }}
                          title="settings"
-                       >
-                         <i className="fas fa-cog" style={{ fontSize: '18px' }}></i>
-                       </button>
+                         color={isLoaded ? c.action : c.textSecondary}
+                         disabled={!isLoaded}
+                       />
                      </div>
                   </div>
 
@@ -415,17 +382,18 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
   // Desktop Table Layout
   return (
     <div style={{
-      fontFamily: '"Montserrat", "Arial", sans-serif'
+      fontFamily: '"Montserrat", "Arial", sans-serif',
+      // Remove or reduce padding/margin so table stretches to section edges
+      padding: 0,
+      margin: 0
     }}>
       {/* Table Header */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '100px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
+        gridTemplateColumns: '120px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
         gap: '0.5rem',
         padding: '0.75rem',
         background: c.bgAlt,
-        borderRadius: '6px 6px 0 0',
-        border: `1px solid ${c.border}`,
         borderBottom: 'none',
         fontSize: '0.8rem',
         fontWeight: 'bold',
@@ -433,15 +401,17 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
       }}>
         <div>drum key</div>
         <div>file details</div>
-        <div>waveform</div>
-        <div>actions</div>
+        <div style={{ paddingLeft: '10px' }}>waveform</div>
+        <div style={{ paddingLeft: '10px' }}>actions</div>
       </div>
 
       {/* Sample Rows */}
       <div style={{
-        border: `1px solid ${c.border}`,
-        borderRadius: '0 0 6px 6px',
-        overflow: 'hidden'
+        borderTop: `1px solid ${c.border}`,
+        borderBottom: `1px solid ${c.border}`,
+        overflow: 'hidden',
+        padding: 0,
+        margin: 0
       }}>
         {Array.from({ length: 24 }, (_, index) => {
           const sample = state.drumSamples[index];
@@ -466,9 +436,9 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '100px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
+                  gridTemplateColumns: '120px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
                   gap: '0.5rem',
-                  padding: '0.75rem',
+                  padding: 0, // Remove row padding
                   background: c.bg,
                   borderBottom: index < 23 ? `1px solid ${c.border}` : 'none',
                   transition: 'background 0.2s ease',
@@ -486,12 +456,14 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
               >
                 {/* Drum Name */}
                 <div style={{
+                  gridColumn: '1 / 2',
                   fontSize: '0.8rem',
                   fontWeight: '500',
                   color: c.text,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem'
+                  gap: '0.5rem',
+                  paddingLeft: '16px'
                 }}>
                   {drumSampleNames[index]}
                   {sample?.hasBeenEdited && (
@@ -512,6 +484,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                   <>
                     {/* Sample Info */}
                     <div style={{
+                      gridColumn: '2 / 3',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '0.15rem'
@@ -536,9 +509,11 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
 
                     {/* Waveform */}
                     <div style={{
+                      gridColumn: '3 / 4',
                       height: '44px',
                       display: 'flex',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      paddingRight: '8px'
                     }}>
                                               {sample.audioBuffer ? (
                           <SmallWaveform
@@ -580,7 +555,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                   </>
                 ) : (
                   // Empty state - spans both columns
-                  <div style={{ gridColumn: 'span 2' }}>
+                  <div style={{ gridColumn: '2 / 4', paddingRight: '8px' }}>
                     <button
                       onClick={() => openFileDialog(index)}
                       style={{
@@ -614,55 +589,40 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
 
                 {/* Actions - Only play, clear, and settings */}
                 <div style={{
+                  gridColumn: '4 / 5',
                   display: 'flex',
                   gap: '0.25rem',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  paddingRight: '16px'
                 }}>
-                  <button
-                    disabled={!isLoaded}
-                    onClick={() => playSample(index).catch(error => {
-                      console.error('Error playing sample:', error);
-                    })}
-                    style={{
-                      ...actionButtonStyle,
-                      color: isLoaded ? c.action : c.textSecondary
-                    }}
+                  <IconButton
+                    icon="fas fa-play"
+                    onClick={() => playSample(index).catch(error => { console.error('Error playing sample:', error); })}
                     title="play"
-                  >
-                    <i className="fas fa-play" style={{ fontSize: '18px' }}></i>
-                  </button>
-                  <button
+                    color={isLoaded ? c.action : c.textSecondary}
                     disabled={!isLoaded}
+                  />
+                  <IconButton
+                    icon="fas fa-times"
                     onClick={() => onClearSample(index)}
-                    style={{
-                      ...actionButtonStyle,
-                      color: isLoaded ? c.action : c.textSecondary
-                    }}
                     title="clear"
-                  >
-                    <i className="fas fa-times" style={{ fontSize: '18px' }}></i>
-                  </button>
-                  <button
-                    onClick={() => onRecordSample?.(index)}
-                    style={{
-                      ...actionButtonStyle,
-                    }}
-                    title="record"
-                  >
-                    <i className="fas fa-microphone" style={{ fontSize: '18px', color: 'var(--color-accent-primary)' }}></i>
-                  </button>
-                  <button
+                    color={isLoaded ? c.action : c.textSecondary}
                     disabled={!isLoaded}
+                  />
+                  <IconButton
+                    icon="fas fa-microphone"
+                    onClick={() => onRecordSample?.(index)}
+                    title="record"
+                    color="var(--color-accent-primary)"
+                  />
+                  <IconButton
+                    icon="fas fa-cog"
                     onClick={() => openSettingsModal(index)}
-                    style={{
-                      ...actionButtonStyle,
-                      color: isLoaded ? c.action : c.textSecondary
-                    }}
                     title="settings"
-                  >
-                    <i className="fas fa-cog" style={{ fontSize: '18px' }}></i>
-                  </button>
+                    color={isLoaded ? c.action : c.textSecondary}
+                    disabled={!isLoaded}
+                  />
                 </div>
               </div>
             </div>

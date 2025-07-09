@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Tooltip } from '../common/Tooltip';
+import { EnhancedTooltip } from '../common/EnhancedTooltip';
 
 interface VirtualMidiKeyboardProps {
   assignedNotes?: number[]; // MIDI note numbers that have samples assigned
@@ -237,15 +237,23 @@ export function VirtualMidiKeyboard({
 
   const tooltipContent = isMobile ? (
     <>
-      <strong>load:</strong> tap empty keys to browse and select files<br />
-      <strong>play:</strong> tap keys to play loaded samples<br />
-      <strong>pin:</strong> use the pin icon to keep the keyboard at the top of the screen
+      <h3>
+        <i className="fas fa-keyboard" style={{ marginRight: '0.5rem' }}></i>
+        keyboard controls
+      </h3>
+      <p><strong>load:</strong> tap empty keys to browse and select files</p>
+      <p><strong>play:</strong> tap keys to play loaded samples</p>
+      <p><strong>pin:</strong> use the pin icon to keep the keyboard at the top of the screen</p>
     </>
   ) : (
     <>
-      <strong>load:</strong> click empty keys to browse files or drag & drop audio onto any key<br />
-      <strong>play:</strong> use keyboard keys (<strong>A-J, W, E, T, Y, U</strong>) & <strong>Z/X</strong> to change octave<br />
-      <strong>pin:</strong> keep the keyboard fixed using the pin icon
+      <h3>
+        <i className="fas fa-keyboard" style={{ marginRight: '0.5rem' }}></i>
+        keyboard controls
+      </h3>
+      <p><strong>load:</strong> click empty keys to browse files or drag & drop audio onto any key</p>
+      <p><strong>play:</strong> use keyboard keys (<strong>A-J, W, E, T, Y, U</strong>) & <strong>Z/X</strong> to change octave</p>
+      <p><strong>pin:</strong> keep the keyboard fixed using the pin icon</p>
     </>
   );
 
@@ -620,7 +628,7 @@ export function VirtualMidiKeyboard({
             }}>
               load and play samples
             </h3>
-            <Tooltip
+            <EnhancedTooltip
               isVisible={isTooltipVisible}
               content={tooltipContent}
             >
@@ -642,7 +650,7 @@ export function VirtualMidiKeyboard({
                   }}
                 />
               </span>
-            </Tooltip>
+                          </EnhancedTooltip>
           </div>
           <div style={{
             display: 'flex',

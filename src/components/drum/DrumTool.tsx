@@ -12,6 +12,8 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 import { usePatchGeneration } from '../../hooks/usePatchGeneration';
 import { audioBufferToWav } from '../../utils/audio';
 import { DrumKeyboardContainer } from './DrumKeyboardContainer';
+import { savePresetToLibrary } from '../../utils/libraryUtils';
+import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 
 export function DrumTool() {
   const { state, dispatch } = useAppContext();
@@ -21,8 +23,8 @@ export function DrumTool() {
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     message: string;
-    onConfirm: () => void;
-  }>({ isOpen: false, message: '', onConfirm: () => {} });
+    onConfirm: () => void | Promise<void>;
+  }>({ isOpen: false, message: '', onConfirm: async () => {} });
   const [recordingModal, setRecordingModal] = useState<{
     isOpen: boolean;
     targetIndex: number | null;
@@ -74,7 +76,7 @@ export function DrumTool() {
         dispatch({ type: 'SET_DRUM_CHANNELS', payload: 0 });
         dispatch({ type: 'SET_DRUM_NORMALIZE', payload: false });
         dispatch({ type: 'SET_DRUM_NORMALIZE_LEVEL', payload: 0.0 });
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -91,40 +93,84 @@ export function DrumTool() {
     setConfirmDialog({
       isOpen: true,
       message: 'are you sure you want to clear this sample?',
-      onConfirm: () => {
+      onConfirm: async () => {
         clearDrumSample(index);
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
 
-  const handleGeneratePatch = async () => {
+
+
+  const handleSaveToLibrary = async () => {
+    try {
+      const result = await savePresetToLibrary(state, state.drumSettings.presetName, 'drum');
+      if (result.success) {
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: {
+            id: Date.now().toString(),
+            type: 'success',
+            title: 'preset saved',
+            message: `"${state.drumSettings.presetName}" saved to library`
+          }
+        });
+        // Trigger library refresh event
+        window.dispatchEvent(new CustomEvent('library-refresh'));
+      } else {
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: {
+            id: Date.now().toString(),
+            type: 'error',
+            title: 'save failed',
+            message: result.error || 'failed to save preset to library'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error saving to library:', error);
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'error',
+          title: 'save failed',
+          message: 'failed to save preset to library'
+        }
+      });
+    }
+  };
+
+  const handleDownloadPreset = async () => {
     try {
       const patchName = state.drumSettings.presetName.trim() || 'drum_patch';
       await generateDrumPatchFile(patchName);
     } catch (error) {
-      console.error('Error generating patch:', error);
+      console.error('Error downloading preset:', error);
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     setConfirmDialog({
       isOpen: true,
       message: 'are you sure you want to clear all loaded samples?',
-      onConfirm: () => {
+      onConfirm: async () => {
         for (let i = 0; i < 24; i++) {
           clearDrumSample(i);
         }
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        // Reset saved to library flag since we're starting fresh
+        await sessionStorageIndexedDB.resetSavedToLibraryFlag();
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
 
-  const handleResetAll = () => {
+  const handleResetAll = async () => {
     setConfirmDialog({
       isOpen: true,
       message: 'are you sure you want to reset everything to defaults? this will clear all samples, reset preset name, audio settings and preset settings.',
-      onConfirm: () => {
+      onConfirm: async () => {
         // Clear all samples
         for (let i = 0; i < 24; i++) {
           clearDrumSample(i);
@@ -149,7 +195,10 @@ export function DrumTool() {
         dispatch({ type: 'SET_DRUM_PRESET_VOLUME', payload: 69 });
         dispatch({ type: 'SET_DRUM_PRESET_WIDTH', payload: 0 });
         
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        // Reset saved to library flag since we're starting fresh
+        await sessionStorageIndexedDB.resetSavedToLibraryFlag();
+        
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -275,23 +324,22 @@ export function DrumTool() {
 
           {/* Content */}
           <div style={{ 
-            padding: isMobile ? '1rem' : '2rem',
+            padding: isMobile ? '1rem' : '0',
           }}>
             <DrumSampleTable 
               onFileUpload={handleFileUpload}
               onClearSample={handleClearSample}
               onRecordSample={handleOpenRecording}
             />
-            
-            {/* Action Buttons Below Table */}
+            {/* Action Buttons Below Table - RESTORED */}
             <div style={{
               display: 'flex',
               gap: '1rem',
-              justifyContent: isMobile ? 'center' : 'flex-end',
-              flexDirection: isMobile ? 'column' : 'row',
-              marginTop: '2rem',
-              paddingTop: '1.5rem',
-              borderTop: '1px solid var(--color-border-light)',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              // padding: '1rem 0 0 0',
+              padding: '1.75rem',
+              flexDirection: isMobile ? 'column' : 'row'
             }}>
               <button
                 onClick={handleClearAll}
@@ -332,7 +380,7 @@ export function DrumTool() {
                 }}
               >
                 <i className="fas fa-trash" style={{ fontSize: '1rem' }}></i>
-                clear all samples
+                clear all
               </button>
               <button
                 onClick={() => setBulkEditModal(true)}
@@ -369,7 +417,7 @@ export function DrumTool() {
                 }}
               >
                 <i className="fas fa-pencil" style={{ fontSize: '1rem' }}></i>
-                bulk edit samples
+                bulk edit
               </button>
             </div>
           </div>
@@ -422,7 +470,8 @@ export function DrumTool() {
           onPresetNameChange={handlePresetNameChange}
           hasChangesFromDefaults={hasChangesFromDefaults}
           onResetAll={handleResetAll}
-          onGeneratePatch={handleGeneratePatch}
+          onSaveToLibrary={handleSaveToLibrary}
+          onDownloadPreset={handleDownloadPreset}
           inputId="preset-name"
         />
       </div>
@@ -432,7 +481,7 @@ export function DrumTool() {
         isOpen={confirmDialog.isOpen}
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} })}
       />
 
       {/* Recording Modal */}

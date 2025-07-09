@@ -13,6 +13,9 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 import { usePatchGeneration } from '../../hooks/usePatchGeneration';
 import { audioBufferToWav } from '../../utils/audio';
 import { cookieUtils, COOKIE_KEYS } from '../../utils/cookies';
+import { savePresetToLibrary } from '../../utils/libraryUtils';
+import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
+
 
 
 export function MultisampleTool() {
@@ -25,8 +28,8 @@ export function MultisampleTool() {
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     message: string;
-    onConfirm: () => void;
-  }>({ isOpen: false, message: '', onConfirm: () => {} });
+    onConfirm: () => void | Promise<void>;
+  }>({ isOpen: false, message: '', onConfirm: async () => {} });
   const [recordingModal, setRecordingModal] = useState<{
     isOpen: boolean;
     targetIndex: number | null;
@@ -129,7 +132,7 @@ export function MultisampleTool() {
         dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: 0 });
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: true });
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE', payload: true });
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -153,40 +156,84 @@ export function MultisampleTool() {
     setConfirmDialog({
       isOpen: true,
       message: 'are you sure you want to clear this sample?',
-      onConfirm: () => {
+      onConfirm: async () => {
         clearMultisampleFile(index);
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
 
-  const handleGeneratePatch = async () => {
+
+
+  const handleSaveToLibrary = async () => {
+    try {
+      const result = await savePresetToLibrary(state, state.multisampleSettings.presetName, 'multisample');
+      if (result.success) {
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: {
+            id: Date.now().toString(),
+            type: 'success',
+            title: 'preset saved',
+            message: `"${state.multisampleSettings.presetName}" saved to library`
+          }
+        });
+        // Trigger library refresh event
+        window.dispatchEvent(new CustomEvent('library-refresh'));
+      } else {
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: {
+            id: Date.now().toString(),
+            type: 'error',
+            title: 'save failed',
+            message: result.error || 'failed to save preset to library'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error saving to library:', error);
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'error',
+          title: 'save failed',
+          message: 'failed to save preset to library'
+        }
+      });
+    }
+  };
+
+  const handleDownloadPreset = async () => {
     try {
       const patchName = state.multisampleSettings.presetName.trim() || 'multisample_patch';
       await generateMultisamplePatchFile(patchName);
     } catch (error) {
-      console.error('Error generating patch:', error);
+      console.error('Error downloading preset:', error);
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     setConfirmDialog({
       isOpen: true,
       message: 'are you sure you want to clear all loaded samples?',
-      onConfirm: () => {
+      onConfirm: async () => {
         for (let i = state.multisampleFiles.length - 1; i >= 0; i--) {
           clearMultisampleFile(i);
         }
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        // Reset saved to library flag since we're starting fresh
+        await sessionStorageIndexedDB.resetSavedToLibraryFlag();
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
 
-  const handleResetAll = () => {
+  const handleResetAll = async () => {
     setConfirmDialog({
       isOpen: true,
       message: 'are you sure you want to reset everything to defaults? this will clear all samples, reset preset name, and audio settings.',
-      onConfirm: () => {
+      onConfirm: async () => {
         // Clear all samples
         for (let i = state.multisampleFiles.length - 1; i >= 0; i--) {
           clearMultisampleFile(i);
@@ -208,7 +255,10 @@ export function MultisampleTool() {
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: true });
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE', payload: true });
         
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        // Reset saved to library flag since we're starting fresh
+        await sessionStorageIndexedDB.resetSavedToLibraryFlag();
+        
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -401,7 +451,7 @@ export function MultisampleTool() {
 
           {/* Content */}
           <div style={{ 
-            padding: isMobile ? '1rem' : '2rem',
+            padding: 0,
           }}>
             <MultisampleSampleTable 
               onFileUpload={handleFileUpload}
@@ -410,17 +460,20 @@ export function MultisampleTool() {
               onFilesSelected={handleFilesSelected}
               onBrowseFilesRef={browseFilesRef}
             />
-            
-            {/* Action Buttons Below Table */}
-            <div style={{
-              display: 'flex',
-              gap: '1rem',
-              justifyContent: isMobile ? 'center' : 'flex-end',
-              flexDirection: isMobile ? 'column' : 'row',
-              marginTop: '2rem',
-              paddingTop: '1.5rem',
-              borderTop: '1px solid var(--color-border-light)',
-            }}>
+            {/* Footer Button Group - Drum Tool Style */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                background: 'var(--color-bg-primary)',
+                borderTop: '1px solid var(--color-border-light)',
+                padding: '1.75rem',
+                margin: 0,
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+            >
               <button
                 onClick={handleClearAll}
                 disabled={!hasLoadedSamples}
@@ -442,7 +495,7 @@ export function MultisampleTool() {
                   justifyContent: 'center',
                   gap: '0.75rem',
                   opacity: hasLoadedSamples ? 1 : 0.6,
-                  width: isMobile ? '100%' : 'auto',
+                  marginRight: '1rem',
                 }}
                 onMouseEnter={(e) => {
                   if (hasLoadedSamples) {
@@ -460,7 +513,7 @@ export function MultisampleTool() {
                 }}
               >
                 <i className="fas fa-trash" style={{ fontSize: '1rem' }}></i>
-                clear all samples
+                clear all
               </button>
               <button
                 onClick={() => setRecordingModal({ isOpen: true, targetIndex: null })}
@@ -481,7 +534,7 @@ export function MultisampleTool() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '0.75rem',
-                  width: isMobile ? '100%' : 'auto',
+                  marginRight: '1rem',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
@@ -494,12 +547,11 @@ export function MultisampleTool() {
                   e.currentTarget.style.color = 'var(--color-interactive-secondary)';
                 }}
               >
-                <i className="fas fa-microphone" style={{ fontSize: '1rem' }}></i>
-                record sample
+                <i className="fas fa-microphone" style={{ fontSize: '1rem', color: 'var(--color-accent-primary)' }}></i>
+                record
               </button>
               <button
                 onClick={() => {
-                  // Trigger the browse files function from MultisampleSampleTable
                   if (browseFilesRef.current) {
                     browseFilesRef.current();
                   }
@@ -521,7 +573,6 @@ export function MultisampleTool() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '0.75rem',
-                  width: isMobile ? '100%' : 'auto',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
@@ -531,7 +582,7 @@ export function MultisampleTool() {
                 }}
               >
                 <i className="fas fa-folder-open" style={{ fontSize: '1rem' }}></i>
-                browse files
+                browse
               </button>
             </div>
           </div>
@@ -588,7 +639,8 @@ export function MultisampleTool() {
           onPresetNameChange={handlePresetNameChange}
           hasChangesFromDefaults={hasChangesFromDefaults}
           onResetAll={handleResetAll}
-          onGeneratePatch={handleGeneratePatch}
+          onSaveToLibrary={handleSaveToLibrary}
+          onDownloadPreset={handleDownloadPreset}
           inputId="preset-name-multi"
         />
       </div>
@@ -598,7 +650,7 @@ export function MultisampleTool() {
         isOpen={confirmDialog.isOpen}
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} })}
       />
 
       {/* Recording Modal */}

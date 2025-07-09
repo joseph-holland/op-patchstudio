@@ -42,16 +42,6 @@ export function Footer() {
         >
           joseph-holland
         </a>
-        {' '} | {' '}
-        <a 
-          href="https://buymeacoffee.com/jxavierh" 
-          target="_blank" 
-          rel="noopener"
-          style={{ color: '#666', display: 'inline-flex', alignItems: 'center', gap: '0.3em' }}
-        >
-          <i className="fas fa-coffee" style={{ fontSize: '0.9em' }}></i>
-          buy me a coffee
-        </a>
       </div>
       <div style={{ marginTop: '0.5rem' }}>
         inspired by the awesome{' '}

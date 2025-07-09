@@ -46,6 +46,7 @@ export interface SessionData {
   selectedMultisample: number | null;
   isDrumKeyboardPinned: boolean;
   isMultisampleKeyboardPinned: boolean;
+  savedToLibrary?: boolean; // Track if this session has been saved to library
 }
 
 export interface SampleData {
@@ -73,6 +74,10 @@ export interface PresetData {
   data: any; // Preset-specific data
   createdAt: number;
   updatedAt: number;
+  isFavorite?: boolean;
+  tags?: string[];
+  description?: string;
+  sampleCount?: number; // Number of samples in the preset
 }
 
 class IndexedDBManager {
@@ -258,6 +263,27 @@ class IndexedDBManager {
 
   async getSamplesByType(type: string): Promise<SampleData[]> {
     return this.getByIndex<SampleData>(STORES.SAMPLES, 'type', type);
+  }
+
+  // Preset-specific operations
+  async savePreset(presetData: PresetData): Promise<void> {
+    await this.update(STORES.PRESETS, presetData);
+  }
+
+  async getPreset(id: string): Promise<PresetData | null> {
+    return this.get<PresetData>(STORES.PRESETS, id);
+  }
+
+  async getAllPresets(): Promise<PresetData[]> {
+    return this.getAll<PresetData>(STORES.PRESETS);
+  }
+
+  async deletePreset(id: string): Promise<void> {
+    await this.delete(STORES.PRESETS, id);
+  }
+
+  async getPresetsByType(type: 'drum' | 'multisample'): Promise<PresetData[]> {
+    return this.getByIndex<PresetData>(STORES.PRESETS, 'type', type);
   }
 
   // Utility methods

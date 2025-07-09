@@ -8,6 +8,9 @@ const HEADER_LENGTH = 44;
 const MAX_AMPLITUDE = 0x7fff;
 const PATCH_SIZE_LIMIT = 8 * 1024 * 1024; // 8mb limit for OP-XY
 
+// Audio processing constants
+export const LOOP_END_PADDING = 5; // Additional samples to add when cutting at loop end
+
 // WAV format structures
 interface WavHeader {
   format: string;
@@ -300,8 +303,8 @@ export async function cutAudioAtLoopEnd(audioBuffer: AudioBuffer, loopEnd: numbe
     return audioBuffer;
   }
 
-  // Trim point is loopEnd + 5 samples (matching reference implementation)
-  const cutPoint = loopEnd + 5;
+  // Trim point is loopEnd + LOOP_END_PADDING samples (buffer for the loop end)
+  const cutPoint = loopEnd + LOOP_END_PADDING;
   
   if (cutPoint >= audioBuffer.length) {
     return audioBuffer;
@@ -338,16 +341,22 @@ export async function convertAudioFormat(
   const normalizeLevel = options.normalizeLevel || 0;
   const gain = options.gain || 0;
   
-  // Create offline context for conversion
+  // Apply trim to loop end if enabled (do this first to get correct duration)
+  let processedBuffer = audioBuffer;
+  if (options.cutAtLoopEnd && options.loopEnd) {
+    processedBuffer = await cutAudioAtLoopEnd(audioBuffer, options.loopEnd);
+  }
+
+  // Create offline context for conversion with correct duration
   const offlineContext = audioContextManager.createOfflineContext(
     targetChannels,
-    Math.ceil(audioBuffer.duration * targetSampleRate),
+    Math.ceil(processedBuffer.duration * targetSampleRate),
     targetSampleRate
   );
 
   // Create buffer source
   const source = offlineContext.createBufferSource();
-  source.buffer = audioBuffer;
+  source.buffer = processedBuffer;
 
   // Create gain node for normalization and gain
   const gainNode = offlineContext.createGain();
@@ -360,43 +369,45 @@ export async function convertAudioFormat(
 
   // Apply normalization if enabled
   if (normalize) {
-    const normalizeGain = calculateNormalizationGain(audioBuffer, normalizeLevel);
+    const normalizeGain = calculateNormalizationGain(processedBuffer, normalizeLevel);
     gainValue *= normalizeGain;
   }
 
   gainNode.gain.value = gainValue;
 
-  // Apply trim to loop end if enabled
-  let processedBuffer = audioBuffer;
-  if (options.cutAtLoopEnd && options.loopEnd) {
-    processedBuffer = await cutAudioAtLoopEnd(audioBuffer, options.loopEnd);
-    // Update source buffer to use the cut version
-    source.buffer = processedBuffer;
-  }
-
   // Handle channel conversion
-  if (targetChannels !== audioBuffer.numberOfChannels) {
+  if (targetChannels !== processedBuffer.numberOfChannels) {
     // Add channel splitter/merger for channel conversion
-    const splitter = offlineContext.createChannelSplitter(audioBuffer.numberOfChannels);
+    const splitter = offlineContext.createChannelSplitter(processedBuffer.numberOfChannels);
     const merger = offlineContext.createChannelMerger(targetChannels);
     
     source.connect(splitter);
-    splitter.connect(gainNode);
-    gainNode.connect(merger);
     
     // Connect channels based on conversion type
-    if (targetChannels === 1 && audioBuffer.numberOfChannels === 2) {
-      // Stereo to mono: mix L+R channels
-      splitter.connect(merger, 0, 0);
-      splitter.connect(merger, 1, 0);
-    } else if (targetChannels === 2 && audioBuffer.numberOfChannels === 1) {
-      // Mono to stereo: duplicate mono channel
-      splitter.connect(merger, 0, 0);
-      splitter.connect(merger, 0, 1);
+    if (targetChannels === 1 && processedBuffer.numberOfChannels === 2) {
+      // Stereo to mono: mix L+R channels through gain node
+      splitter.connect(gainNode, 0, 0);
+      splitter.connect(gainNode, 1, 0);
+      gainNode.connect(merger, 0, 0);
+    } else if (targetChannels === 2 && processedBuffer.numberOfChannels === 1) {
+      // Mono to stereo: duplicate mono channel through gain node
+      splitter.connect(gainNode, 0, 0);
+      gainNode.connect(merger, 0, 0);
+      gainNode.connect(merger, 0, 1);
     } else {
-      // Direct channel mapping
-      for (let i = 0; i < Math.min(targetChannels, audioBuffer.numberOfChannels); i++) {
-        splitter.connect(merger, i, i);
+      // Direct channel mapping - create separate gain nodes for each channel
+      const numChannels = Math.min(targetChannels, processedBuffer.numberOfChannels);
+      const gainNodes: GainNode[] = [];
+      
+      for (let i = 0; i < numChannels; i++) {
+        const channelGainNode = offlineContext.createGain();
+        channelGainNode.gain.value = gainValue;
+        gainNodes.push(channelGainNode);
+        
+        // Connect splitter output to gain node input
+        splitter.connect(channelGainNode, i, 0);
+        // Connect gain node output to merger input
+        channelGainNode.connect(merger, 0, i);
       }
     }
     
@@ -600,6 +611,25 @@ function writeAudioData24(uint8: Uint8Array, audioBuffer: AudioBuffer, offset: n
 // Existing functions preserved for compatibility
 export function sanitizeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9 #\-().]+/g, "");
+}
+
+/**
+ * Check if a preset name contains only valid characters for OP-XY/OP-1 devices
+ * @param name - The preset name to validate
+ * @returns true if the name contains only valid characters, false otherwise
+ */
+export function isValidPresetName(name: string): boolean {
+  return /^[a-zA-Z0-9 #\-().]*$/.test(name);
+}
+
+/**
+ * Get invalid characters from a preset name
+ * @param name - The preset name to check
+ * @returns Array of invalid characters found in the name
+ */
+export function getInvalidPresetNameChars(name: string): string[] {
+  const invalidChars = name.match(/[^a-zA-Z0-9 #\-().]/g);
+  return invalidChars ? [...new Set(invalidChars)] : [];
 }
 
 export function parseFilename(filename: string): [string, number] {

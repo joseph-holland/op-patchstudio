@@ -147,6 +147,7 @@ export class SessionStorageManagerIndexedDB {
       selectedMultisample: state.selectedMultisample,
       isDrumKeyboardPinned: state.isDrumKeyboardPinned,
       isMultisampleKeyboardPinned: state.isMultisampleKeyboardPinned,
+      savedToLibrary: false, // Track if this session has been saved to library
     };
 
     // Save session data
@@ -206,6 +207,38 @@ export class SessionStorageManagerIndexedDB {
     if (currentSessionId) {
       await indexedDB.deleteSession(currentSessionId);
       localStorage.removeItem(CURRENT_SESSION_KEY);
+    }
+  }
+
+  // Mark current session as saved to library
+  async markSessionAsSavedToLibrary(): Promise<void> {
+    const currentSessionId = this.getCurrentSessionId();
+    if (!currentSessionId) return;
+
+    try {
+      const sessionData = await indexedDB.getSession(currentSessionId);
+      if (sessionData) {
+        sessionData.savedToLibrary = true;
+        await indexedDB.saveSession(sessionData);
+      }
+    } catch (error) {
+      console.error('Failed to mark session as saved to library:', error);
+    }
+  }
+
+  // Reset saved to library flag (when session is significantly changed)
+  async resetSavedToLibraryFlag(): Promise<void> {
+    const currentSessionId = this.getCurrentSessionId();
+    if (!currentSessionId) return;
+
+    try {
+      const sessionData = await indexedDB.getSession(currentSessionId);
+      if (sessionData) {
+        sessionData.savedToLibrary = false;
+        await indexedDB.saveSession(sessionData);
+      }
+    } catch (error) {
+      console.error('Failed to reset saved to library flag:', error);
     }
   }
 

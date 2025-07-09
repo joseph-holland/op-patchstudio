@@ -359,6 +359,50 @@ body {
   border-top: 5px solid rgba(51, 51, 51, 0.95);
 }
 
+/* Enhanced Tooltip Styles - Merges dark styling with better layout */
+.enhanced-tooltip-content {
+  padding: 12px 16px;
+  background: rgba(51, 51, 51, 0.95);
+  color: white;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: normal;
+  line-height: 1.4;
+  white-space: normal;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: max-content;
+  max-width: 300px;
+}
+
+.enhanced-tooltip-content h1,
+.enhanced-tooltip-content h2,
+.enhanced-tooltip-content h3,
+.enhanced-tooltip-content h4,
+.enhanced-tooltip-content h5,
+.enhanced-tooltip-content h6 {
+  margin: 0 0 8px 0;
+  font-weight: 300;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.enhanced-tooltip-content p {
+  margin: 0 0 8px 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.enhanced-tooltip-content p:last-child {
+  margin-bottom: 0;
+}
+
+.enhanced-tooltip-content i {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.enhanced-tooltip-arrow {
+  display: none;
+}
+
 /* Hide focus outline for mouse users, keep for keyboard users (accessibility best practice) */
 :focus {
   outline: none;
@@ -516,5 +560,22 @@ body {
   .drum-sample-settings-modal div[style*="position: relative"][style*="margin-bottom: 1rem"] {
     width: 100% !important;
     overflow: hidden !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .tab-bar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tab-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-bar > button {
+    flex: 0 0 auto;
+    min-width: 44px;
   }
 }

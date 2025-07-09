@@ -14,7 +14,9 @@ import {
   convertAudioFormat,
   calculateNormalizationGain,
   normalizeAudioBuffer,
-  cutAudioAtLoopEnd
+  cutAudioAtLoopEnd,
+  isValidPresetName,
+  getInvalidPresetNameChars
 } from '../../utils/audio'
 
 // Mock AudioContext for testing
@@ -218,6 +220,43 @@ describe('audio utilities', () => {
 
     it('should handle empty string', () => {
       expect(sanitizeName('')).toBe('')
+    })
+  })
+
+  describe('isValidPresetName', () => {
+    it('should return true for valid preset names', () => {
+      expect(isValidPresetName('Test Preset')).toBe(true)
+      expect(isValidPresetName('Bass C4')).toBe(true)
+      expect(isValidPresetName('Drum Kit #1')).toBe(true)
+      expect(isValidPresetName('Sample (v2)')).toBe(true)
+      expect(isValidPresetName('')).toBe(true)
+    })
+
+    it('should return false for invalid preset names', () => {
+      expect(isValidPresetName('Test@Preset')).toBe(false)
+      expect(isValidPresetName('file/name')).toBe(false)
+      expect(isValidPresetName('name\\test')).toBe(false)
+      expect(isValidPresetName('name:test')).toBe(false)
+      expect(isValidPresetName('name*test')).toBe(false)
+      expect(isValidPresetName('name?test')).toBe(false)
+    })
+  })
+
+  describe('getInvalidPresetNameChars', () => {
+    it('should return empty array for valid names', () => {
+      expect(getInvalidPresetNameChars('Test Preset')).toEqual([])
+      expect(getInvalidPresetNameChars('')).toEqual([])
+    })
+
+    it('should return unique invalid characters', () => {
+      expect(getInvalidPresetNameChars('Test@Preset')).toEqual(['@'])
+      expect(getInvalidPresetNameChars('file/name\\test')).toEqual(['/', '\\'])
+      expect(getInvalidPresetNameChars('name:test*here')).toEqual([':', '*'])
+    })
+
+    it('should not duplicate characters', () => {
+      expect(getInvalidPresetNameChars('test@@@name')).toEqual(['@'])
+      expect(getInvalidPresetNameChars('test///name')).toEqual(['/'])
     })
   })
 
