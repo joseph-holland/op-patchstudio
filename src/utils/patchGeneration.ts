@@ -1,6 +1,6 @@
 // Patch generation utilities for OP-XY drum and multisample presets
 import JSZip from 'jszip';
-import { convertAudioFormat, sanitizeName } from './audio';
+import { convertAudioFormat, sanitizeName, LOOP_END_PADDING } from './audio';
 import { baseDrumJson } from '../components/drum/baseDrumJson';
 import { baseMultisampleJson } from '../components/multisample/baseMultisampleJson';
 import { percentToInternal } from './valueConversions';
@@ -306,7 +306,7 @@ export async function generateMultisamplePatch(
 
     // Calculate the actual framecount for the region (accounting for cut at loop end)
     const actualFramecount = state.multisampleSettings.cutAtLoopEnd 
-      ? scaledLoopEnd + 5 
+      ? scaledLoopEnd + LOOP_END_PADDING 
       : framecount;
     
     const region: MultisampleRegion = {
@@ -354,7 +354,7 @@ export async function generateMultisamplePatch(
             // Validate that converted buffer frame count matches our calculation
             // If cutting is enabled, expect the cut length, otherwise expect the full duration
             const expectedFramecount = state.multisampleSettings.cutAtLoopEnd 
-              ? scaledLoopEnd + 5 
+              ? scaledLoopEnd + LOOP_END_PADDING 
               : Math.floor(duration * effectiveSampleRate);
             validateFrameCount(sample.name, expectedFramecount, convertedBuffer.length, region);
             

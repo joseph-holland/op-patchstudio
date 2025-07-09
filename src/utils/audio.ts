@@ -8,6 +8,9 @@ const HEADER_LENGTH = 44;
 const MAX_AMPLITUDE = 0x7fff;
 const PATCH_SIZE_LIMIT = 8 * 1024 * 1024; // 8mb limit for OP-XY
 
+// Audio processing constants
+export const LOOP_END_PADDING = 5; // Additional samples to add when cutting at loop end
+
 // WAV format structures
 interface WavHeader {
   format: string;
@@ -300,8 +303,8 @@ export async function cutAudioAtLoopEnd(audioBuffer: AudioBuffer, loopEnd: numbe
     return audioBuffer;
   }
 
-  // Trim point is loopEnd + 5 samples (matching reference implementation)
-  const cutPoint = loopEnd + 5;
+  // Trim point is loopEnd + LOOP_END_PADDING samples (buffer for the loop end)
+  const cutPoint = loopEnd + LOOP_END_PADDING;
   
   if (cutPoint >= audioBuffer.length) {
     return audioBuffer;
