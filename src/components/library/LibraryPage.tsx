@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConfirmationModal } from '../common/ConfirmationModal';
 import { LibraryTable } from './LibraryTable';
 import { LibraryFilters } from './LibraryFilters';
@@ -132,6 +132,10 @@ export function LibraryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const isMobile = window.innerWidth < 768;
   const pageSize = isMobile ? 10 : 15;
+  
+  // Ref to track current state for async operations
+  const currentStateRef = useRef(state);
+  currentStateRef.current = state;
 
   // Calculate paginated presets
   const paginatedPresets = filteredPresets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -355,51 +359,60 @@ export function LibraryPage() {
           dispatch({ type: 'CLEAR_MULTISAMPLE_FILE', payload: i });
         }
         
-        // Load valid multisample files and track the starting index
-        const startingFileCount = state.multisampleFiles.length;
-        let loadedFileIndex = startingFileCount;
+        // Load all valid multisample files first
+        const filesToLoad = restoredFiles.filter(file => 
+          file && 
+          file.file && 
+          file.audioBuffer && 
+          file.audioBuffer.duration &&
+          file.metadata &&
+          typeof file.metadata.duration === 'number'
+        );
         
-        restoredFiles.forEach((file) => {
-          if (file && 
-              file.file && 
-              file.audioBuffer && 
-              file.audioBuffer.duration &&
-              file.metadata &&
-              typeof file.metadata.duration === 'number') {
-            
-            // First load the file with basic properties
+        // Load all files and collect their data for later updates
+        const filesWithUpdates = filesToLoad.map(file => ({
+          file,
+          updates: {
+            inPoint: file.inPoint || 0,
+            outPoint: file.outPoint || file.audioBuffer.duration,
+            loopStart: file.loopStart || file.audioBuffer.duration * 0.2,
+            loopEnd: file.loopEnd || file.audioBuffer.duration * 0.8,
+          }
+        }));
+        
+        // Load all files first
+        filesWithUpdates.forEach(({ file }) => {
+          dispatch({
+            type: 'LOAD_MULTISAMPLE_FILE',
+            payload: {
+              file: file.file,
+              audioBuffer: file.audioBuffer,
+              metadata: file.metadata,
+              rootNoteOverride: file.rootNote
+            }
+          });
+        });
+        
+        // Wait for React state updates to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Now apply updates by finding each file in the current state
+        filesWithUpdates.forEach(({ file, updates }) => {
+          // Find the file in the current state by name and rootNote
+          const fileIndex = currentStateRef.current.multisampleFiles.findIndex(f => 
+            f && f.name === file.file.name && f.rootNote === file.rootNote
+          );
+          
+          if (fileIndex !== -1) {
             dispatch({
-              type: 'LOAD_MULTISAMPLE_FILE',
+              type: 'UPDATE_MULTISAMPLE_FILE',
               payload: {
-                file: file.file,
-                audioBuffer: file.audioBuffer,
-                metadata: file.metadata,
-                rootNoteOverride: file.rootNote
+                index: fileIndex,
+                updates
               }
             });
-            
-            // Store the file info with its expected index for later update
-            const expectedIndex = loadedFileIndex;
-            loadedFileIndex++;
-            
-            // Use setTimeout to update loop points after the file is loaded
-            setTimeout(() => {
-              dispatch({
-                type: 'UPDATE_MULTISAMPLE_FILE',
-                payload: {
-                  index: expectedIndex,
-                  updates: {
-                    inPoint: file.inPoint || 0,
-                    outPoint: file.outPoint || file.audioBuffer.duration,
-                    loopStart: file.loopStart || file.audioBuffer.duration * 0.2,
-                    loopEnd: file.loopEnd || file.audioBuffer.duration * 0.8,
-                  }
-                }
-              });
-            }, 50); // Small delay to ensure the file is loaded first
-            
           } else {
-            console.warn('Skipping invalid multisample file:', file);
+            console.warn(`Could not find multisample file to update settings for file ${file.file.name} with rootNote ${file.rootNote}`);
           }
         });
 

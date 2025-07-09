@@ -366,35 +366,36 @@ export async function convertAudioFormat(
 
   // Apply normalization if enabled
   if (normalize) {
-    const normalizeGain = calculateNormalizationGain(audioBuffer, normalizeLevel);
+    const normalizeGain = calculateNormalizationGain(processedBuffer, normalizeLevel);
     gainValue *= normalizeGain;
   }
 
   gainNode.gain.value = gainValue;
 
   // Handle channel conversion
-  if (targetChannels !== audioBuffer.numberOfChannels) {
+  if (targetChannels !== processedBuffer.numberOfChannels) {
     // Add channel splitter/merger for channel conversion
-    const splitter = offlineContext.createChannelSplitter(audioBuffer.numberOfChannels);
+    const splitter = offlineContext.createChannelSplitter(processedBuffer.numberOfChannels);
     const merger = offlineContext.createChannelMerger(targetChannels);
     
     source.connect(splitter);
-    splitter.connect(gainNode);
-    gainNode.connect(merger);
     
     // Connect channels based on conversion type
-    if (targetChannels === 1 && audioBuffer.numberOfChannels === 2) {
-      // Stereo to mono: mix L+R channels
-      splitter.connect(merger, 0, 0);
-      splitter.connect(merger, 1, 0);
-    } else if (targetChannels === 2 && audioBuffer.numberOfChannels === 1) {
-      // Mono to stereo: duplicate mono channel
-      splitter.connect(merger, 0, 0);
-      splitter.connect(merger, 0, 1);
+    if (targetChannels === 1 && processedBuffer.numberOfChannels === 2) {
+      // Stereo to mono: mix L+R channels through gain node
+      splitter.connect(gainNode, 0, 0);
+      splitter.connect(gainNode, 1, 0);
+      gainNode.connect(merger, 0, 0);
+    } else if (targetChannels === 2 && processedBuffer.numberOfChannels === 1) {
+      // Mono to stereo: duplicate mono channel through gain node
+      splitter.connect(gainNode, 0, 0);
+      gainNode.connect(merger, 0, 0);
+      gainNode.connect(merger, 0, 1);
     } else {
-      // Direct channel mapping
-      for (let i = 0; i < Math.min(targetChannels, audioBuffer.numberOfChannels); i++) {
-        splitter.connect(merger, i, i);
+      // Direct channel mapping through gain node
+      for (let i = 0; i < Math.min(targetChannels, processedBuffer.numberOfChannels); i++) {
+        splitter.connect(gainNode, i, i);
+        gainNode.connect(merger, i, i);
       }
     }
     
