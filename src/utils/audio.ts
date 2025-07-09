@@ -392,10 +392,19 @@ export async function convertAudioFormat(
       gainNode.connect(merger, 0, 0);
       gainNode.connect(merger, 0, 1);
     } else {
-      // Direct channel mapping through gain node
-      for (let i = 0; i < Math.min(targetChannels, processedBuffer.numberOfChannels); i++) {
-        splitter.connect(gainNode, i, i);
-        gainNode.connect(merger, i, i);
+      // Direct channel mapping - create separate gain nodes for each channel
+      const numChannels = Math.min(targetChannels, processedBuffer.numberOfChannels);
+      const gainNodes: GainNode[] = [];
+      
+      for (let i = 0; i < numChannels; i++) {
+        const channelGainNode = offlineContext.createGain();
+        channelGainNode.gain.value = gainValue;
+        gainNodes.push(channelGainNode);
+        
+        // Connect splitter output to gain node input
+        splitter.connect(channelGainNode, i, 0);
+        // Connect gain node output to merger input
+        channelGainNode.connect(merger, 0, i);
       }
     }
     
