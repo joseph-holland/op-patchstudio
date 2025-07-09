@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PatchSizeIndicator } from './PatchSizeIndicator';
-import { PresetNameInput } from './PresetNameInput';
+import { PresetNameInput } from '../library/PresetNameInput';
 
 interface GeneratePresetSectionProps {
   type: 'drum' | 'multisample';
@@ -94,7 +94,7 @@ export function GeneratePresetSection({
                 id={inputId}
                 labelText="preset name"
                 value={presetName}
-                onChange={(value) => onPresetNameChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>)}
+                onChange={(value: string) => onPresetNameChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>)}
                 placeholder="enter preset name..."
                 className="preset-name-input-wide"
               />

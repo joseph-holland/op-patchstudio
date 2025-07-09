@@ -1,7 +1,7 @@
 import { useAppContext } from '../../context/AppContext';
 import { DrumTool } from '../drum/DrumTool';
 import { MultisampleTool } from '../multisample/MultisampleTool';
-import { LibraryPage } from './LibraryPage';
+import { LibraryPage } from '../library/LibraryPage';
 
 export function MainTabs() {
   const { state, dispatch } = useAppContext();

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { LibraryTable } from '../../components/common/LibraryTable';
+import { LibraryTable } from '../../components/library/LibraryTable';
 
 describe('LibraryTable', () => {
   it('should render with title', () => {

@@ -1,6 +1,6 @@
 import { render, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { LibraryPage } from '../../components/common/LibraryPage';
+import { LibraryPage } from '../../components/library/LibraryPage';
 import { AppContextProvider } from '../../context/AppContext';
 import { indexedDB, STORES } from '../../utils/indexedDB';
 import { generateDrumPatch, generateMultisamplePatch, downloadBlob } from '../../utils/patchGeneration';

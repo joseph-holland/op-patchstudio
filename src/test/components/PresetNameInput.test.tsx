@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PresetNameInput } from '../../components/common/PresetNameInput';
+import { PresetNameInput } from '../../components/library/PresetNameInput';
 
 // Mock the audio utils
 vi.mock('../../utils/audio', () => ({

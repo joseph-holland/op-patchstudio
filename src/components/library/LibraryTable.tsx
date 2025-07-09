@@ -89,9 +89,8 @@ export function LibraryTable({
       {/* Footer - Optional */}
       {footerContent && (
         <div style={{
-          padding: '1rem',
+          padding: '0',
           background: c.bgAlt,
-          borderTop: `1px solid ${c.border}`,
           display: 'flex',
           justifyContent: 'flex-end',
           alignItems: 'center',
