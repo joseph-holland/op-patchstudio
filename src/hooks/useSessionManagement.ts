@@ -54,18 +54,21 @@ export function useSessionManagement() {
               const drumSamplesCount = sessionData.drumSamples.length;
               const multisampleFilesCount = sessionData.multisampleFiles.length;
               
-              // Set session info for the modal
-              dispatch({
-                type: 'SET_SESSION_INFO',
-                payload: {
-                  timestamp: sessionData.timestamp,
-                  drumSamplesCount,
-                  multisampleFilesCount
-                }
-              });
-              
-              // Show restoration modal
-              dispatch({ type: 'SET_SESSION_RESTORATION_MODAL_OPEN', payload: true });
+              // Only show restoration modal if there are samples to restore
+              if (drumSamplesCount > 0 || multisampleFilesCount > 0) {
+                // Set session info for the modal
+                dispatch({
+                  type: 'SET_SESSION_INFO',
+                  payload: {
+                    timestamp: sessionData.timestamp,
+                    drumSamplesCount,
+                    multisampleFilesCount
+                  }
+                });
+                
+                // Show restoration modal
+                dispatch({ type: 'SET_SESSION_RESTORATION_MODAL_OPEN', payload: true });
+              }
             }
           }
         }
