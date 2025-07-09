@@ -204,125 +204,132 @@ export function MainTabs() {
       </div>
       
       {/* Tab Content */}
-      <div 
-        role="tabpanel"
-        id="drum-tabpanel"
-        aria-labelledby="drum-tab"
-        style={{
-          background: 'var(--color-bg-primary)',
-          borderRadius: '15px',
-          border: '1px solid var(--color-border-subtle)',
-          borderTop: 'none',
-          minHeight: '500px',
-          overflow: 'hidden',
-          display: state.currentTab === 'drum' ? 'block' : 'none'
-        }}
-      >
-        <DrumTool />
-      </div>
-      <div 
-        role="tabpanel"
-        id="multisample-tabpanel"
-        aria-labelledby="multisample-tab"
-        style={{
-        background: 'var(--color-bg-primary)',
-        borderRadius: '15px',
-        border: '1px solid var(--color-border-subtle)',
-        borderTop: 'none',
-        minHeight: '500px',
-          overflow: 'hidden',
-          display: state.currentTab === 'multisample' ? 'block' : 'none'
-        }}
-      >
-        <MultisampleTool />
-      </div>
-      <div
-        role="tabpanel"
-        id="feedback-tabpanel"
-        aria-labelledby="feedback-tab"
-        style={{
-          background: 'var(--color-bg-primary)',
-          borderRadius: '15px',
-          border: '1px solid var(--color-border-subtle)',
-          borderTop: 'none',
-          minHeight: '500px',
-          overflow: 'hidden',
-          display: state.currentTab === 'feedback' ? 'block' : 'none'
-        }}
-      >
-        {/* Feedback Section */}
-        <div style={{
-          background: 'var(--color-bg-primary)',
-          borderRadius: '15px',
-          boxShadow: '0 2px 8px var(--color-shadow-primary)',
-          border: '1px solid var(--color-border-subtle)',
-          overflow: 'hidden',
-          marginBottom: '1rem',
-          margin: '2rem'
-        }}>
-          {/* Header */}
+      {state.currentTab === 'drum' && (
+        <div 
+          role="tabpanel"
+          id="drum-tabpanel"
+          aria-labelledby="drum-tab"
+          style={{
+            background: 'var(--color-bg-primary)',
+            borderRadius: '15px',
+            border: '1px solid var(--color-border-subtle)',
+            borderTop: 'none',
+            minHeight: '500px',
+            overflow: 'hidden'
+          }}
+        >
+          <DrumTool />
+        </div>
+      )}
+      
+      {state.currentTab === 'multisample' && (
+        <div 
+          role="tabpanel"
+          id="multisample-tabpanel"
+          aria-labelledby="multisample-tab"
+          style={{
+            background: 'var(--color-bg-primary)',
+            borderRadius: '15px',
+            border: '1px solid var(--color-border-subtle)',
+            borderTop: 'none',
+            minHeight: '500px',
+            overflow: 'hidden'
+          }}
+        >
+          <MultisampleTool />
+        </div>
+      )}
+      
+      {state.currentTab === 'feedback' && (
+        <div
+          role="tabpanel"
+          id="feedback-tabpanel"
+          aria-labelledby="feedback-tab"
+          style={{
+            background: 'var(--color-bg-primary)',
+            borderRadius: '15px',
+            border: '1px solid var(--color-border-subtle)',
+            borderTop: 'none',
+            minHeight: '500px',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Feedback Section */}
           <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '0.7rem 1rem 0.5rem 1rem',
-            borderBottom: '1px solid var(--color-border-medium)',
-            backgroundColor: 'var(--color-bg-secondary)',
+            background: 'var(--color-bg-primary)',
+            borderRadius: '15px',
+            boxShadow: '0 2px 8px var(--color-shadow-primary)',
+            border: '1px solid var(--color-border-subtle)',
+            overflow: 'hidden',
+            marginBottom: '1rem',
+            margin: '2rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-              <h3 style={{
-                margin: 0,
-                color: '#222',
-                fontSize: '1.25rem',
-                fontWeight: 300,
-              }}>
-                feedback
-              </h3>
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '0.7rem 1rem 0.5rem 1rem',
+              borderBottom: '1px solid var(--color-border-medium)',
+              backgroundColor: 'var(--color-bg-secondary)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                <h3 style={{
+                  margin: 0,
+                  color: '#222',
+                  fontSize: '1.25rem',
+                  fontWeight: 300,
+                }}>
+                  feedback
+                </h3>
+              </div>
             </div>
-          </div>
 
-          {/* Content */}
-          <div style={{ 
-            padding: '2rem',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-              <iframe
-                src="https://docs.google.com/forms/d/e/1FAIpQLSdgfoCaXzmQL6iF4QR08owfFSAwH651jlGChzcnz-pqwsI4Gw/viewform?embedded=true"
-                width="1200"
-                height="1000"
-                frameBorder="0"
-                marginHeight={0}
-                marginWidth={0}
-                style={{
-                  border: 'none',
-                  borderRadius: '15px',
-                  maxWidth: '100%',
-                  minHeight: '800px',
-                  background: 'white'
-                }}
-              >
-                loading…
-              </iframe>
+            {/* Content */}
+            <div style={{ 
+              padding: '2rem',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                <iframe
+                  src="https://docs.google.com/forms/d/e/1FAIpQLSdgfoCaXzmQL6iF4QR08owfFSAwH651jlGChzcnz-pqwsI4Gw/viewform?embedded=true"
+                  width="1200"
+                  height="1000"
+                  frameBorder="0"
+                  marginHeight={0}
+                  marginWidth={0}
+                  style={{
+                    border: 'none',
+                    borderRadius: '15px',
+                    maxWidth: '100%',
+                    minHeight: '800px',
+                    background: 'white'
+                  }}
+                >
+                  loading…
+                </iframe>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <div
-        role="tabpanel"
-        id="library-tabpanel"
-        aria-labelledby="library-tab"
-        style={{
-          background: 'var(--color-bg-primary)',
-          borderRadius: '15px',
-          border: '1px solid var(--color-border-subtle)',
-          borderTop: 'none',
-          minHeight: '500px',
-          overflow: 'hidden',
-          display: state.currentTab === 'library' ? 'block' : 'none'
-        }}
-      >
-        <LibraryPage />
-      </div>
+      )}
+      
+      {state.currentTab === 'library' && (
+        <div
+          role="tabpanel"
+          id="library-tabpanel"
+          aria-labelledby="library-tab"
+          style={{
+            background: 'var(--color-bg-primary)',
+            borderRadius: '15px',
+            border: '1px solid var(--color-border-subtle)',
+            borderTop: 'none',
+            minHeight: '500px',
+            overflow: 'hidden'
+          }}
+        >
+          <LibraryPage />
+        </div>
+      )}
     </div>
   );
 }
