@@ -3,7 +3,7 @@ import { useAppContext } from '../../context/AppContext';
 import { audioContextManager } from '../../utils/audioContext';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { SmallWaveform } from '../common/SmallWaveform';
-import { Tooltip } from '../common/Tooltip';
+import { EnhancedTooltip } from '../common/EnhancedTooltip';
 import { WaveformZoomModal } from '../common/WaveformZoomModal';
 import { midiNoteToString, noteStringToMidiValue } from '../../utils/audio';
 
@@ -728,14 +728,18 @@ export function MultisampleSampleTable({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           key
-          <Tooltip
+          <EnhancedTooltip
             isVisible={isKeyHelpTooltipVisible}
             content={
               <>
-                <strong>click to edit note:</strong><br />
-                • musical notes: <strong>C5</strong>, <strong>A#2</strong>, <strong>Bb3</strong><br />
-                • midi numbers: <strong>60</strong>, <strong>72</strong>, <strong>48</strong><br />
-                • press <strong>enter</strong> or click away to save
+                <h3>
+                  <i className="fas fa-music" style={{ marginRight: '0.5rem' }}></i>
+                  note editing
+                </h3>
+                <p><strong>click to edit note:</strong></p>
+                <p>• musical notes: <strong>C5</strong>, <strong>A#2</strong>, <strong>Bb3</strong></p>
+                <p>• midi numbers: <strong>60</strong>, <strong>72</strong>, <strong>48</strong></p>
+                <p>• press <strong>enter</strong> or click away to save</p>
               </>
             }
           >
@@ -757,7 +761,7 @@ export function MultisampleSampleTable({
                 }}
               />
             </span>
-          </Tooltip>
+          </EnhancedTooltip>
         </div>
         <div>file details</div>
         <div style={{ paddingLeft: '10px' }}>waveform</div>

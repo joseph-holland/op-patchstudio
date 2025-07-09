@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { EnhancedTooltip } from '../common/EnhancedTooltip';
 
 interface LibraryTableProps {
   title: string;
+  titleTooltip?: React.ReactNode;
   headerContent?: React.ReactNode;
   footerContent?: React.ReactNode;
   style?: React.CSSProperties;
@@ -16,6 +18,7 @@ interface LibraryTableProps {
 
 export function LibraryTable({ 
   title, 
+  titleTooltip,
   headerContent, 
   footerContent,
   style,
@@ -27,6 +30,7 @@ export function LibraryTable({
   emptyState,
   tableContent
 }: LibraryTableProps) {
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const c = {
     bg: 'var(--color-bg-primary)',
     bgAlt: 'var(--color-bg-secondary)',
@@ -58,14 +62,49 @@ export function LibraryTable({
         position: 'relative',
         ...headerStyle
       }}>
-        <h2 style={{
-          margin: 0,
-          color: '#222',
-          fontSize: '1.25rem',
-          fontWeight: 300,
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
         }}>
-          {title}
-        </h2>
+          <h2 style={{
+            margin: 0,
+            color: '#222',
+            fontSize: '1.25rem',
+            fontWeight: 300,
+          }}>
+            {title}
+          </h2>
+          
+          {titleTooltip && (
+            <EnhancedTooltip 
+              content={titleTooltip}
+              isVisible={isTooltipVisible}
+            >
+              <div
+                onMouseEnter={() => setIsTooltipVisible(true)}
+                onMouseLeave={() => setIsTooltipVisible(false)}
+                style={{
+                  cursor: 'help',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--color-text-secondary)',
+                  fontSize: '18px',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                }}
+              >
+                <i className="fas fa-question-circle"></i>
+              </div>
+                          </EnhancedTooltip>
+          )}
+        </div>
         
         {headerContent && (
           <div style={{ justifySelf: 'end' }}>

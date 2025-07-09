@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback, useLayoutEffect } from 'react';
-import { Tooltip } from './Tooltip';
+import { EnhancedTooltip } from './EnhancedTooltip';
 import { isMobile, isTablet } from 'react-device-detect';
 import { triggerRotateOverlay } from '../../App';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
@@ -666,8 +666,16 @@ export function WaveformZoomModal({
                 fontSize: isMobileDevice() ? '1rem' : '1.25rem'
               }}></i>
               zoom and edit markers
-              <Tooltip
-                content="drag markers to adjust positions. press 'p' to preview."
+              <EnhancedTooltip
+                content={
+                  <>
+                    <h3>
+                      <i className="fas fa-edit" style={{ marginRight: '0.5rem' }}></i>
+                      waveform editor
+                    </h3>
+                    <p>drag markers to adjust positions. press 'p' to preview.</p>
+                  </>
+                }
                 isVisible={showTooltip}
               >
                 <i
@@ -681,7 +689,7 @@ export function WaveformZoomModal({
                   onMouseEnter={() => setShowTooltip(true)}
                   onMouseLeave={() => setShowTooltip(false)}
                 />
-              </Tooltip>
+              </EnhancedTooltip>
             </h3>
           </div>
 

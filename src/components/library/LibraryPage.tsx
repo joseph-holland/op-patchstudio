@@ -671,6 +671,20 @@ export function LibraryPage() {
         <div>
           <LibraryTable
             title="presets"
+            titleTooltip={
+              <>
+                <h3>
+                  <i className="fas fa-shield-alt" style={{ marginRight: '0.5rem' }}></i>
+                  privacy & data
+                </h3>
+                <p>
+                  all data is stored locally on your device. no data is sent to external servers or shared with third parties.
+                </p>
+                <p style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+                  your presets, samples, and settings remain private and secure.
+                </p>
+              </>
+            }
             headerContent={
               <LibraryFilters
                 searchTerm={searchTerm}
