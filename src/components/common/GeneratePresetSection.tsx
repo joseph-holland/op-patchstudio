@@ -94,7 +94,28 @@ export function GeneratePresetSection({
                 id={inputId}
                 labelText="preset name"
                 value={presetName}
-                onChange={(value: string) => onPresetNameChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>)}
+                onChange={(value: string) => {
+                  // Create a proper synthetic event that matches React.ChangeEvent<HTMLInputElement>
+                  const syntheticEvent = {
+                    target: { value },
+                    currentTarget: { value },
+                    preventDefault: () => {},
+                    stopPropagation: () => {},
+                    nativeEvent: new Event('change'),
+                    type: 'change',
+                    bubbles: true,
+                    cancelable: true,
+                    defaultPrevented: false,
+                    eventPhase: 0,
+                    isTrusted: true,
+                    timeStamp: Date.now(),
+                    isDefaultPrevented: () => false,
+                    isPropagationStopped: () => false,
+                    persist: () => {}
+                  } as React.ChangeEvent<HTMLInputElement>;
+                  
+                  onPresetNameChange(syntheticEvent);
+                }}
                 placeholder="enter preset name..."
                 className="preset-name-input-wide"
               />

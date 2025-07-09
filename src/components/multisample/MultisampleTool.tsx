@@ -28,8 +28,8 @@ export function MultisampleTool() {
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     message: string;
-    onConfirm: () => void;
-  }>({ isOpen: false, message: '', onConfirm: () => {} });
+    onConfirm: () => void | Promise<void>;
+  }>({ isOpen: false, message: '', onConfirm: async () => {} });
   const [recordingModal, setRecordingModal] = useState<{
     isOpen: boolean;
     targetIndex: number | null;
@@ -132,7 +132,7 @@ export function MultisampleTool() {
         dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: 0 });
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: true });
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE', payload: true });
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -156,9 +156,9 @@ export function MultisampleTool() {
     setConfirmDialog({
       isOpen: true,
       message: 'are you sure you want to clear this sample?',
-      onConfirm: () => {
+      onConfirm: async () => {
         clearMultisampleFile(index);
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -224,7 +224,7 @@ export function MultisampleTool() {
         }
         // Reset saved to library flag since we're starting fresh
         await sessionStorageIndexedDB.resetSavedToLibraryFlag();
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -258,7 +258,7 @@ export function MultisampleTool() {
         // Reset saved to library flag since we're starting fresh
         await sessionStorageIndexedDB.resetSavedToLibraryFlag();
         
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -650,7 +650,7 @@ export function MultisampleTool() {
         isOpen={confirmDialog.isOpen}
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} })}
       />
 
       {/* Recording Modal */}

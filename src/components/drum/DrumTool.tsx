@@ -23,8 +23,8 @@ export function DrumTool() {
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     message: string;
-    onConfirm: () => void;
-  }>({ isOpen: false, message: '', onConfirm: () => {} });
+    onConfirm: () => void | Promise<void>;
+  }>({ isOpen: false, message: '', onConfirm: async () => {} });
   const [recordingModal, setRecordingModal] = useState<{
     isOpen: boolean;
     targetIndex: number | null;
@@ -76,7 +76,7 @@ export function DrumTool() {
         dispatch({ type: 'SET_DRUM_CHANNELS', payload: 0 });
         dispatch({ type: 'SET_DRUM_NORMALIZE', payload: false });
         dispatch({ type: 'SET_DRUM_NORMALIZE_LEVEL', payload: 0.0 });
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -93,9 +93,9 @@ export function DrumTool() {
     setConfirmDialog({
       isOpen: true,
       message: 'are you sure you want to clear this sample?',
-      onConfirm: () => {
+      onConfirm: async () => {
         clearDrumSample(index);
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -161,7 +161,7 @@ export function DrumTool() {
         }
         // Reset saved to library flag since we're starting fresh
         await sessionStorageIndexedDB.resetSavedToLibraryFlag();
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -198,7 +198,7 @@ export function DrumTool() {
         // Reset saved to library flag since we're starting fresh
         await sessionStorageIndexedDB.resetSavedToLibraryFlag();
         
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -481,7 +481,7 @@ export function DrumTool() {
         isOpen={confirmDialog.isOpen}
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} })}
       />
 
       {/* Recording Modal */}

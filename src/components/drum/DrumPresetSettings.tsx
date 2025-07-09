@@ -11,8 +11,8 @@ export function DrumPresetSettings() {
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     message: string;
-    onConfirm: () => void;
-  }>({ isOpen: false, message: '', onConfirm: () => {} });
+    onConfirm: () => void | Promise<void>;
+  }>({ isOpen: false, message: '', onConfirm: async () => {} });
 
   useEffect(() => {
     const checkMobile = () => {
@@ -71,7 +71,7 @@ export function DrumPresetSettings() {
           }
         });
         
-        setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+        setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
   };
@@ -442,7 +442,7 @@ export function DrumPresetSettings() {
         isOpen={confirmDialog.isOpen}
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} })}
+        onCancel={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} })}
       />
     </div>
   );
