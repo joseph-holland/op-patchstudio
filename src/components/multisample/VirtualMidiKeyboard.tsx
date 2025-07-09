@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { EnhancedTooltip } from '../common/EnhancedTooltip';
+import { useWebMidi } from '../../hooks/useWebMidi';
+import type { MidiEvent } from '../../utils/midi';
 
 interface VirtualMidiKeyboardProps {
   assignedNotes?: number[]; // MIDI note numbers that have samples assigned
@@ -10,6 +12,7 @@ interface VirtualMidiKeyboardProps {
   loadedSamplesCount?: number; // Number of loaded samples
   isPinned: boolean;
   onTogglePin: () => void;
+  selectedMidiChannel?: number;
 }
 
 export function VirtualMidiKeyboard({ 
@@ -20,7 +23,8 @@ export function VirtualMidiKeyboard({
   className = '',
   loadedSamplesCount = 0,
   isPinned,
-  onTogglePin
+  onTogglePin,
+  selectedMidiChannel
 }: VirtualMidiKeyboardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const placeholderRef = useRef<HTMLDivElement>(null);
@@ -37,7 +41,9 @@ export function VirtualMidiKeyboard({
   // Keyboard control state
   const [activeOctave, setActiveOctave] = useState(4); // Default to middle C (C4)
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
+
   const [mousePressedKey, setMousePressedKey] = useState<number | null>(null);
+  const { onMidiEvent, offMidiEvent } = useWebMidi();
   
   // Mouse drag scrolling state
   const [isDragging, setIsDragging] = useState(false);
@@ -170,6 +176,66 @@ export function VirtualMidiKeyboard({
     };
      }, [activeOctave, pressedKeys, keyboardMapping, changeOctave, assignedNotes, onKeyClick, onUnassignedKeyClick]);
 
+  // Helper function to get computer key for a MIDI note in the active octave
+  const getComputerKeyForNote = useCallback((midiNote: number): string | null => {
+    // Fix: Use C3 = 60 convention. C3 is octave 3, so C0 = 60 - (3 * 12) = 24
+    const noteOctave = Math.floor((midiNote - 24) / 12);
+    if (noteOctave !== activeOctave) return null;
+    
+    const noteInOctave = (midiNote - 24) % 12;
+    
+    // Find the computer key that maps to this note
+    for (const [key, offset] of Object.entries(keyboardMapping)) {
+      if (offset === noteInOctave) {
+        return key.toUpperCase();
+      }
+    }
+    return null;
+  }, [activeOctave, keyboardMapping]);
+
+  // MIDI event handling for multisample keyboard
+  useEffect(() => {
+    const handleMidiEvent = (event: MidiEvent) => {
+      if (event.type === 'noteon' || event.type === 'noteoff') {
+        const midiNote = event.note;
+        
+        if (event.type === 'noteon' && event.velocity > 0) {
+          // Note on - trigger key action and add visual feedback
+          if (assignedNotes.includes(midiNote)) {
+            onKeyClick?.(midiNote);
+          } else {
+            onUnassignedKeyClick?.(midiNote);
+          }
+          
+          // Add keyboard key press effect for visual feedback
+          const computerKey = getComputerKeyForNote(midiNote);
+          if (computerKey) {
+            setPressedKeys(prev => new Set([...prev, computerKey.toLowerCase()]));
+          }
+        } else {
+          // Note off - remove visual feedback
+          
+          // Remove keyboard key press effect
+          const computerKey = getComputerKeyForNote(midiNote);
+          if (computerKey) {
+            setPressedKeys(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(computerKey.toLowerCase());
+              return newSet;
+            });
+          }
+        }
+      }
+    };
+
+    // Listen to the selected channel (or all channels if none selected)
+    onMidiEvent(handleMidiEvent, selectedMidiChannel);
+
+    return () => {
+      offMidiEvent(handleMidiEvent);
+    };
+  }, [onMidiEvent, offMidiEvent, assignedNotes, onKeyClick, onUnassignedKeyClick, selectedMidiChannel, getComputerKeyForNote]);
+
   // Center the keyboard on the active octave when it changes or on mount
   useEffect(() => {
     centerActiveOctave();
@@ -268,25 +334,6 @@ export function VirtualMidiKeyboard({
     zIndex: isStuck ? 1000 : undefined,
     ...dynamicStyles,
   };
-
-
-
-  // Helper function to get computer key for a MIDI note in the active octave
-  const getComputerKeyForNote = useCallback((midiNote: number): string | null => {
-    // Fix: Use C3 = 60 convention. C3 is octave 3, so C0 = 60 - (3 * 12) = 24
-    const noteOctave = Math.floor((midiNote - 24) / 12);
-    if (noteOctave !== activeOctave) return null;
-    
-    const noteInOctave = (midiNote - 24) % 12;
-    
-    // Find the computer key that maps to this note
-    for (const [key, offset] of Object.entries(keyboardMapping)) {
-      if (offset === noteInOctave) {
-        return key.toUpperCase();
-      }
-    }
-    return null;
-  }, [activeOctave, keyboardMapping]);
 
   const handleKeyClick = useCallback((midiNote: number) => {
     // Don't trigger key actions if we're dragging

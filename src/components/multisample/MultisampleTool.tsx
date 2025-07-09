@@ -36,6 +36,10 @@ export function MultisampleTool() {
   }>({ isOpen: false, targetIndex: null });
 
   const [targetMidiNote, setTargetMidiNote] = useState<number | null>(null);
+  const [selectedMidiChannel] = useState(() => {
+    const saved = localStorage.getItem('midi-channel');
+    return saved ? parseInt(saved, 10) : 0;
+  });
 
   // Get pin state from context
   const { isMultisampleKeyboardPinned } = state;
@@ -409,6 +413,7 @@ export function MultisampleTool() {
             loadedSamplesCount={state.multisampleFiles.length}
             isPinned={isMultisampleKeyboardPinned}
             onTogglePin={handleTogglePin}
+            selectedMidiChannel={selectedMidiChannel}
           />
         </div>
       </div>
