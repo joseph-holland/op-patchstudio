@@ -12,24 +12,74 @@ export async function audioBufferToWavBlob(audioBuffer: AudioBuffer): Promise<Bl
 }
 
 export async function blobToAudioBuffer(blob: Blob, audioContext: AudioContext): Promise<AudioBuffer> {
-  const arrayBuffer = await blob.arrayBuffer();
-  return await audioContext.decodeAudioData(arrayBuffer);
+  try {
+    const arrayBuffer = await blob.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    
+    // Validate the audio buffer
+    if (!audioBuffer || typeof audioBuffer.duration !== 'number' || audioBuffer.duration <= 0) {
+      throw new Error('Invalid audio buffer: missing or invalid duration');
+    }
+    
+    return audioBuffer;
+  } catch (error) {
+    console.error('Failed to convert blob to AudioBuffer:', error);
+    throw error;
+  }
 }
 
-// --- Strip AudioBuffer and replace with Blob for storage ---
-async function prepareSamplesForStorage(samples: any[] | undefined | null): Promise<any[]> {
-  // Handle cases where samples might be undefined, null, or not an array
-  if (!samples || !Array.isArray(samples)) {
+// --- Strip AudioBuffer and replace with Blob for storage (preserving drum sample indexes) ---
+async function prepareDrumSamplesForStorage(drumSamples: AppState['drumSamples']): Promise<any[]> {
+  if (!Array.isArray(drumSamples)) {
     return [];
   }
   
-  return Promise.all(samples.map(async (sample) => {
-    if (sample && sample.audioBuffer) {
+  const preparedSamples = [];
+  for (let index = 0; index < drumSamples.length; index++) {
+    const sample = drumSamples[index];
+    
+    if (sample && sample.isLoaded && sample.audioBuffer) {
       const audioBlob = await audioBufferToWavBlob(sample.audioBuffer);
       const { audioBuffer, ...rest } = sample;
-      return { ...rest, audioBlob };
+      preparedSamples.push({
+        ...rest,
+        audioBlob,
+        originalIndex: index, // Preserve the original index
+        metadata: {
+          duration: sample.duration,
+          bitDepth: sample.originalBitDepth,
+          sampleRate: sample.originalSampleRate,
+          channels: sample.originalChannels
+        }
+      });
     }
-    return sample;
+  }
+  
+  return preparedSamples;
+}
+
+// --- Strip AudioBuffer and replace with Blob for multisample files ---
+async function prepareMultisampleFilesForStorage(multisampleFiles: AppState['multisampleFiles']): Promise<any[]> {
+  if (!Array.isArray(multisampleFiles)) {
+    return [];
+  }
+  
+  return Promise.all(multisampleFiles.map(async (file) => {
+    if (file && file.isLoaded && file.audioBuffer) {
+      const audioBlob = await audioBufferToWavBlob(file.audioBuffer);
+      const { audioBuffer, ...rest } = file;
+      return {
+        ...rest,
+        audioBlob,
+        metadata: {
+          duration: file.duration,
+          bitDepth: file.originalBitDepth,
+          sampleRate: file.originalSampleRate,
+          channels: file.originalChannels
+        }
+      };
+    }
+    return file;
   }));
 }
 
@@ -60,11 +110,9 @@ export async function savePresetToLibrary(
       };
     }
 
-    // Prepare samples for storage (replace AudioBuffer with Blob)
-    const drumSamples = await prepareSamplesForStorage(state.drumSamples);
-    const multisampleFiles = await prepareSamplesForStorage(state.multisampleFiles);
-    const importedDrumPreset = state.importedDrumPreset ? await prepareSamplesForStorage(state.importedDrumPreset) : undefined;
-    const importedMultisamplePreset = state.importedMultisamplePreset ? await prepareSamplesForStorage(state.importedMultisamplePreset) : undefined;
+    // Prepare samples for storage with proper index preservation
+    const drumSamples = await prepareDrumSamplesForStorage(state.drumSamples);
+    const multisampleFiles = await prepareMultisampleFilesForStorage(state.multisampleFiles);
 
     // Store the current state data for the preset
     const presetData = {
@@ -72,8 +120,8 @@ export async function savePresetToLibrary(
       multisampleSettings: state.multisampleSettings,
       drumSamples,
       multisampleFiles,
-      importedDrumPreset,
-      importedMultisamplePreset
+      importedDrumPreset: state.importedDrumPreset,
+      importedMultisamplePreset: state.importedMultisamplePreset
     };
     
     const preset: LibraryPreset = {
@@ -85,8 +133,8 @@ export async function savePresetToLibrary(
       updatedAt: Date.now(),
       isFavorite: false,
       sampleCount: type === 'drum' 
-        ? drumSamples.filter(s => s && s.isLoaded).length
-        : multisampleFiles.length
+        ? drumSamples.length // Now this counts actual loaded samples
+        : multisampleFiles.filter(f => f && f.isLoaded).length
     };
 
     await indexedDB.add(STORES.PRESETS, preset);

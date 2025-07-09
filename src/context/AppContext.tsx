@@ -403,6 +403,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
       
     case 'LOAD_DRUM_SAMPLE':
+      // Validate that audioBuffer exists and has required properties
+      if (!action.payload.audioBuffer || typeof action.payload.audioBuffer.duration !== 'number') {
+        console.error('Invalid audioBuffer provided to LOAD_DRUM_SAMPLE:', action.payload.audioBuffer);
+        return state; // Return current state without changes
+      }
+      
+      // Validate that metadata exists and has required properties
+      if (!action.payload.metadata || typeof action.payload.metadata.duration !== 'number') {
+        console.error('Invalid metadata provided to LOAD_DRUM_SAMPLE:', action.payload.metadata);
+        return state; // Return current state without changes
+      }
+      
       const newDrumSamples = [...state.drumSamples];
       newDrumSamples[action.payload.index] = {
         ...initialDrumSample,
@@ -435,6 +447,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, drumSamples: updatedDrumSamples };
       
     case 'LOAD_MULTISAMPLE_FILE':
+      // Validate that audioBuffer exists and has required properties
+      if (!action.payload.audioBuffer || typeof action.payload.audioBuffer.duration !== 'number') {
+        console.error('Invalid audioBuffer provided to LOAD_MULTISAMPLE_FILE:', action.payload.audioBuffer);
+        return state; // Return current state without changes
+      }
+      
+      // Validate that metadata exists and has required properties
+      if (!action.payload.metadata || typeof action.payload.metadata.duration !== 'number') {
+        console.error('Invalid metadata provided to LOAD_MULTISAMPLE_FILE:', action.payload.metadata);
+        return state; // Return current state without changes
+      }
+      
       // Check max limit of 24 samples
       if (state.multisampleFiles.length >= 24) {
         return state;

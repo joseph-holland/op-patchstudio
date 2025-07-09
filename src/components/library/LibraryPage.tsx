@@ -41,6 +41,81 @@ const defaultMultisampleSettings = {
   loopOnRelease: true
 };
 
+// Initial drum sample for array reconstruction
+const initialDrumSample = {
+  file: null,
+  audioBuffer: null,
+  name: '',
+  isLoaded: false,
+  inPoint: 0,
+  outPoint: 0,
+  playmode: 'oneshot' as const,
+  reverse: false,
+  tune: 0,
+  pan: 0,
+  gain: 0,
+  hasBeenEdited: false
+};
+
+// Helper to restore audioBuffers from blobs for drum samples (with index preservation)
+async function restoreDrumSamples(drumSamples: any[], audioContext: AudioContext) {
+  const restoredSamples: any[] = [];
+  
+  for (const sample of drumSamples) {
+    if (sample && sample.audioBlob && typeof sample.originalIndex === 'number') {
+      try {
+        const audioBuffer = await blobToAudioBuffer(sample.audioBlob, audioContext);
+        const { audioBlob, originalIndex, ...rest } = sample;
+        
+        // Validate metadata
+        if (!rest.metadata || typeof rest.metadata.duration !== 'number') {
+          console.error('Missing or invalid metadata for drum sample:', sample.name, rest.metadata);
+          continue;
+        }
+        
+        restoredSamples.push({
+          ...rest,
+          audioBuffer,
+          originalIndex,
+          file: new File([sample.audioBlob], sample.name, { type: 'audio/wav' })
+        });
+      } catch (error) {
+        console.error('Failed to restore audio buffer for drum sample:', sample.name, error);
+      }
+    }
+  }
+  
+  return restoredSamples;
+}
+
+// Helper to restore audioBuffers from blobs for multisample files
+async function restoreMultisampleFiles(multisampleFiles: any[], audioContext: AudioContext) {
+  return Promise.all(multisampleFiles.map(async (file) => {
+    if (file && file.audioBlob) {
+      try {
+        const audioBuffer = await blobToAudioBuffer(file.audioBlob, audioContext);
+        const { audioBlob, ...rest } = file;
+        
+        // Validate metadata
+        if (!rest.metadata || typeof rest.metadata.duration !== 'number') {
+          console.error('Missing or invalid metadata for multisample file:', file.name, rest.metadata);
+          return null;
+        }
+        
+        return {
+          ...rest,
+          audioBuffer,
+          file: new File([file.audioBlob], file.name, { type: 'audio/wav' })
+        };
+      } catch (error) {
+        console.error('Failed to restore audio buffer for multisample file:', file.name, error);
+        return null;
+      }
+    }
+    return null;
+  })).then(files => files.filter(file => file !== null));
+}
+
 export function LibraryPage() {
   const { state, dispatch } = useAppContext();
   const [presets, setPresets] = useState<LibraryPreset[]>([]);
@@ -174,17 +249,7 @@ export function LibraryPage() {
       const presetData = preset.data as any;
       const audioContext = window.AudioContext ? new window.AudioContext() : new (window as any).webkitAudioContext();
 
-      // Helper to restore audioBuffers from blobs
-      async function restoreAudioBuffers(samples: any[]) {
-        return Promise.all(samples.map(async (sample) => {
-          if (sample && sample.audioBlob) {
-            const audioBuffer = await blobToAudioBuffer(sample.audioBlob, audioContext);
-            const { audioBlob, ...rest } = sample;
-            return { ...rest, audioBuffer };
-          }
-          return sample;
-        }));
-      }
+
 
       if (preset.type === 'drum') {
         // Restore drum settings
@@ -202,19 +267,35 @@ export function LibraryPage() {
         dispatch({ type: 'SET_DRUM_PRESET_WIDTH', payload: drumSettings.presetSettings.width });
 
         // Restore drum samples
-        const restoredSamples = await restoreAudioBuffers(presetData.drumSamples || []);
+        let restoredSamples: any[] = [];
+        try {
+          restoredSamples = await restoreDrumSamples(presetData.drumSamples || [], audioContext);
+        } catch (error) {
+          console.error('Failed to restore drum samples:', error);
+          restoredSamples = [];
+        }
         
         // Clear existing samples and load new ones
         for (let i = 0; i < 24; i++) {
           dispatch({ type: 'CLEAR_DRUM_SAMPLE', payload: i });
         }
         
-        restoredSamples.forEach((sample, index) => {
-          if (sample && sample.file && sample.audioBuffer) {
+        // Load samples back to their original indexes
+        restoredSamples.forEach((sample) => {
+          if (sample && 
+              sample.file && 
+              sample.audioBuffer && 
+              sample.audioBuffer.duration &&
+              sample.metadata &&
+              typeof sample.metadata.duration === 'number' &&
+              typeof sample.originalIndex === 'number' &&
+              sample.originalIndex >= 0 && 
+              sample.originalIndex < 24) {
+            
             dispatch({
               type: 'LOAD_DRUM_SAMPLE',
               payload: {
-                index,
+                index: sample.originalIndex, // Use the original index
                 file: sample.file,
                 audioBuffer: sample.audioBuffer,
                 metadata: sample.metadata
@@ -225,7 +306,7 @@ export function LibraryPage() {
             dispatch({
               type: 'UPDATE_DRUM_SAMPLE',
               payload: {
-                index,
+                index: sample.originalIndex, // Use the original index
                 updates: {
                   inPoint: sample.inPoint,
                   outPoint: sample.outPoint,
@@ -238,6 +319,8 @@ export function LibraryPage() {
                 }
               }
             });
+          } else {
+            console.warn('Skipping invalid drum sample:', sample);
           }
         });
 
@@ -259,15 +342,32 @@ export function LibraryPage() {
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE', payload: multisampleSettings.loopOnRelease });
 
         // Restore multisample files
-        const restoredFiles = await restoreAudioBuffers(presetData.multisampleFiles || []);
+        let restoredFiles: any[] = [];
+        try {
+          restoredFiles = await restoreMultisampleFiles(presetData.multisampleFiles || [], audioContext);
+        } catch (error) {
+          console.error('Failed to restore multisample files:', error);
+          restoredFiles = [];
+        }
         
         // Clear existing files and load new ones
         for (let i = 0; i < state.multisampleFiles.length; i++) {
           dispatch({ type: 'CLEAR_MULTISAMPLE_FILE', payload: i });
         }
         
+        // Load valid multisample files and track the starting index
+        const startingFileCount = state.multisampleFiles.length;
+        let loadedFileIndex = startingFileCount;
+        
         restoredFiles.forEach((file) => {
-          if (file && file.file && file.audioBuffer) {
+          if (file && 
+              file.file && 
+              file.audioBuffer && 
+              file.audioBuffer.duration &&
+              file.metadata &&
+              typeof file.metadata.duration === 'number') {
+            
+            // First load the file with basic properties
             dispatch({
               type: 'LOAD_MULTISAMPLE_FILE',
               payload: {
@@ -277,6 +377,29 @@ export function LibraryPage() {
                 rootNoteOverride: file.rootNote
               }
             });
+            
+            // Store the file info with its expected index for later update
+            const expectedIndex = loadedFileIndex;
+            loadedFileIndex++;
+            
+            // Use setTimeout to update loop points after the file is loaded
+            setTimeout(() => {
+              dispatch({
+                type: 'UPDATE_MULTISAMPLE_FILE',
+                payload: {
+                  index: expectedIndex,
+                  updates: {
+                    inPoint: file.inPoint || 0,
+                    outPoint: file.outPoint || file.audioBuffer.duration,
+                    loopStart: file.loopStart || file.audioBuffer.duration * 0.2,
+                    loopEnd: file.loopEnd || file.audioBuffer.duration * 0.8,
+                  }
+                }
+              });
+            }, 50); // Small delay to ensure the file is loaded first
+            
+          } else {
+            console.warn('Skipping invalid multisample file:', file);
           }
         });
 
@@ -314,27 +437,27 @@ export function LibraryPage() {
       const presetData = preset.data as any;
       const audioContext = window.AudioContext ? new window.AudioContext() : new (window as any).webkitAudioContext();
 
-      // Helper to restore audioBuffers from blobs
-      async function restoreAudioBuffers(samples: any[]) {
-        return Promise.all(samples.map(async (sample) => {
-          if (sample && sample.audioBlob) {
-            const audioBuffer = await blobToAudioBuffer(sample.audioBlob, audioContext);
-            const { audioBlob, ...rest } = sample;
-            return { ...rest, audioBuffer };
-          }
-          return sample;
-        }));
-      }
-
       if (preset.type === 'drum') {
         // Restore drum samples for patch generation
-        const restoredSamples = await restoreAudioBuffers(presetData.drumSamples || []);
+        const restoredSamples = await restoreDrumSamples(presetData.drumSamples || [], audioContext);
+        
+        // Convert back to array format with proper indexing for patch generation
+        const drumSamplesArray = Array.from({ length: 24 }, () => ({ ...initialDrumSample }));
+        restoredSamples.forEach((sample) => {
+          if (sample && typeof sample.originalIndex === 'number' && 
+              sample.originalIndex >= 0 && sample.originalIndex < 24) {
+            drumSamplesArray[sample.originalIndex] = {
+              ...sample,
+              isLoaded: true
+            };
+          }
+        });
         
         // Create a temporary state for patch generation
         const tempState = {
           ...state,
           drumSettings: presetData.drumSettings || defaultDrumSettings,
-          drumSamples: restoredSamples
+          drumSamples: drumSamplesArray
         };
         
         // Generate and download the patch
@@ -347,7 +470,7 @@ export function LibraryPage() {
 
       } else if (preset.type === 'multisample') {
         // Restore multisample files for patch generation
-        const restoredFiles = await restoreAudioBuffers(presetData.multisampleFiles || []);
+        const restoredFiles = await restoreMultisampleFiles(presetData.multisampleFiles || [], audioContext);
         
         // Create a temporary state for patch generation
         const tempState = {
