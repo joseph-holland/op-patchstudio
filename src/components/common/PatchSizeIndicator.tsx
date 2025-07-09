@@ -73,7 +73,7 @@ export function PatchSizeIndicator({ type, className = '' }: PatchSizeIndicatorP
           fontWeight: '500',
           color: 'var(--color-text-primary)'
         }}>
-          preset size estimate(currently broken)
+          preset size estimate (currently broken)
         </span>
         <span style={{ 
           fontSize: '0.9rem',
