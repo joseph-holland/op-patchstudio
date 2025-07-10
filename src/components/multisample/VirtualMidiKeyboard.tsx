@@ -50,7 +50,7 @@ export function VirtualMidiKeyboard({
   const [mousePressedKey, setMousePressedKey] = useState<number | null>(null);
   const { onMidiEvent, state: midiState, initialize, refreshDevices } = useWebMidi();
   const [isMidiSelectorVisible, setIsMidiSelectorVisible] = useState(false);
-  const [localSelectedMidiChannel, setLocalSelectedMidiChannel] = useState(selectedMidiChannel || 0);
+  const [localSelectedMidiChannel, setLocalSelectedMidiChannel] = useState(selectedMidiChannel || 1);
   const [midiTriggeredKeys, setMidiTriggeredKeys] = useState<Set<string>>(new Set());
   const [midiPressedNotes, setMidiPressedNotes] = useState<Set<number>>(new Set());
 
