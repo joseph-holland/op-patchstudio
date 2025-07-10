@@ -789,7 +789,11 @@ export function VirtualMidiKeyboard({
                     }
                   }}
                   style={{
-                    background: isMidiSelectorVisible ? 'var(--color-interactive-focus)' : 'var(--color-text-secondary)',
+                    background: isMidiSelectorVisible 
+                      ? 'var(--color-interactive-focus)' 
+                      : midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0
+                        ? 'var(--color-text-primary)'
+                        : 'var(--color-text-secondary)',
                     border: 'none',
                     cursor: 'pointer',
                     padding: '0.25rem 0.5rem',
@@ -802,31 +806,28 @@ export function VirtualMidiKeyboard({
                     transition: 'all 0.2s ease',
                     fontFamily: '"Montserrat", "Arial", sans-serif',
                     fontWeight: 500,
-                    minHeight: '32px',
-                    position: 'relative'
+                    minHeight: '32px'
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible ? 'var(--color-interactive-dark)' : 'var(--color-interactive-focus)';
+                    const hasConnectedDevices = midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0;
+                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible 
+                      ? 'var(--color-interactive-dark)' 
+                      : hasConnectedDevices
+                        ? 'var(--color-interactive-focus)'
+                        : 'var(--color-interactive-focus)';
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible ? 'var(--color-interactive-focus)' : 'var(--color-text-secondary)';
+                    const hasConnectedDevices = midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0;
+                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible 
+                      ? 'var(--color-interactive-focus)' 
+                      : hasConnectedDevices
+                        ? 'var(--color-text-primary)'
+                        : 'var(--color-text-secondary)';
                   }}
                   title="connect midi devices"
                 >
                   <i className="fas fa-plug" style={{ fontSize: '0.75rem' }}></i>
                   <span>midi</span>
-                  {midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0 && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '-2px',
-                      right: '-2px',
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      background: 'var(--color-interactive-focus)',
-                      border: '1px solid var(--color-white)'
-                    }}></div>
-                  )}
                 </button>
               </>
             )}

@@ -173,13 +173,21 @@ export function useWebMidi(): WebMidiHookReturn {
 
   // MIDI event handlers
   const onMidiEvent = useCallback((callback: (event: MidiEvent) => void, channel?: number) => {
-    console.log(`[WebMidi] Adding MIDI event listener for channel ${channel !== undefined ? channel + 1 : 'all'}`);
+    console.log(`[WebMidi] Adding MIDI event listener for channel ${channel !== undefined ? channel : 'all'}`);
+    console.log('[WebMidi] Channel parameter:', channel, 'Type:', typeof channel, 'Is undefined:', channel === undefined);
     console.log('[WebMidi] Available inputs:', WebMidi.inputs.length);
     
     // Create a unique ID for this callback
     const callbackId = Math.random().toString(36).substr(2, 9);
     
     // Create a filtered callback if channel is specified
+    console.log('[WebMidi] Creating callback - channel !== undefined:', channel !== undefined);
+    const extractEventChannel = (event: any) => {
+      if (typeof event.channel === 'number') return event.channel;
+      if (typeof event.message?.channel === 'number') return event.message.channel;
+      if (typeof event.target?.number === 'number') return event.target.number;
+      return 1;
+    };
     const filteredCallback = channel !== undefined 
       ? (event: any) => {
           console.log('[WebMidi] MIDI event received (filtered):', event);
@@ -189,17 +197,14 @@ export function useWebMidi(): WebMidiHookReturn {
             targetNumber: event.target?.number,
             message: event.message
           });
-          
-          // Try different ways to get the channel
-          const eventChannel = event.target?.number || event.channel || event.message?.channel || 1;
-          console.log('[WebMidi] Event channel:', eventChannel, 'Expected channel:', channel + 1);
-          
-          if (eventChannel === channel + 1) { // WebMidi.js uses 1-based channels
+          const eventChannel = extractEventChannel(event);
+          console.log('[WebMidi] Event channel:', eventChannel, 'Expected channel:', channel);
+          if (eventChannel === channel) { // Both are 1-based (1-16)
             const midiEvent: MidiEvent = {
               type: event.type,
               note: event.note.number,
               velocity: event.rawVelocity,
-              channel: eventChannel - 1, // Convert to 0-based
+              channel: eventChannel, // 1-based (1-16)
               timestamp: event.timestamp
             };
             console.log('[WebMidi] Calling callback with event:', midiEvent);
@@ -214,16 +219,13 @@ export function useWebMidi(): WebMidiHookReturn {
             targetNumber: event.target?.number,
             message: event.message
           });
-          
-          // Try different ways to get the channel
-          const eventChannel = event.target?.number || event.channel || event.message?.channel || 1;
+          const eventChannel = extractEventChannel(event);
           console.log('[WebMidi] Event channel:', eventChannel);
-          
           const midiEvent: MidiEvent = {
             type: event.type,
             note: event.note.number,
             velocity: event.rawVelocity,
-            channel: eventChannel - 1, // Convert to 0-based
+                          channel: eventChannel, // 1-based (1-16)
             timestamp: event.timestamp
           };
           console.log('[WebMidi] Calling callback with event:', midiEvent);

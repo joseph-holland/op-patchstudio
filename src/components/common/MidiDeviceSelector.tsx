@@ -35,7 +35,7 @@ function MidiChannelSelector({ selectedChannel, onChannelChange }: MidiChannelSe
         }}
       >
         {Array.from({ length: 16 }, (_, i) => (
-          <option key={i} value={i}>
+          <option key={i} value={i + 1}>
             {i + 1}
           </option>
         ))}
@@ -58,7 +58,7 @@ export function MidiDeviceSelector({
   onChannelChange
 }: MidiDeviceSelectorProps) {
   const { state, initialize } = useWebMidi();
-  const [selectedChannel, setSelectedChannel] = useState(0); // Default to channel 1 (0-indexed)
+  const [selectedChannel, setSelectedChannel] = useState(1); // Default to channel 1 (1-based)
 
   const handleInitialize = async () => {
     if (!state.isSupported) {
@@ -102,61 +102,86 @@ export function MidiDeviceSelector({
   if (!state.isInitialized) {
     return (
       <div className={`midi-device-selector ${className}`} style={{
-        padding: '0.75rem 1rem',
         background: 'var(--color-bg-primary)',
-        borderRadius: '6px',
-        border: '1px solid var(--color-border-light)',
-        textAlign: 'center'
+        overflow: 'hidden',
+        height: '60px'
       }}>
-        <button
-          onClick={handleInitialize}
-          disabled={state.isConnecting}
-          style={{
-            background: 'var(--color-interactive-focus)',
-            color: 'var(--color-white)',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '0.5rem 1rem',
-            fontSize: '0.875rem',
-            cursor: state.isConnecting ? 'not-allowed' : 'pointer',
-            opacity: state.isConnecting ? 0.6 : 1,
-            transition: 'all 0.2s ease',
-            fontFamily: '"Montserrat", "Arial", sans-serif',
-            fontWeight: 500,
-            minHeight: '44px',
+        {/* Compact single-row layout */}
+        <div style={{
+          padding: '0.75rem 1rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          flexWrap: 'wrap'
+        }}>
+          {/* Left side - Header */}
+          <div style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem'
-          }}
-          onMouseEnter={e => {
-            if (!state.isConnecting) {
-              e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
-            }
-          }}
-          onMouseLeave={e => {
-            if (!state.isConnecting) {
-              e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
-            }
-          }}
-        >
-          {state.isConnecting ? (
-            <>
-              <i className="fas fa-spinner fa-spin" style={{ fontSize: '0.75rem' }}></i>
-              connecting...
-            </>
-          ) : (
-            <>
-              <i className="fas fa-plug" style={{ fontSize: '0.75rem' }}></i>
-              connect midi devices
-            </>
-          )}
-        </button>
+            gap: '0.5rem',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            color: 'var(--color-text-primary)',
+            flexShrink: 0
+          }}>
+            <i className="fas fa-music" style={{ fontSize: '0.75rem' }}></i>
+            midi devices
+          </div>
+
+          {/* Right side - Connect button */}
+          <div style={{ marginLeft: 'auto' }}>
+            <button
+              onClick={handleInitialize}
+              disabled={state.isConnecting}
+              style={{
+                background: 'var(--color-interactive-focus)',
+                color: 'var(--color-white)',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem',
+                cursor: state.isConnecting ? 'not-allowed' : 'pointer',
+                opacity: state.isConnecting ? 0.6 : 1,
+                transition: 'all 0.2s ease',
+                fontFamily: '"Montserrat", "Arial", sans-serif',
+                fontWeight: 500,
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}
+              onMouseEnter={e => {
+                if (!state.isConnecting) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
+                }
+              }}
+              onMouseLeave={e => {
+                if (!state.isConnecting) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
+                }
+              }}
+            >
+              {state.isConnecting ? (
+                <>
+                  <i className="fas fa-spinner fa-spin" style={{ fontSize: '0.75rem' }}></i>
+                  connecting...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-plug" style={{ fontSize: '0.75rem' }}></i>
+                  connect midi devices
+                </>
+              )}
+            </button>
+          </div>
+        </div>
         {state.error && (
           <div style={{
             color: 'var(--color-text-error)',
             fontSize: '0.75rem',
-            marginTop: '0.5rem'
+            marginTop: '0.5rem',
+            padding: '0 1rem 0.75rem 1rem'
           }}>
             {state.error}
           </div>
@@ -168,7 +193,8 @@ export function MidiDeviceSelector({
   return (
     <div className={`midi-device-selector ${className}`} style={{
       background: 'var(--color-bg-primary)',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      height: '60px'
     }}>
       {/* Compact single-row layout */}
       <div style={{
@@ -206,15 +232,42 @@ export function MidiDeviceSelector({
           />
         </div>
 
-        {/* Center - Device count */}
+        {/* Center - Device count & Rescan */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
+          gap: '0.75rem',
           fontSize: '0.75rem',
           color: 'var(--color-text-secondary)',
           flexShrink: 0
         }}>
           <span>{filteredDevices.length} connected</span>
+          <button
+            onClick={handleInitialize}
+            disabled={state.isConnecting}
+            title="Rescan MIDI devices"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-text-secondary)',
+              cursor: state.isConnecting ? 'not-allowed' : 'pointer',
+              padding: '0.25rem',
+              fontSize: '0.875rem',
+              lineHeight: 1,
+              opacity: state.isConnecting ? 0.6 : 1,
+              transition: 'color 0.2s ease',
+            }}
+            onMouseEnter={e => {
+              if (!state.isConnecting) e.currentTarget.style.color = 'var(--color-text-primary)';
+            }}
+            onMouseLeave={e => {
+              if (!state.isConnecting) e.currentTarget.style.color = 'var(--color-text-secondary)';
+            }}
+          >
+            {state.isConnecting 
+              ? <i className="fas fa-spinner fa-spin"></i> 
+              : <i className="fas fa-sync-alt"></i>}
+          </button>
         </div>
 
         {/* Right side - Compact device list */}
