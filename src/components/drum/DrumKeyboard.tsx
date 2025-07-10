@@ -53,7 +53,7 @@ interface DrumKeyboardProps {
 export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: externalMidiState, onMidiEventExternal }: DrumKeyboardProps = {}) {
   const { state } = useAppContext();
   const [currentOctave, setCurrentOctave] = useState(0);
-  const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
+  const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set()); // Format: "keyChar:octave" e.g., "A:0", "W:1"
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingUploadIndex, setPendingUploadIndex] = useState<number | null>(null);
@@ -155,9 +155,15 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
   const isMidiConnected = midiState.isInitialized && inputDevices.length > 0;
 
   const playSample = async (index: number) => {
+    console.log(`[DEBUG] playSample called with index: ${index}`);
     const sample = state.drumSamples[index];
-    if (!sample?.isLoaded || !sample.audioBuffer) return;
+    console.log(`[DEBUG] Sample at index ${index}:`, sample);
+    if (!sample?.isLoaded || !sample.audioBuffer) {
+      console.log(`[DEBUG] Sample at index ${index} is not loaded or has no audioBuffer`);
+      return;
+    }
 
+    console.log(`[DEBUG] Playing sample: ${sample.name} at index ${index}`);
     try {
       await play(sample.audioBuffer, {
         inFrame: sample.inPoint !== undefined ? Math.floor(sample.inPoint * sample.audioBuffer.sampleRate) : 0,
@@ -222,7 +228,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
       const idx = getDrumIdxForKey(key);
       if (idx !== null && state.drumSamples[idx]) {
         playSample(idx);
-        setPressedKeys(prev => new Set(prev).add(key));
+        setPressedKeys(prev => new Set(prev).add(`${key}:${currentOctave}`));
       }
     };
 
@@ -230,7 +236,9 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
       const key = e.key.toUpperCase();
       setPressedKeys(prev => {
         const newSet = new Set(prev);
-        newSet.delete(key);
+        // Remove the key from both octaves since we don't know which one was pressed
+        newSet.delete(`${key}:0`);
+        newSet.delete(`${key}:1`);
         return newSet;
       });
     };
@@ -261,10 +269,11 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
           setCurrentOctave(0);
         }
         playSample(drumIndex);
-        // Add visual feedback by finding the key character
+        // Add visual feedback by finding the key character and octave
         const keyChar = getKeyCharFromDrumIndex(drumIndex);
         if (keyChar) {
-          setPressedKeys(prev => new Set([...prev, keyChar]));
+          const keyOctave = isUpperOctave ? 1 : 0;
+          setPressedKeys(prev => new Set([...prev, `${keyChar}:${keyOctave}`]));
         }
       } else {
         console.log(`[MIDI] No drum mapping found for note: ${note}`);
@@ -275,9 +284,10 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
       if (drumIndex !== null) {
         const keyChar = getKeyCharFromDrumIndex(drumIndex);
         if (keyChar) {
+          const keyOctave = drumIndex >= 12 ? 1 : 0;
           setPressedKeys(prev => {
             const newSet = new Set(prev);
-            newSet.delete(keyChar);
+            newSet.delete(`${keyChar}:${keyOctave}`);
             return newSet;
           });
         }
@@ -380,10 +390,35 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
     }
   }, [isMidiConnected, selectedMidiChannel, onMidiEvent, handleMidiEvent, midiState.devices, state.currentTab]);
 
+  // Helper functions to create common OPXYKey props
+  const createKeyProps = (keyChar: string, octave: number, isLarge = false, circleOffset: 'left' | 'right' | 'center' = 'center') => {
+    const mapping = drumKeyMap[octave][keyChar as keyof typeof drumKeyMap[0]];
+    console.log(`[DEBUG] createKeyProps: keyChar=${keyChar}, octave=${octave}, mapping=`, mapping);
+    return {
+      keyChar,
+      mapping,
+      octave, // Add the octave to the props
+      isPressed: pressedKeys.has(`${keyChar}:${octave}`), // Show pressed state for specific key+octave combination
+      isLarge,
+      circleOffset,
+      isActiveOctave: currentOctave === octave,
+      showKeyboardLabels: currentOctave === octave && !isMidiConnected,
+      isMobile,
+      keyWidth
+    };
+  };
+
+  const createStandardKeyProps = (keyChar: string, octave: number) => 
+    createKeyProps(keyChar, octave, false, 'center');
+
+  const createLargeKeyProps = (keyChar: string, octave: number, circleOffset: 'left' | 'right') => 
+    createKeyProps(keyChar, octave, true, circleOffset);
+
   // OP-XY key component with exact 1:1 and 1:1.5 ratios
   const OPXYKey = ({ 
     keyChar, 
     mapping, 
+    octave, // Add octave to the props
     isPressed, 
     isLarge = false,
     circleOffset = 'center', // 'left', 'right', or 'center'
@@ -394,6 +429,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
   }: { 
     keyChar: string; 
     mapping?: { label: string; idx: number }; 
+    octave: number; // Add octave to the type
     isPressed: boolean;
     isLarge?: boolean;
     circleOffset?: 'left' | 'right' | 'center';
@@ -404,6 +440,9 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
   }) => {
     const hasContent = mapping && state.drumSamples[mapping.idx]?.isLoaded;
     const isActive = hasContent; // Key is only active when it has content
+    
+    // Flag to prevent double-triggering between mouse events and click events
+    const [mouseTriggered, setMouseTriggered] = useState(false);
     
     // Use keyWidth for all proportional sizing
     const baseSize = keyWidth;
@@ -469,27 +508,48 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
         {/* Key button */}
         <button
           onClick={() => {
+            console.log(`[DEBUG] onClick triggered for key: ${keyChar}, octave: ${octave}`);
             if (mapping) {
+              console.log(`[DEBUG] Clicked key: ${keyChar}, octave: ${octave}, mapping.idx: ${mapping.idx}, isActive: ${isActive}`);
               if (isActive) {
-                // Play sample if key has content
-                playSample(mapping.idx);
+                // Only trigger if mouse didn't already trigger it
+                if (!mouseTriggered) {
+                  console.log(`[DEBUG] onClick - playing sample at index: ${mapping.idx}`);
+                  playSample(mapping.idx);
+                } else {
+                  console.log(`[DEBUG] onClick - skipping because mouse already triggered`);
+                }
               } else {
                 // Open file browser if key is empty
+                console.log(`[DEBUG] Opening file browser for index: ${mapping.idx}`);
                 openFileBrowser(mapping.idx);
               }
+            } else {
+              console.log(`[DEBUG] No mapping found for key: ${keyChar}, octave: ${octave}`);
             }
+            // Reset the flag
+            setMouseTriggered(false);
           }}
           onMouseDown={() => {
-            if (!isActive || !mapping) return; // Only simulate key events for active keys with samples
-            // Simulate key press for mouse clicks
-            const syntheticEvent = new KeyboardEvent('keydown', { key: keyChar });
-            document.dispatchEvent(syntheticEvent);
+            console.log(`[DEBUG] onMouseDown triggered for key: ${keyChar}, octave: ${octave}`);
+            if (!mapping) return; // Need mapping to know which key
+            if (isActive) {
+              // Directly trigger sample playback for mouse events
+              console.log(`[DEBUG] Mouse down - playing sample at index: ${mapping.idx}`);
+              playSample(mapping.idx);
+              setMouseTriggered(true);
+              // Add visual feedback for pressed key
+              setPressedKeys(prev => new Set(prev).add(`${keyChar}:${octave}`));
+            }
           }}
           onMouseUp={() => {
-            if (!isActive || !mapping) return; // Only simulate key events for active keys with samples
-            // Simulate key release for mouse clicks
-            const syntheticEvent = new KeyboardEvent('keyup', { key: keyChar });
-            document.dispatchEvent(syntheticEvent);
+            console.log(`[DEBUG] onMouseUp triggered for key: ${keyChar}, octave: ${octave}`);
+            // Remove visual feedback for released key
+            setPressedKeys(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(`${keyChar}:${octave}`);
+              return newSet;
+            });
           }}
           onDragOver={(e) => {
             e.preventDefault();
@@ -731,16 +791,16 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
                   }}>
                     {/* Top row */}
                     <div style={{ display: 'flex', gap: '1px' }}>
-                      <OPXYKey keyChar="W" mapping={drumKeyMap[0].W} isPressed={currentOctave === 0 && pressedKeys.has('W')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0 && !isMidiConnected} isMobile={true} keyWidth={keyWidth}/>
-                      <OPXYKey keyChar="E" mapping={drumKeyMap[0].E} isPressed={currentOctave === 0 && pressedKeys.has('E')} isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0 && !isMidiConnected} isMobile={true} keyWidth={keyWidth}/>
-                      <OPXYKey keyChar="R" mapping={drumKeyMap[0].R} isPressed={currentOctave === 0 && pressedKeys.has('R')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0 && !isMidiConnected} isMobile={true} keyWidth={keyWidth}/>
-                      <OPXYKey keyChar="Y" mapping={drumKeyMap[0].Y} isPressed={currentOctave === 0 && pressedKeys.has('Y')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0 && !isMidiConnected} isMobile={true} keyWidth={keyWidth}/>
-                      <OPXYKey keyChar="U" mapping={drumKeyMap[0].U} isPressed={currentOctave === 0 && pressedKeys.has('U')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0 && !isMidiConnected} isMobile={true} keyWidth={keyWidth}/>
+                      <OPXYKey {...createLargeKeyProps('W', 0, 'right')} />
+                      <OPXYKey {...createStandardKeyProps('E', 0)} />
+                      <OPXYKey {...createLargeKeyProps('R', 0, 'left')} />
+                      <OPXYKey {...createLargeKeyProps('Y', 0, 'left')} />
+                      <OPXYKey {...createLargeKeyProps('U', 0, 'right')} />
                     </div>
                     {/* Bottom row */}
                     <div style={{ display: 'flex', gap: '1px' }}>
                       {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
-                        <OPXYKey key={`octave0-mobile-${key}`} keyChar={key} mapping={drumKeyMap[0][key as keyof typeof drumKeyMap[0]]} isPressed={currentOctave === 0 && pressedKeys.has(key)} isActiveOctave={currentOctave === 0} showKeyboardLabels={currentOctave === 0 && !isMidiConnected} isMobile={true} keyWidth={keyWidth}/>
+                        <OPXYKey key={`octave0-mobile-${key}`} {...createStandardKeyProps(key, 0)} />
                       ))}
                     </div>
                   </div>
@@ -756,16 +816,16 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
                   }}>
                     {/* Top row */}
                     <div style={{ display: 'flex', gap: '1px' }}>
-                      <OPXYKey keyChar="W" mapping={drumKeyMap[1].W} isPressed={currentOctave === 1 && pressedKeys.has('W')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1 && !isMidiConnected} isMobile={true} keyWidth={keyWidth}/>
-                      <OPXYKey keyChar="E" mapping={drumKeyMap[1].E} isPressed={currentOctave === 1 && pressedKeys.has('E')} isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1 && !isMidiConnected} isMobile={true} keyWidth={keyWidth}/>
-                      <OPXYKey keyChar="R" mapping={drumKeyMap[1].R} isPressed={currentOctave === 1 && pressedKeys.has('R')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1 && !isMidiConnected} isMobile={true} keyWidth={keyWidth}/>
-                      <OPXYKey keyChar="Y" mapping={drumKeyMap[1].Y} isPressed={currentOctave === 1 && pressedKeys.has('Y')} isLarge={true} circleOffset="left" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1 && !isMidiConnected} isMobile={true} keyWidth={keyWidth}/>
-                      <OPXYKey keyChar="U" mapping={drumKeyMap[1].U} isPressed={currentOctave === 1 && pressedKeys.has('U')} isLarge={true} circleOffset="right" isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1 && !isMidiConnected} isMobile={true} keyWidth={keyWidth}/>
+                      <OPXYKey {...createLargeKeyProps('W', 1, 'right')} />
+                      <OPXYKey {...createStandardKeyProps('E', 1)} />
+                      <OPXYKey {...createLargeKeyProps('R', 1, 'left')} />
+                      <OPXYKey {...createLargeKeyProps('Y', 1, 'left')} />
+                      <OPXYKey {...createLargeKeyProps('U', 1, 'right')} />
                     </div>
                     {/* Bottom row */}
                     <div style={{ display: 'flex', gap: '1px' }}>
                       {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
-                        <OPXYKey key={`octave1-mobile-${key}`} keyChar={key} mapping={drumKeyMap[1][key as keyof typeof drumKeyMap[1]]} isPressed={currentOctave === 1 && pressedKeys.has(key)} isActiveOctave={currentOctave === 1} showKeyboardLabels={currentOctave === 1 && !isMidiConnected} isMobile={true} keyWidth={keyWidth}/>
+                        <OPXYKey key={`octave1-mobile-${key}`} {...createStandardKeyProps(key, 1)} />
                       ))}
                     </div>
                   </div>
@@ -842,54 +902,11 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
               justifyContent: 'center',
               overflow: 'hidden'
             }}>
-              <OPXYKey
-                keyChar="W"
-                mapping={drumKeyMap[0].W}
-                isPressed={currentOctave === 0 && pressedKeys.has('W')}
-                isLarge={true}
-                circleOffset="right"
-                isActiveOctave={currentOctave === 0}
-                showKeyboardLabels={currentOctave === 0 && !isMidiConnected}
-                keyWidth={keyWidth}
-              />
-              <OPXYKey
-                keyChar="E"
-                mapping={drumKeyMap[0].E}
-                isPressed={currentOctave === 0 && pressedKeys.has('E')}
-                isActiveOctave={currentOctave === 0}
-                showKeyboardLabels={currentOctave === 0 && !isMidiConnected}
-                keyWidth={keyWidth}
-              />
-              <OPXYKey
-                keyChar="R"
-                mapping={drumKeyMap[0].R}
-                isPressed={currentOctave === 0 && pressedKeys.has('R')}
-                isLarge={true}
-                circleOffset="left"
-                isActiveOctave={currentOctave === 0}
-                showKeyboardLabels={currentOctave === 0 && !isMidiConnected}
-                keyWidth={keyWidth}
-              />
-              <OPXYKey
-                keyChar="Y"
-                mapping={drumKeyMap[0].Y}
-                isPressed={currentOctave === 0 && pressedKeys.has('Y')}
-                isLarge={true}
-                circleOffset="left"
-                isActiveOctave={currentOctave === 0}
-                showKeyboardLabels={currentOctave === 0 && !isMidiConnected}
-                keyWidth={keyWidth}
-              />
-              <OPXYKey
-                keyChar="U"
-                mapping={drumKeyMap[0].U}
-                isPressed={currentOctave === 0 && pressedKeys.has('U')}
-                isLarge={true}
-                circleOffset="right"
-                isActiveOctave={currentOctave === 0}
-                showKeyboardLabels={currentOctave === 0 && !isMidiConnected}
-                keyWidth={keyWidth}
-              />
+              <OPXYKey {...createLargeKeyProps('W', 0, 'right')} />
+              <OPXYKey {...createStandardKeyProps('E', 0)} />
+              <OPXYKey {...createLargeKeyProps('R', 0, 'left')} />
+              <OPXYKey {...createLargeKeyProps('Y', 0, 'left')} />
+              <OPXYKey {...createLargeKeyProps('U', 0, 'right')} />
             </div>
 
             {/* Bottom row */}
@@ -905,12 +922,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
               {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
                 <OPXYKey
                   key={`octave0-${key}`}
-                  keyChar={key}
-                  mapping={drumKeyMap[0][key as keyof typeof drumKeyMap[0]]}
-                  isPressed={currentOctave === 0 && pressedKeys.has(key)}
-                  isActiveOctave={currentOctave === 0}
-                  showKeyboardLabels={currentOctave === 0 && !isMidiConnected}
-                  keyWidth={keyWidth}
+                  {...createStandardKeyProps(key, 0)}
                 />
               ))}
             </div>
@@ -935,54 +947,11 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
               justifyContent: 'center',
               overflow: 'hidden'
             }}>
-              <OPXYKey
-                keyChar="W"
-                mapping={drumKeyMap[1].W}
-                isPressed={currentOctave === 1 && pressedKeys.has('W')}
-                isLarge={true}
-                circleOffset="right"
-                isActiveOctave={currentOctave === 1}
-                showKeyboardLabels={currentOctave === 1 && !isMidiConnected}
-                keyWidth={keyWidth}
-              />
-              <OPXYKey
-                keyChar="E"
-                mapping={drumKeyMap[1].E}
-                isPressed={currentOctave === 1 && pressedKeys.has('E')}
-                isActiveOctave={currentOctave === 1}
-                showKeyboardLabels={currentOctave === 1 && !isMidiConnected}
-                keyWidth={keyWidth}
-              />
-              <OPXYKey
-                keyChar="R"
-                mapping={drumKeyMap[1].R}
-                isPressed={currentOctave === 1 && pressedKeys.has('R')}
-                isLarge={true}
-                circleOffset="left"
-                isActiveOctave={currentOctave === 1}
-                showKeyboardLabels={currentOctave === 1 && !isMidiConnected}
-                keyWidth={keyWidth}
-              />
-              <OPXYKey
-                keyChar="Y"
-                mapping={drumKeyMap[1].Y}
-                isPressed={currentOctave === 1 && pressedKeys.has('Y')}
-                isLarge={true}
-                circleOffset="left"
-                isActiveOctave={currentOctave === 1}
-                showKeyboardLabels={currentOctave === 1 && !isMidiConnected}
-                keyWidth={keyWidth}
-              />
-              <OPXYKey
-                keyChar="U"
-                mapping={drumKeyMap[1].U}
-                isPressed={currentOctave === 1 && pressedKeys.has('U')}
-                isLarge={true}
-                circleOffset="right"
-                isActiveOctave={currentOctave === 1}
-                showKeyboardLabels={currentOctave === 1 && !isMidiConnected}
-                keyWidth={keyWidth}
-              />
+              <OPXYKey {...createLargeKeyProps('W', 1, 'right')} />
+              <OPXYKey {...createStandardKeyProps('E', 1)} />
+              <OPXYKey {...createLargeKeyProps('R', 1, 'left')} />
+              <OPXYKey {...createLargeKeyProps('Y', 1, 'left')} />
+              <OPXYKey {...createLargeKeyProps('U', 1, 'right')} />
             </div>
 
             {/* Bottom row */}
@@ -998,12 +967,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
               {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map(key => (
                 <OPXYKey
                   key={`octave1-${key}`}
-                  keyChar={key}
-                  mapping={drumKeyMap[1][key as keyof typeof drumKeyMap[1]]}
-                  isPressed={currentOctave === 1 && pressedKeys.has(key)}
-                  isActiveOctave={currentOctave === 1}
-                  showKeyboardLabels={currentOctave === 1 && !isMidiConnected}
-                  keyWidth={keyWidth}
+                  {...createStandardKeyProps(key, 1)}
                 />
               ))}
             </div>

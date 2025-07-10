@@ -24,6 +24,7 @@ export interface WebMidiHookReturn {
   sendNoteOff: (note: number, velocity?: number, channel?: number) => void;
   sendControlChange: (controller: number, value: number, channel?: number) => void;
 }
+// Note: All channel parameters use 1-16 numbering (MIDI standard), not 0-15
 
 export function useWebMidi(): WebMidiHookReturn {
   const [state, setState] = useState<WebMidiState>({
@@ -103,8 +104,8 @@ export function useWebMidi(): WebMidiHookReturn {
       }));
     }
 
-    // Periodic device state check to catch any missed connections
-    // This helps with devices that don't immediately trigger portschanged
+    // Periodic device state check as a fallback for missed portschanged events
+    // This is less frequent now since we rely more on event-driven updates
     const interval = setInterval(() => {
       if (WebMidi.enabled) {
         const currentDevices = getDevicesFromWebMidi();
@@ -118,13 +119,13 @@ export function useWebMidi(): WebMidiHookReturn {
             );
           
           if (hasChanged) {
-            console.log('[MIDI] Device state check detected changes, updating...');
+            console.log('[MIDI] Fallback device state check detected changes, updating...');
             return { ...prev, devices: currentDevices };
           }
           return prev;
         });
       }
-    }, 1000); // Check every second
+    }, 8000); // Check every 8 seconds (optimized from 1 second)
 
     return () => clearInterval(interval);
   }, [state.isInitialized]);
@@ -193,10 +194,11 @@ export function useWebMidi(): WebMidiHookReturn {
     return devices;
   };
 
-  // Device listener - improved to handle initial connection and state changes
+  // Event-driven device listener - primary mechanism for device state changes
+  // This is more efficient than polling and should catch most device changes
   useEffect(() => {
     const handlePortsChanged = () => {
-      console.log('[MIDI] Device list changed, updating...');
+      console.log('[MIDI] Event-driven device list change detected, updating...');
       setState(prev => ({ 
         ...prev, 
         devices: getDevicesFromWebMidi(),
@@ -211,7 +213,7 @@ export function useWebMidi(): WebMidiHookReturn {
 
     // Also set up a listener for when WebMidi becomes enabled
     const handleEnabled = () => {
-      console.log('[MIDI] WebMidi enabled, setting up device listener...');
+      console.log('[MIDI] WebMidi enabled, setting up event-driven device listener...');
       WebMidi.addListener('portschanged', handlePortsChanged);
       // Immediately update device list when enabled
       setState(prev => ({ 
@@ -304,22 +306,22 @@ export function useWebMidi(): WebMidiHookReturn {
     console.warn('[useWebMidi] offMidiEvent is not fully implemented. Use the cleanup function from onMidiEvent.');
   }, []);
 
-  // MIDI output functions
-  const sendNoteOn = useCallback((note: number, velocity: number = 127, channel: number = 0) => {
+  // MIDI output functions - all use 1-16 channel numbering for consistency
+  const sendNoteOn = useCallback((note: number, velocity: number = 127, channel: number = 1) => {
     WebMidi.outputs.forEach((output: Output) => {
-      output.channels[channel + 1]?.sendNoteOn(note, { rawAttack: velocity });
+      output.channels[channel]?.sendNoteOn(note, { rawAttack: velocity });
     });
   }, []);
 
-  const sendNoteOff = useCallback((note: number, velocity: number = 0, channel: number = 0) => {
+  const sendNoteOff = useCallback((note: number, velocity: number = 0, channel: number = 1) => {
     WebMidi.outputs.forEach((output: Output) => {
-      output.channels[channel + 1]?.sendNoteOff(note, { rawRelease: velocity });
+      output.channels[channel]?.sendNoteOff(note, { rawRelease: velocity });
     });
   }, []);
 
-  const sendControlChange = useCallback((controller: number, value: number, channel: number = 0) => {
+  const sendControlChange = useCallback((controller: number, value: number, channel: number = 1) => {
     WebMidi.outputs.forEach((output: Output) => {
-      output.channels[channel + 1]?.sendControlChange(controller, value);
+      output.channels[channel]?.sendControlChange(controller, value);
     });
   }, []);
 
