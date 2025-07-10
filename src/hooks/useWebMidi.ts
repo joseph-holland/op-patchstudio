@@ -162,7 +162,7 @@ export function useWebMidi(): WebMidiHookReturn {
 
   // MIDI event handlers
   const onMidiEvent = useCallback((callback: (event: MidiEvent) => void, channel?: number) => {
-    console.log(`[MIDI] Setting up event listener for channel: ${channel || 'all'}`);
+    // console.log(`[MIDI] Setting up event listener for channel: ${channel || 'all'}`);
 
     const handler = (event: any) => {
       // console.log(`[MIDI] Raw event received:`, {

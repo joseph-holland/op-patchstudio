@@ -53,6 +53,9 @@ export function useAudioPlayer() {
       outFrame?: number;
     } = {}
   ) => {
+    // Stop any current playback
+    stopCurrentPlayback();
+    
     try {
       const audioContext = await audioContextManager.getAudioContext();
       let buffer = audioBuffer;
