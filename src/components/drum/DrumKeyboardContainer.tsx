@@ -46,7 +46,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
   });
 
   // MIDI event handling
-  const { onMidiEvent, state: midiState, initialize } = useWebMidi();
+  const { onMidiEvent, state: midiState, initialize, refreshDevices } = useWebMidi();
   const [isMidiSelectorVisible, setIsMidiSelectorVisible] = useState(false);
 
   // Auto-initialize MIDI if not already initialized
@@ -55,6 +55,21 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
       initialize();
     }
   }, [midiState.isInitialized, midiState.isConnecting, initialize]);
+
+  // Refresh MIDI devices when tab becomes visible (helps with device detection)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && midiState.isInitialized) {
+        console.log('[MIDI] Tab became visible, refreshing devices...');
+        refreshDevices();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [midiState.isInitialized, refreshDevices]);
 
   // Function to hide MIDI selector
   const hideMidiSelector = () => {

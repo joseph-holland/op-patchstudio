@@ -418,6 +418,7 @@ export function MultisampleTool() {
               setSelectedMidiChannel(channel);
               localStorage.setItem('midi-channel', channel.toString());
             }}
+            isActive={state.currentTab === 'multisample'}
           />
         </div>
       </div>

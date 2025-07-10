@@ -15,6 +15,7 @@ interface VirtualMidiKeyboardProps {
   onTogglePin: () => void;
   selectedMidiChannel?: number;
   onMidiChannelChange?: (channel: number) => void;
+  isActive?: boolean; // Whether this keyboard should respond to MIDI events
 }
 
 export function VirtualMidiKeyboard({ 
@@ -27,7 +28,8 @@ export function VirtualMidiKeyboard({
   isPinned,
   onTogglePin,
   selectedMidiChannel,
-  onMidiChannelChange
+  onMidiChannelChange,
+  isActive = true
 }: VirtualMidiKeyboardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const placeholderRef = useRef<HTMLDivElement>(null);
@@ -46,7 +48,7 @@ export function VirtualMidiKeyboard({
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
 
   const [mousePressedKey, setMousePressedKey] = useState<number | null>(null);
-  const { onMidiEvent, state: midiState, initialize } = useWebMidi();
+  const { onMidiEvent, state: midiState, initialize, refreshDevices } = useWebMidi();
   const [isMidiSelectorVisible, setIsMidiSelectorVisible] = useState(false);
   const [localSelectedMidiChannel, setLocalSelectedMidiChannel] = useState(selectedMidiChannel || 0);
   const [midiTriggeredKeys, setMidiTriggeredKeys] = useState<Set<string>>(new Set());
@@ -58,6 +60,21 @@ export function VirtualMidiKeyboard({
       initialize();
     }
   }, [midiState.isInitialized, midiState.isConnecting, initialize]);
+
+  // Refresh MIDI devices when tab becomes visible (helps with device detection)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && midiState.isInitialized) {
+        console.log('[MIDI] Tab became visible, refreshing devices...');
+        refreshDevices();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [midiState.isInitialized, refreshDevices]);
 
   // Check if MIDI is connected (initialized and has input devices)
   const inputDevices = midiState.devices.filter(device => device.type === 'input' && device.state === 'connected');
@@ -298,9 +315,14 @@ export function VirtualMidiKeyboard({
     }
   }, [assignedNotes, onKeyClick, onUnassignedKeyClick, getComputerKeyForNote, hideMidiSelector]);
 
-  // MIDI event handling for multisample keyboard
+  // MIDI event handling for multisample keyboard - only when active
   useEffect(() => {
     if (!midiState.isInitialized) {
+      return;
+    }
+
+    // Only set up MIDI listener if this keyboard is active
+    if (!isActive) {
       return;
     }
 
@@ -316,7 +338,7 @@ export function VirtualMidiKeyboard({
     } else if (!localSelectedMidiChannel) {
       console.log(`[MIDI] Virtual keyboard: No MIDI channel selected`);
     }
-  }, [isMidiConnected, localSelectedMidiChannel, onMidiEvent, handleMidiEvent]);
+  }, [isMidiConnected, localSelectedMidiChannel, onMidiEvent, handleMidiEvent, isActive]);
 
   // Center the keyboard on the active octave when it changes or on mount
   useEffect(() => {

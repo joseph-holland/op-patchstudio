@@ -359,8 +359,13 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
     return lowerOctaveKeys[drumIndex] ?? upperOctaveKeys[drumIndex] ?? null;
   };
 
-  // Set up MIDI event listener
+  // Set up MIDI event listener - only when drum tab is active
   useEffect(() => {
+    // Only set up MIDI listener if drum tab is active
+    if (state.currentTab !== 'drum') {
+      return;
+    }
+
     if (isMidiConnected && selectedMidiChannel) {
       const cleanup = onMidiEvent(handleMidiEvent, selectedMidiChannel); // Listen on selected channel only
       
@@ -373,7 +378,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
     } else if (!selectedMidiChannel) {
       console.log(`[MIDI] Drum keyboard: No MIDI channel selected`);
     }
-  }, [isMidiConnected, selectedMidiChannel, onMidiEvent, handleMidiEvent, midiState.devices]);
+  }, [isMidiConnected, selectedMidiChannel, onMidiEvent, handleMidiEvent, midiState.devices, state.currentTab]);
 
   // OP-XY key component with exact 1:1 and 1:1.5 ratios
   const OPXYKey = ({ 

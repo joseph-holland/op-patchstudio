@@ -57,7 +57,7 @@ export function MidiDeviceSelector({
   showOutputsOnly = false,
   onChannelChange
 }: MidiDeviceSelectorProps) {
-  const { state, initialize } = useWebMidi();
+  const { state, initialize, refreshDevices } = useWebMidi();
   const [selectedChannel, setSelectedChannel] = useState(1); // Default to channel 1 (1-based)
 
   const handleInitialize = async () => {
@@ -67,6 +67,10 @@ export function MidiDeviceSelector({
     }
     
     await initialize();
+    // Force refresh devices after initialization to catch any immediate connections
+    setTimeout(() => {
+      refreshDevices();
+    }, 100);
   };
 
   // Filter devices based on props
@@ -243,7 +247,7 @@ export function MidiDeviceSelector({
         }}>
           <span>{filteredDevices.length} connected</span>
           <button
-            onClick={handleInitialize}
+            onClick={refreshDevices}
             disabled={state.isConnecting}
             title="Rescan MIDI devices"
             style={{
