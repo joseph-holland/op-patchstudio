@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { useWebMidi } from '../../hooks/useWebMidi';
@@ -57,7 +57,16 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel }: DrumKeyboard
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
   const { play } = useAudioPlayer();
-  const { onMidiEvent, offMidiEvent, state: midiState } = useWebMidi();
+  const { onMidiEvent, state: midiState } = useWebMidi();
+  
+  // Debug: Test WebMidi.js availability
+  useEffect(() => {
+    console.log('[DrumKeyboard] Component mounted');
+    console.log('[DrumKeyboard] WebMidi.js test:', {
+      supported: typeof window !== 'undefined' && 'WebMidi' in window,
+      navigator: typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator
+    });
+  }, []);
   
   // Touch/swipe handling for mobile
   const touchStartX = useRef<number | null>(null);
@@ -253,14 +262,59 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel }: DrumKeyboard
     };
   }, [currentOctave, state.drumSamples]);
 
-  // MIDI event handling for drum samples
-  useEffect(() => {
-    // Map MIDI note numbers to drum sample indices
-    // OP-XY drum keyboard mapping (C3 = MIDI 60)
-    // Lower octave (octave 0): F3 to F4 (MIDI 53-65)
-    // Upper octave (octave 1): F4 to F5 (MIDI 65-77)
-    const midiToDrumMap: { [key: number]: number } = {
-      // Lower octave (octave 0) - F3 to F4
+  // MIDI event handling
+  const handleMidiEvent = useCallback((event: MidiEvent) => {
+    console.log('[DrumKeyboard] MIDI event received:', event);
+    
+    if (event.type === 'noteon' && event.velocity > 0) {
+      const note = event.note;
+      console.log('[DrumKeyboard] Processing MIDI note:', note);
+      
+      // Map MIDI note to drum sample index
+      const drumIndex = getDrumIndexFromMidiNote(note);
+      if (drumIndex !== null) {
+        console.log('[DrumKeyboard] Found drum index:', drumIndex, 'for note:', note);
+        
+        // Determine which octave this note belongs to and switch if needed
+        const isUpperOctave = drumIndex >= 12;
+        if (isUpperOctave && currentOctave !== 1) {
+          console.log('[DrumKeyboard] Switching to upper octave for MIDI note:', note);
+          setCurrentOctave(1);
+        } else if (!isUpperOctave && currentOctave !== 0) {
+          console.log('[DrumKeyboard] Switching to lower octave for MIDI note:', note);
+          setCurrentOctave(0);
+        }
+        
+        playSample(drumIndex);
+        
+        // Add visual feedback by finding the key character
+        const keyChar = getKeyCharFromDrumIndex(drumIndex);
+        if (keyChar) {
+          setPressedKeys(prev => new Set([...prev, keyChar]));
+        }
+      } else {
+        console.log('[DrumKeyboard] No drum mapping found for MIDI note:', note);
+      }
+    } else if (event.type === 'noteoff') {
+      const note = event.note;
+      const drumIndex = getDrumIndexFromMidiNote(note);
+      if (drumIndex !== null) {
+        const keyChar = getKeyCharFromDrumIndex(drumIndex);
+        if (keyChar) {
+          setPressedKeys(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(keyChar);
+            return newSet;
+          });
+        }
+      }
+    }
+  }, [playSample, currentOctave]);
+
+  // Helper function to map MIDI note to drum index
+  const getDrumIndexFromMidiNote = (note: number): number | null => {
+    // Lower octave (octave 0) - F3 to F4
+    const lowerOctaveMap: { [key: number]: number } = {
       53: 0,  // F3  -> KD1 (A key)
       54: 1,  // F#3 -> KD2 (W key) 
       55: 2,  // G3  -> SD1 (S key)
@@ -273,8 +327,10 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel }: DrumKeyboard
       62: 9,  // D4  -> CL (H key)
       63: 10, // D#4 -> OH (U key)
       64: 11, // E4  -> CAB (J key)
-      
-      // Upper octave (octave 1) - F4 to E5
+    };
+    
+    // Upper octave (octave 1) - F4 to E5
+    const upperOctaveMap: { [key: number]: number } = {
       65: 14, // F4  -> LT (A key, octave 1)
       66: 12, // F#4 -> RC (W key, octave 1)
       67: 16, // G4  -> MT (S key, octave 1)
@@ -287,12 +343,15 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel }: DrumKeyboard
       74: 22, // D5  -> WS (H key, octave 1)
       75: 19, // D#5 -> HC (U key, octave 1)
       76: 23, // E5  -> GUI (J key, octave 1)
-      77: 12, // F5  -> RC (W key, octave 1) - wraps around
     };
+    
+    return lowerOctaveMap[note] ?? upperOctaveMap[note] ?? null;
+  };
 
-    // Create reverse mapping from drum index to keyboard key
-    const drumToKeyMap: { [key: number]: string } = {
-      // Lower octave (octave 0)
+  // Helper function to get key character from drum index
+  const getKeyCharFromDrumIndex = (drumIndex: number): string | null => {
+    // Lower octave (octave 0)
+    const lowerOctaveKeys: { [key: number]: string } = {
       0: 'A',   // KD1
       1: 'W',   // KD2
       2: 'S',   // SD1
@@ -305,8 +364,10 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel }: DrumKeyboard
       9: 'H',   // CL
       10: 'U',  // OH
       11: 'J',  // CAB
-      
-      // Upper octave (octave 1)
+    };
+    
+    // Upper octave (octave 1)
+    const upperOctaveKeys: { [key: number]: string } = {
       12: 'W',  // RC
       13: 'E',  // CC
       14: 'A',  // LT
@@ -320,62 +381,23 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel }: DrumKeyboard
       22: 'H',  // WS
       23: 'J',  // GUI
     };
+    
+    return lowerOctaveKeys[drumIndex] ?? upperOctaveKeys[drumIndex] ?? null;
+  };
 
-    const handleMidiEvent = (event: MidiEvent) => {
-      console.log('MIDI Event received:', event); // Debug logging
+  // Set up MIDI event listener
+  useEffect(() => {
+    if (isMidiConnected && selectedMidiChannel !== null) {
+      console.log('[DrumKeyboard] Setting up MIDI listener for channel:', selectedMidiChannel);
+      const cleanup = onMidiEvent(handleMidiEvent, selectedMidiChannel);
       
-      if (event.type === 'noteon' || event.type === 'noteoff') {
-        const drumIndex = midiToDrumMap[event.note];
-        console.log(`MIDI Note ${event.note} maps to drum index:`, drumIndex); // Debug logging
-        
-        if (drumIndex !== undefined && drumIndex < 24) {
-          const keyChar = drumToKeyMap[drumIndex];
-          
-          // Determine which octave this note belongs to
-          const isUpperOctave = drumIndex >= 12;
-          
-          if (event.type === 'noteon' && event.velocity > 0) {
-            // Note on - play sample and add visual feedback
-            console.log(`Playing drum sample at index ${drumIndex} (key: ${keyChar}, octave: ${isUpperOctave ? 'upper' : 'lower'})`); // Debug logging
-            
-            // Switch to the correct octave if needed
-            if (isUpperOctave && currentOctave !== 1) {
-              setCurrentOctave(1);
-            } else if (!isUpperOctave && currentOctave !== 0) {
-              setCurrentOctave(0);
-            }
-            
-            playSample(drumIndex);
-            
-            // Add keyboard key press effect for visual feedback
-            if (keyChar) {
-              setPressedKeys(prev => new Set([...prev, keyChar]));
-            }
-          } else {
-            // Note off - remove visual feedback
-            
-            // Remove keyboard key press effect
-            if (keyChar) {
-              setPressedKeys(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(keyChar);
-                return newSet;
-              });
-            }
-          }
-        } else {
-          console.log(`No drum mapping found for MIDI note ${event.note}`); // Debug logging
-        }
-      }
-    };
-
-    // Listen to the selected channel (or all channels if none selected)
-    onMidiEvent(handleMidiEvent, selectedMidiChannel);
-
-    return () => {
-      offMidiEvent(handleMidiEvent);
-    };
-  }, [onMidiEvent, offMidiEvent, state.drumSamples, currentOctave]);
+      // Cleanup function
+      return () => {
+        console.log('[DrumKeyboard] Cleaning up MIDI listener');
+        cleanup();
+      };
+    }
+  }, [isMidiConnected, selectedMidiChannel, onMidiEvent, handleMidiEvent]);
 
   // OP-XY key component with exact 1:1 and 1:1.5 ratios
   const OPXYKey = ({ 

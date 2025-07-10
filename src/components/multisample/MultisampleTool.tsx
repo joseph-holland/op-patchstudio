@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { audioContextManager } from '../../utils/audioContext';
 import { ConfirmationModal } from '../common/ConfirmationModal';
 import { RecordingModal } from '../common/RecordingModal';
 import { AudioProcessingSection } from '../common/AudioProcessingSection';
@@ -11,6 +10,7 @@ import { MultisamplePresetSettings } from './MultisamplePresetSettings';
 import { VirtualMidiKeyboard } from './VirtualMidiKeyboard';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { usePatchGeneration } from '../../hooks/usePatchGeneration';
+import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { audioBufferToWav } from '../../utils/audio';
 import { cookieUtils, COOKIE_KEYS } from '../../utils/cookies';
 import { savePresetToLibrary } from '../../utils/libraryUtils';
@@ -22,6 +22,7 @@ export function MultisampleTool() {
   const { state, dispatch } = useAppContext();
   const { handleMultisampleUpload, clearMultisampleFile } = useFileUpload();
   const { generateMultisamplePatchFile } = usePatchGeneration();
+  const { play } = useAudioPlayer();
   const audioFileInputRef = useRef<HTMLInputElement>(null);
   const browseFilesRef = useRef<(() => void) | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -36,7 +37,7 @@ export function MultisampleTool() {
   }>({ isOpen: false, targetIndex: null });
 
   const [targetMidiNote, setTargetMidiNote] = useState<number | null>(null);
-  const [selectedMidiChannel] = useState(() => {
+  const [selectedMidiChannel, setSelectedMidiChannel] = useState(() => {
     const saved = localStorage.getItem('midi-channel');
     return saved ? parseInt(saved, 10) : 0;
   });
@@ -329,21 +330,20 @@ export function MultisampleTool() {
 
     if (rootSample && rootSample.audioBuffer) {
       try {
-        const audioContext = await audioContextManager.getAudioContext();
-        const source = audioContext.createBufferSource();
-        source.buffer = rootSample.audioBuffer;
-
         // Apply pitch shifting
         const playbackRate = Math.pow(2, pitchOffset / 12);
-        source.playbackRate.value = playbackRate;
-
-        source.connect(audioContext.destination);
-        source.start();
+        
+        // Use the audio player with gain control (same as drum keyboard)
+        await play(rootSample.audioBuffer, {
+          playbackRate,
+          gain: state.multisampleSettings.gain || 0,
+          pan: 0, // No pan control for multisample
+        });
       } catch (error) {
         console.error("Error playing pitched sample:", error);
       }
     }
-  }, [zoneMap, state.multisampleFiles]);
+  }, [zoneMap, state.multisampleFiles, play, state.multisampleSettings.gain]);
 
   // Handler for clicking an unassigned key
   const handleUnassignedKeyClick = useCallback((midiNote: number) => {
@@ -407,13 +407,17 @@ export function MultisampleTool() {
         <div style={{ position: 'relative' }}>
           <VirtualMidiKeyboard
             assignedNotes={Array.from(zoneMap.keys())}
-            onKeyClick={handleKeyClick}
+            onKeyClick={handleKeyClick} // Pass the handler directly so source is respected
             onUnassignedKeyClick={handleUnassignedKeyClick}
             onKeyDrop={handleKeyDrop}
             loadedSamplesCount={state.multisampleFiles.length}
             isPinned={isMultisampleKeyboardPinned}
             onTogglePin={handleTogglePin}
             selectedMidiChannel={selectedMidiChannel}
+            onMidiChannelChange={(channel) => {
+              setSelectedMidiChannel(channel);
+              localStorage.setItem('midi-channel', channel.toString());
+            }}
           />
         </div>
       </div>

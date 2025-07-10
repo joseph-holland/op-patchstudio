@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import { useWebMidi } from '../../hooks/useWebMidi';
-import { EnhancedTooltip } from './EnhancedTooltip';
 
 // MIDI Channel Selector Component
 interface MidiChannelSelectorProps {
@@ -31,7 +30,8 @@ function MidiChannelSelector({ selectedChannel, onChannelChange }: MidiChannelSe
           fontSize: '0.75rem',
           color: 'var(--color-text-primary)',
           fontFamily: '"Montserrat", "Arial", sans-serif',
-          cursor: 'pointer'
+          cursor: 'pointer',
+          minWidth: '60px'
         }}
       >
         {Array.from({ length: 16 }, (_, i) => (
@@ -58,7 +58,6 @@ export function MidiDeviceSelector({
   onChannelChange
 }: MidiDeviceSelectorProps) {
   const { state, initialize } = useWebMidi();
-  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState(0); // Default to channel 1 (0-indexed)
 
   const handleInitialize = async () => {
@@ -83,25 +82,18 @@ export function MidiDeviceSelector({
   if (!state.isSupported) {
     return (
       <div className={`midi-device-selector ${className}`} style={{
-        padding: '1rem',
-        background: 'var(--color-bg-secondary)',
+        padding: '0.75rem 1rem',
+        background: 'var(--color-bg-primary)',
         borderRadius: '6px',
-        border: '1px solid var(--color-border-subtle)',
+        border: '1px solid var(--color-border-light)',
         textAlign: 'center'
       }}>
         <div style={{ 
           color: 'var(--color-text-secondary)',
-          fontSize: '0.875rem',
-          marginBottom: '0.5rem'
+          fontSize: '0.875rem'
         }}>
           <i className="fas fa-exclamation-triangle" style={{ marginRight: '0.5rem' }}></i>
           webmidi not supported
-        </div>
-        <div style={{ 
-          color: 'var(--color-text-secondary)',
-          fontSize: '0.75rem'
-        }}>
-          please use chrome, edge, or another chromium-based browser
         </div>
       </div>
     );
@@ -110,10 +102,10 @@ export function MidiDeviceSelector({
   if (!state.isInitialized) {
     return (
       <div className={`midi-device-selector ${className}`} style={{
-        padding: '1rem',
-        background: 'var(--color-bg-secondary)',
+        padding: '0.75rem 1rem',
+        background: 'var(--color-bg-primary)',
         borderRadius: '6px',
-        border: '1px solid var(--color-border-subtle)',
+        border: '1px solid var(--color-border-light)',
         textAlign: 'center'
       }}>
         <button
@@ -121,25 +113,41 @@ export function MidiDeviceSelector({
           disabled={state.isConnecting}
           style={{
             background: 'var(--color-interactive-focus)',
-            color: 'white',
+            color: 'var(--color-white)',
             border: 'none',
-            borderRadius: '3px',
+            borderRadius: '6px',
             padding: '0.5rem 1rem',
             fontSize: '0.875rem',
             cursor: state.isConnecting ? 'not-allowed' : 'pointer',
             opacity: state.isConnecting ? 0.6 : 1,
             transition: 'all 0.2s ease',
-            fontFamily: '"Montserrat", "Arial", sans-serif'
+            fontFamily: '"Montserrat", "Arial", sans-serif',
+            fontWeight: 500,
+            minHeight: '44px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem'
+          }}
+          onMouseEnter={e => {
+            if (!state.isConnecting) {
+              e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
+            }
+          }}
+          onMouseLeave={e => {
+            if (!state.isConnecting) {
+              e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
+            }
           }}
         >
           {state.isConnecting ? (
             <>
-              <i className="fas fa-spinner fa-spin" style={{ marginRight: '0.5rem' }}></i>
+              <i className="fas fa-spinner fa-spin" style={{ fontSize: '0.75rem' }}></i>
               connecting...
             </>
           ) : (
             <>
-              <i className="fas fa-plug" style={{ marginRight: '0.5rem' }}></i>
+              <i className="fas fa-plug" style={{ fontSize: '0.75rem' }}></i>
               connect midi devices
             </>
           )}
@@ -159,35 +167,36 @@ export function MidiDeviceSelector({
 
   return (
     <div className={`midi-device-selector ${className}`} style={{
-      background: 'var(--color-bg-secondary)',
-      borderRadius: '6px',
-      border: '1px solid var(--color-border-subtle)',
+      background: 'var(--color-bg-primary)',
       overflow: 'hidden'
     }}>
-      {/* Header */}
+      {/* Compact single-row layout */}
       <div style={{
         padding: '0.75rem 1rem',
-        borderBottom: '1px solid var(--color-border-light)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        gap: '1rem',
+        flexWrap: 'wrap'
       }}>
+        {/* Left side - Header and channel selector */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem',
-          fontSize: '0.875rem',
-          fontWeight: 500,
-          color: 'var(--color-text-primary)'
+          gap: '1rem',
+          flexShrink: 0
         }}>
-          <i className="fas fa-music" style={{ fontSize: '0.75rem' }}></i>
-          midi devices
-        </div>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem'
-        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            color: 'var(--color-text-primary)'
+          }}>
+            <i className="fas fa-music" style={{ fontSize: '0.75rem' }}></i>
+            midi devices
+          </div>
+          
           <MidiChannelSelector 
             selectedChannel={selectedChannel}
             onChannelChange={(channel) => {
@@ -195,142 +204,128 @@ export function MidiDeviceSelector({
               onChannelChange?.(channel);
             }}
           />
-          <EnhancedTooltip 
-            isVisible={isTooltipVisible}
-            content={
-              <div>
-                <h3>midi device support</h3>
-                <p>connect midi keyboards, controllers, or drum pads to play virtual instruments</p>
-                <p><strong>note:</strong> devices must be connected before opening this page</p>
-                <p><strong>channel:</strong> select which midi channel to listen to (1-16)</p>
-              </div>
-            }>
-            <i 
-              className="fas fa-question-circle" 
-              style={{ 
-                fontSize: '0.75rem', 
-                color: 'var(--color-text-secondary)',
-                cursor: 'help'
-              }}
-              onMouseEnter={() => setIsTooltipVisible(true)}
-              onMouseLeave={() => setIsTooltipVisible(false)}
-            ></i>
-          </EnhancedTooltip>
         </div>
-      </div>
 
-      {/* Device Lists */}
-      <div style={{ padding: '0.75rem 1rem' }}>
-        {filteredDevices.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            color: 'var(--color-text-secondary)',
-            fontSize: '0.75rem',
-            padding: '1rem 0'
-          }}>
-            <i className="fas fa-search" style={{ marginRight: '0.5rem' }}></i>
-            no midi devices detected
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {/* Input Devices */}
-            {inputDevices.length > 0 && (
-              <div>
-                <div style={{
-                  fontSize: '0.75rem',
-                  color: 'var(--color-text-secondary)',
-                  marginBottom: '0.5rem',
-                  fontWeight: 500
-                }}>
-                  input devices ({inputDevices.length})
-                </div>
-                {inputDevices.map(device => (
-                  <DeviceItem key={device.id} device={device} />
-                ))}
-              </div>
-            )}
+        {/* Center - Device count */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          fontSize: '0.75rem',
+          color: 'var(--color-text-secondary)',
+          flexShrink: 0
+        }}>
+          <span>{filteredDevices.length} connected</span>
+        </div>
 
-            {/* Output Devices */}
-            {outputDevices.length > 0 && (
-              <div>
-                <div style={{
-                  fontSize: '0.75rem',
-                  color: 'var(--color-text-secondary)',
-                  marginBottom: '0.5rem',
-                  fontWeight: 500
-                }}>
-                  output devices ({outputDevices.length})
+        {/* Right side - Compact device list */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {filteredDevices.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              color: 'var(--color-text-secondary)',
+              fontSize: '0.75rem'
+            }}>
+              <i className="fas fa-search" style={{ marginRight: '0.5rem' }}></i>
+              no midi devices detected
+            </div>
+          ) : (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              flexWrap: 'wrap'
+            }}>
+              {/* Input Devices */}
+              {inputDevices.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{
+                    fontSize: '0.7rem',
+                    color: 'var(--color-text-secondary)',
+                    fontWeight: 500,
+                    textTransform: 'uppercase'
+                  }}>
+                    in:
+                  </span>
+                  {inputDevices.map(device => (
+                    <CompactDeviceItem key={device.id} device={device} />
+                  ))}
                 </div>
-                {outputDevices.map(device => (
-                  <DeviceItem key={device.id} device={device} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+              )}
+
+              {/* Output Devices */}
+              {outputDevices.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{
+                    fontSize: '0.7rem',
+                    color: 'var(--color-text-secondary)',
+                    fontWeight: 500,
+                    textTransform: 'uppercase'
+                  }}>
+                    out:
+                  </span>
+                  {outputDevices.map(device => (
+                    <CompactDeviceItem key={device.id} device={device} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-// Individual device item component
-function DeviceItem({ device }: { device: import('../../utils/midi').MidiDevice }) {
+// Compact device item component for single-row layout
+function CompactDeviceItem({ device }: { device: import('../../utils/midi').MidiDevice }) {
   const isConnected = device.state === 'connected';
   
   return (
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      gap: '0.75rem',
-      padding: '0.5rem',
-      background: isConnected ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)',
+      gap: '0.5rem',
+      padding: '0.25rem 0.5rem',
+      background: isConnected ? 'var(--color-bg-secondary)' : 'var(--color-bg-primary)',
       borderRadius: '3px',
-      border: `1px solid ${isConnected ? 'var(--color-border-light)' : 'var(--color-border-subtle)'}`
+      border: `1px solid ${isConnected ? 'var(--color-border-light)' : 'var(--color-border-subtle)'}`,
+      transition: 'all 0.2s ease',
+      fontSize: '0.7rem'
     }}>
       {/* Connection Status */}
       <div style={{
-        width: '8px',
-        height: '8px',
+        width: '6px',
+        height: '6px',
         borderRadius: '50%',
-        background: isConnected ? '#4CAF50' : '#9E9E9E',
-        flexShrink: 0
+        background: isConnected ? 'var(--color-interactive-focus)' : 'var(--color-text-secondary)',
+        flexShrink: 0,
+        transition: 'all 0.2s ease'
       }}></div>
 
-      {/* Device Info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: '0.75rem',
-          fontWeight: 500,
-          color: 'var(--color-text-primary)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
-        }}>
-          {device.name}
-        </div>
-        {device.manufacturer && device.manufacturer !== 'Unknown' && (
-          <div style={{
-            fontSize: '0.7rem',
-            color: 'var(--color-text-secondary)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}>
-            {device.manufacturer}
-          </div>
-        )}
-      </div>
-
-      {/* Device Type */}
-      <div style={{
-        fontSize: '0.7rem',
-        color: 'var(--color-text-secondary)',
-        textTransform: 'uppercase',
+      {/* Device Name */}
+      <span style={{
+        color: 'var(--color-text-primary)',
         fontWeight: 500,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        maxWidth: '120px'
+      }}>
+        {device.name}
+      </span>
+
+      {/* Device Type Badge */}
+      <span style={{
+        fontSize: '0.65rem',
+        color: isConnected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+        textTransform: 'uppercase',
+        fontWeight: 600,
         flexShrink: 0
       }}>
         {device.type}
-      </div>
+      </span>
     </div>
   );
-} 
+}
+
+ 

@@ -37,8 +37,28 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
   });
 
   // MIDI event handling
-  const { onMidiEvent, offMidiEvent } = useWebMidi();
+  const { onMidiEvent, state: midiState, initialize } = useWebMidi();
   const [isMidiSelectorVisible, setIsMidiSelectorVisible] = useState(false);
+
+  // Auto-initialize MIDI on component mount
+  useEffect(() => {
+    if (midiState.isSupported && !midiState.isInitialized && !midiState.isConnecting) {
+      console.log('[DrumKeyboardContainer] Auto-initializing MIDI...');
+      initialize();
+    }
+  }, [midiState.isSupported, midiState.isInitialized, midiState.isConnecting, initialize]);
+
+  // Debug: Log MIDI state
+  useEffect(() => {
+    console.log('[DrumKeyboardContainer] MIDI State:', {
+      isSupported: midiState.isSupported,
+      isInitialized: midiState.isInitialized,
+      deviceCount: midiState.devices.length,
+      devices: midiState.devices.map(d => ({ name: d.name, type: d.type, state: d.state })),
+      selectedChannel: selectedMidiChannel,
+      isSelectorVisible: isMidiSelectorVisible
+    });
+  }, [midiState, selectedMidiChannel, isMidiSelectorVisible]);
 
   // Function to hide MIDI selector
   const hideMidiSelector = () => {
@@ -53,14 +73,14 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
   useEffect(() => {
     const handleMidiNote = (event: MidiEvent) => {
       if (event.type === 'noteon' && event.velocity > 0) {
-        // Hide MIDI selector when a note is played
+        // Hide MIDI selector and collapse panel when a note is played
         hideMidiSelector();
       }
     };
 
-    onMidiEvent(handleMidiNote);
-    return () => offMidiEvent(handleMidiNote);
-  }, [onMidiEvent, offMidiEvent]);
+    const cleanup = onMidiEvent(handleMidiNote);
+    return () => cleanup();
+  }, [onMidiEvent]);
 
   const loadedSamplesCount = state.drumSamples.filter(sample => sample && sample.isLoaded).length;
 
@@ -235,34 +255,6 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
           >
             {!isMobile && (
               <>
-                <button
-                  onClick={() => {
-                    setIsMidiSelectorVisible(!isMidiSelectorVisible);
-                    const midiSelector = document.querySelector('.midi-device-selector') as HTMLElement;
-                    if (midiSelector) {
-                      midiSelector.style.display = isMidiSelectorVisible ? 'none' : 'block';
-                    }
-                  }}
-                  style={{
-                    background: 'var(--color-text-secondary)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '3px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    fontSize: '0.875rem',
-                    color: 'white',
-                    transition: 'all 0.2s ease',
-                    fontFamily: '"Montserrat", "Arial", sans-serif',
-                    fontWeight: 500
-                  }}
-                  title="connect midi devices"
-                >
-                  <i className="fas fa-plug" style={{ fontSize: '0.75rem' }}></i>
-                  <span>midi</span>
-                </button>
                 <div
                   style={{
                     display: 'flex',
@@ -274,6 +266,54 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                   <i className="fas fa-check-circle" style={{ color: 'var(--color-text-secondary)', fontSize: iconSize }}></i>
                   {loadedSamplesCount} / 24 loaded
                 </div>
+                <button
+                  onClick={() => {
+                    setIsMidiSelectorVisible(!isMidiSelectorVisible);
+                    const midiSelector = document.querySelector('.midi-device-selector') as HTMLElement;
+                    if (midiSelector) {
+                      midiSelector.style.display = isMidiSelectorVisible ? 'none' : 'block';
+                    }
+                  }}
+                  style={{
+                    background: isMidiSelectorVisible ? 'var(--color-interactive-focus)' : 'var(--color-text-secondary)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    fontSize: '0.875rem',
+                    color: 'var(--color-white)',
+                    transition: 'all 0.2s ease',
+                    fontFamily: '"Montserrat", "Arial", sans-serif',
+                    fontWeight: 500,
+                    minHeight: '32px',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible ? 'var(--color-interactive-dark)' : 'var(--color-interactive-focus)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible ? 'var(--color-interactive-focus)' : 'var(--color-text-secondary)';
+                  }}
+                  title="connect midi devices"
+                >
+                  <i className="fas fa-plug" style={{ fontSize: '0.75rem' }}></i>
+                  <span>midi</span>
+                  {midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-2px',
+                      right: '-2px',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: 'var(--color-interactive-focus)',
+                      border: '1px solid var(--color-white)'
+                    }}></div>
+                  )}
+                </button>
               </>
             )}
             <button
