@@ -154,7 +154,7 @@ class WebMidiManager {
       device.state = port.connection === 'open' ? 'connected' : 'disconnected';
       
       if (oldState !== device.state) {
-        console.log(`[MIDI] Device ${device.name || 'Unknown'} ${device.state}`);
+        // Device state change logged for debugging
         this.notifyDeviceListeners();
       }
     } else {
