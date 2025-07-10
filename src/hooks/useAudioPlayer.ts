@@ -90,18 +90,18 @@ export function useAudioPlayer() {
     const sustainPercent = adsr.sustain / 32767;
     const releasePercent = adsr.release / 32767;
 
-    // Map to realistic time ranges (exponential mapping for more natural feel)
-    // Attack: 0-2 seconds (exponential curve for more responsive low values)
-    const attackTime = Math.pow(attackPercent, 2) * 2;
+    // Map to time ranges with exponential curves for natural feel (0-30 seconds)
+    // Attack: 0-30 seconds (exponential curve for more responsive low values)
+    const attackTime = Math.pow(attackPercent, 2) * 30;
     
-    // Decay: 0-1 second (exponential curve)
-    const decayTime = Math.pow(decayPercent, 2) * 1;
+    // Decay: 0-30 seconds (exponential curve)
+    const decayTime = Math.pow(decayPercent, 2) * 30;
     
     // Sustain: 0-1 (linear, this is a level)
     const sustainLevel = sustainPercent;
     
-    // Release: 0-3 seconds (exponential curve)
-    const releaseTime = Math.pow(releasePercent, 2) * 3;
+    // Release: 0-30 seconds (exponential curve)
+    const releaseTime = Math.pow(releasePercent, 2) * 30;
 
     return { attackTime, decayTime, sustainLevel, releaseTime };
   }, []);

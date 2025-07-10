@@ -376,8 +376,6 @@ export function MultisampleTool() {
       // Fallback: try the simple noteId
       releaseNote(`multisample-${midiNote}`);
     }
-    // Also try the simple noteId for safety
-    releaseNote(`multisample-${midiNote}`);
   }, [releaseNote]);
 
   // Handler for clicking an unassigned key
