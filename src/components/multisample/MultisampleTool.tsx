@@ -373,8 +373,10 @@ export function MultisampleTool() {
         .filter((id: string) => id.startsWith(`multisample-${midiNote}`))
         .forEach((id: string) => releaseNote(id));
     } else {
-      // Fallback: try the simple noteId
-      releaseNote(`multisample-${midiNote}`);
+      // Fallback: try to release any note that starts with the correct pattern
+      // Since we can't access the global active notes, we'll use a pattern approach
+      // The audio player will find and release all notes starting with this pattern
+      releaseNote(`multisample-${midiNote}-`);
     }
   }, [releaseNote]);
 

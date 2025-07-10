@@ -130,36 +130,41 @@ export function useAudioPlayer() {
   const applyADSREnvelope = useCallback((
     gainNode: GainNode,
     adsr: ADSRValues,
-    startTime: number
+    startTime: number,
+    velocityScale: number = 1
   ) => {
     const { attackTime, decayTime, sustainLevel } = convertADSRValues(adsr);
+    
+    // Scale the envelope by velocity
+    const scaledSustainLevel = sustainLevel * velocityScale;
+    const scaledAttackPeak = 1 * velocityScale;
     
     // Set initial gain to 0
     gainNode.gain.setValueAtTime(0, startTime);
     
     if (attackTime > 0) {
       // Attack: exponential curve (factor 1.5 like the visual envelope)
-      const attackCurve = generateExponentialCurve(0, 1, 1.5);
+      const attackCurve = generateExponentialCurve(0, scaledAttackPeak, 1.5);
       gainNode.gain.setValueCurveAtTime(attackCurve, startTime, attackTime);
     } else {
       // Instant attack
-      gainNode.gain.setValueAtTime(1, startTime);
+      gainNode.gain.setValueAtTime(scaledAttackPeak, startTime);
     }
     
     const attackEndTime = startTime + attackTime;
     
     if (decayTime > 0) {
       // Decay: exponential curve to sustain level
-      const decayCurve = generateExponentialCurve(1, sustainLevel, 2.0);
+      const decayCurve = generateExponentialCurve(scaledAttackPeak, scaledSustainLevel, 2.0);
       gainNode.gain.setValueCurveAtTime(decayCurve, attackEndTime, decayTime);
     } else {
       // Instant decay to sustain
-      gainNode.gain.setValueAtTime(sustainLevel, attackEndTime);
+      gainNode.gain.setValueAtTime(scaledSustainLevel, attackEndTime);
     }
     
     // Sustain level is maintained until note release
     const decayEndTime = attackEndTime + decayTime;
-    gainNode.gain.setValueAtTime(sustainLevel, decayEndTime);
+    gainNode.gain.setValueAtTime(scaledSustainLevel, decayEndTime);
     
     // Return the sustain end time for release calculation
     return decayEndTime;
@@ -199,12 +204,29 @@ export function useAudioPlayer() {
     // Get release time for cleanup
     const { releaseTime: adsrReleaseTime } = convertADSRValues(noteState.adsr);
 
-    // Clean up after release phase
-    setTimeout(() => {
-      activeNotesRef.current.delete(noteId);
-      noteState.source.disconnect();
-      noteState.gainNode.disconnect();
-    }, adsrReleaseTime * 1000);
+    // For instant release (0ms), stop the source and clean up immediately
+    if (adsrReleaseTime <= 0) {
+      try {
+        noteState.source.stop();
+      } catch (error) {
+        // Source might already be stopped
+      }
+      // Small delay to ensure the gain change has been applied
+      setTimeout(() => {
+        activeNotesRef.current.delete(noteId);
+        noteState.source.disconnect();
+        noteState.gainNode.disconnect();
+        noteState.envelopePhase = 'finished';
+      }, 10);
+    } else {
+      // Clean up after release phase
+      setTimeout(() => {
+        activeNotesRef.current.delete(noteId);
+        noteState.source.disconnect();
+        noteState.gainNode.disconnect();
+        noteState.envelopePhase = 'finished';
+      }, adsrReleaseTime * 1000);
+    }
   }, [releaseNoteWithADSR, convertADSRValues]);
 
   // Play with ADSR envelope support
@@ -259,7 +281,8 @@ export function useAudioPlayer() {
 
       // Apply ADSR envelope
       const startTime = audioContext.currentTime;
-      applyADSREnvelope(gainNode, adsr, startTime);
+      const velocityScale = velocity / 127;
+      applyADSREnvelope(gainNode, adsr, startTime, velocityScale);
 
       // Calculate timing
       let bufferStartTime = options.startTime || 0;
@@ -304,16 +327,20 @@ export function useAudioPlayer() {
 
       // Set up cleanup when source ends
       source.onended = () => {
-        activeNotesRef.current.delete(noteId);
-        if (lastNoteRef.current?.noteId === noteId) {
-          lastNoteRef.current = null;
-        }
-        // Remove from global active notes
-        if (noteId.startsWith('multisample-')) {
-          const arr = (window as any).opPatchstudioActiveNotes;
-          if (Array.isArray(arr)) {
-            const idx = arr.indexOf(noteId);
-            if (idx !== -1) arr.splice(idx, 1);
+        const noteState = activeNotesRef.current.get(noteId);
+        // Only clean up if the note is not in release phase (ADSR will handle cleanup)
+        if (noteState && noteState.envelopePhase !== 'release') {
+          activeNotesRef.current.delete(noteId);
+          if (lastNoteRef.current?.noteId === noteId) {
+            lastNoteRef.current = null;
+          }
+          // Remove from global active notes
+          if (noteId.startsWith('multisample-')) {
+            const arr = (window as any).opPatchstudioActiveNotes;
+            if (Array.isArray(arr)) {
+              const idx = arr.indexOf(noteId);
+              if (idx !== -1) arr.splice(idx, 1);
+            }
           }
         }
       };
@@ -325,9 +352,21 @@ export function useAudioPlayer() {
     }
   }, [applyADSREnvelope, triggerRelease]);
 
-  // Release a specific note
+  // Release a specific note or notes matching a pattern
   const releaseNote = useCallback((noteId: string) => {
-    triggerRelease(noteId);
+    // Check if this is a pattern (contains wildcard or is a base pattern)
+    if (noteId.includes('*') || noteId.endsWith('-')) {
+      // Pattern matching: find all notes that start with the pattern
+      const pattern = noteId.replace('*', '').replace(/-$/, '');
+      for (const [id] of activeNotesRef.current) {
+        if (id.startsWith(pattern)) {
+          triggerRelease(id);
+        }
+      }
+    } else {
+      // Exact match
+      triggerRelease(noteId);
+    }
   }, [triggerRelease]);
 
   // Release all notes

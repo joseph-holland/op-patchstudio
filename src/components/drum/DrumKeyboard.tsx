@@ -504,21 +504,6 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
         
         {/* Key button */}
         <button
-          onClick={() => {
-            console.log(`[DEBUG] onClick triggered for key: ${keyChar}, octave: ${octave}`);
-            if (mapping) {
-              console.log(`[DEBUG] Clicked key: ${keyChar}, octave: ${octave}, mapping.idx: ${mapping.idx}, isActive: ${isActive}`);
-              if (isActive) {
-                console.log(`[DEBUG] onClick - playing sample at index: ${mapping.idx}`);
-                playSample(mapping.idx);
-              } else {
-                console.log(`[DEBUG] onClick - opening file browser for index: ${mapping.idx}`);
-                openFileBrowser(mapping.idx);
-              }
-            } else {
-              console.log(`[DEBUG] No mapping found for key: ${keyChar}, octave: ${octave}`);
-            }
-          }}
           onMouseDown={() => {
             console.log(`[DEBUG] onMouseDown triggered for key: ${keyChar}, octave: ${octave}`);
             if (!mapping) return; // Need mapping to know which key
