@@ -580,11 +580,17 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, isMultisampleKeyboardPinned: !state.isMultisampleKeyboardPinned };
       
     case 'RESTORE_SESSION':
-      return {
+      // Create a properly sized drum samples array (24 slots)
+      const restoredDrumSamples = Array.from({ length: 24 }, (_, index) => {
+        // If there's a restored sample at this index, use it; otherwise use initial state
+        return action.payload.drumSamples[index] || { ...initialDrumSample };
+      });
+      
+      const newState = {
         ...state,
         drumSettings: action.payload.drumSettings,
         multisampleSettings: action.payload.multisampleSettings,
-        drumSamples: action.payload.drumSamples,
+        drumSamples: restoredDrumSamples,
         multisampleFiles: action.payload.multisampleFiles,
         selectedMultisample: action.payload.selectedMultisample,
         isDrumKeyboardPinned: action.payload.isDrumKeyboardPinned,
@@ -592,6 +598,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
         isSessionRestorationModalOpen: false,
         sessionInfo: null
       };
+      
+      return newState;
       
     case 'SET_SESSION_RESTORATION_MODAL_OPEN':
       return { ...state, isSessionRestorationModalOpen: action.payload };

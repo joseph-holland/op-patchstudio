@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { EnhancedTooltip } from '../common/EnhancedTooltip';
+import { useWebMidi } from '../../hooks/useWebMidi';
+import { MidiDeviceSelector } from '../common/MidiDeviceSelector';
+import type { MidiEvent } from '../../utils/midi';
 
 interface VirtualMidiKeyboardProps {
   assignedNotes?: number[]; // MIDI note numbers that have samples assigned
@@ -10,6 +13,9 @@ interface VirtualMidiKeyboardProps {
   loadedSamplesCount?: number; // Number of loaded samples
   isPinned: boolean;
   onTogglePin: () => void;
+  selectedMidiChannel?: number;
+  onMidiChannelChange?: (channel: number) => void;
+  isActive?: boolean; // Whether this keyboard should respond to MIDI events
 }
 
 export function VirtualMidiKeyboard({ 
@@ -20,7 +26,10 @@ export function VirtualMidiKeyboard({
   className = '',
   loadedSamplesCount = 0,
   isPinned,
-  onTogglePin
+  onTogglePin,
+  selectedMidiChannel,
+  onMidiChannelChange,
+  isActive = true
 }: VirtualMidiKeyboardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const placeholderRef = useRef<HTMLDivElement>(null);
@@ -37,7 +46,39 @@ export function VirtualMidiKeyboard({
   // Keyboard control state
   const [activeOctave, setActiveOctave] = useState(4); // Default to middle C (C4)
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
+
   const [mousePressedKey, setMousePressedKey] = useState<number | null>(null);
+  const { onMidiEvent, state: midiState, initialize, refreshDevices } = useWebMidi();
+  const [isMidiSelectorVisible, setIsMidiSelectorVisible] = useState(false);
+  const [localSelectedMidiChannel, setLocalSelectedMidiChannel] = useState(selectedMidiChannel || 1);
+  const [midiTriggeredKeys, setMidiTriggeredKeys] = useState<Set<string>>(new Set());
+  const [midiPressedNotes, setMidiPressedNotes] = useState<Set<number>>(new Set());
+
+  // Auto-initialize MIDI if not already initialized
+  useEffect(() => {
+    if (!midiState.isInitialized && !midiState.isConnecting) {
+      initialize();
+    }
+  }, [midiState.isInitialized, midiState.isConnecting, initialize]);
+
+  // Refresh MIDI devices when tab becomes visible (helps with device detection)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && midiState.isInitialized) {
+        console.log('[MIDI] Tab became visible, refreshing devices...');
+        refreshDevices();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [midiState.isInitialized, refreshDevices]);
+
+  // Check if MIDI is connected (initialized and has input devices)
+  const inputDevices = midiState.devices.filter(device => device.type === 'input' && device.state === 'connected');
+  const isMidiConnected = midiState.isInitialized && inputDevices.length > 0;
   
   // Mouse drag scrolling state
   const [isDragging, setIsDragging] = useState(false);
@@ -128,7 +169,7 @@ export function VirtualMidiKeyboard({
       }
       
       // Handle note playing - only respond if there's a sample loaded
-      if (key in keyboardMapping && !pressedKeys.has(key)) {
+      if (key in keyboardMapping && !pressedKeys.has(key) && !midiTriggeredKeys.has(key)) {
         const noteOffset = keyboardMapping[key as keyof typeof keyboardMapping];
         // Fix: Use C3 = 60 convention. C3 is octave 3, so C0 = 60 - (3 * 12) = 24
         const midiNote = activeOctave * 12 + 24 + noteOffset;
@@ -169,6 +210,135 @@ export function VirtualMidiKeyboard({
       document.removeEventListener('keyup', handleKeyUp);
     };
      }, [activeOctave, pressedKeys, keyboardMapping, changeOctave, assignedNotes, onKeyClick, onUnassignedKeyClick]);
+
+  // Helper function to get computer key for a MIDI note in the active octave
+  const getComputerKeyForNote = useCallback((midiNote: number): string | null => {
+    // Fix: Use C3 = 60 convention. C3 is octave 3, so C0 = 60 - (3 * 12) = 24
+    const noteOctave = Math.floor((midiNote - 24) / 12);
+    if (noteOctave !== activeOctave) return null;
+    
+    const noteInOctave = (midiNote - 24) % 12;
+    
+    // Find the computer key that maps to this note
+    for (const [key, offset] of Object.entries(keyboardMapping)) {
+      if (offset === noteInOctave) {
+        return key.toUpperCase();
+      }
+    }
+    return null;
+  }, [activeOctave, keyboardMapping]);
+
+  // Function to hide MIDI selector
+  const hideMidiSelector = () => {
+    setIsMidiSelectorVisible(false);
+    const midiSelector = document.querySelector('.virtual-midi-keyboard .midi-device-selector') as HTMLElement;
+    if (midiSelector) {
+      midiSelector.style.display = 'none';
+    }
+  };
+
+  // Wrap handleMidiEvent in useCallback so its reference is stable
+  const handleMidiEvent = useCallback((event: MidiEvent) => {
+    if (event.type === 'noteon' || event.type === 'noteoff') {
+      const midiNote = event.note;
+      console.log(`[MIDI] Virtual keyboard received note: ${midiNote} (velocity: ${event.velocity}, channel: ${event.channel})`);
+      
+      if (event.type === 'noteon' && event.velocity > 0) {
+        // Note on - only trigger playback for assigned notes, not file browser for unassigned
+        if (assignedNotes.includes(midiNote)) {
+          onKeyClick?.(midiNote);
+        }
+        // Don't call onUnassignedKeyClick for MIDI - only mouse clicks should trigger file browser
+        
+        // Hide MIDI selector when a note is played
+        hideMidiSelector();
+        
+        // Add visual feedback for ALL keys (not just current octave)
+        setMidiPressedNotes(prev => new Set([...prev, midiNote]));
+        
+        // Also handle computer keyboard mapping for current octave
+        const computerKey = getComputerKeyForNote(midiNote);
+        if (computerKey) {
+          const keyLower = computerKey.toLowerCase();
+          // Mark this key as MIDI-triggered to prevent keyboard handler from firing
+          setMidiTriggeredKeys(prev => new Set([...prev, keyLower]));
+          setPressedKeys(prev => new Set([...prev, keyLower]));
+        }
+        
+        // Remove visual feedback after 150ms (same as mouse clicks)
+        setTimeout(() => {
+          setMidiPressedNotes(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(midiNote);
+            return newSet;
+          });
+          // Clear computer keyboard mapping after a short delay
+          if (computerKey) {
+            setTimeout(() => {
+              setPressedKeys(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(computerKey.toLowerCase());
+                return newSet;
+              });
+              setMidiTriggeredKeys(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(computerKey.toLowerCase());
+                return newSet;
+              });
+            }, 50);
+          }
+        }, 150);
+      } else {
+        // Note off - remove visual feedback immediately
+        setMidiPressedNotes(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(midiNote);
+          return newSet;
+        });
+        
+        // Also clear computer keyboard mapping
+        const computerKey = getComputerKeyForNote(midiNote);
+        if (computerKey) {
+          const keyLower = computerKey.toLowerCase();
+          setPressedKeys(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(keyLower);
+            return newSet;
+          });
+          setMidiTriggeredKeys(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(keyLower);
+            return newSet;
+          });
+        }
+      }
+    }
+  }, [assignedNotes, onKeyClick, onUnassignedKeyClick, getComputerKeyForNote, hideMidiSelector]);
+
+  // MIDI event handling for multisample keyboard - only when active
+  useEffect(() => {
+    if (!midiState.isInitialized) {
+      return;
+    }
+
+    // Only set up MIDI listener if this keyboard is active
+    if (!isActive) {
+      return;
+    }
+
+    // Set up MIDI event listener
+    if (isMidiConnected && localSelectedMidiChannel) {
+      const cleanup = onMidiEvent(handleMidiEvent, localSelectedMidiChannel);
+      
+      return () => {
+        cleanup();
+      };
+    } else if (!isMidiConnected) {
+      console.log(`[MIDI] Virtual keyboard: No MIDI devices connected`);
+    } else if (!localSelectedMidiChannel) {
+      console.log(`[MIDI] Virtual keyboard: No MIDI channel selected`);
+    }
+  }, [isMidiConnected, localSelectedMidiChannel, onMidiEvent, handleMidiEvent, isActive]);
 
   // Center the keyboard on the active octave when it changes or on mount
   useEffect(() => {
@@ -268,25 +438,6 @@ export function VirtualMidiKeyboard({
     zIndex: isStuck ? 1000 : undefined,
     ...dynamicStyles,
   };
-
-
-
-  // Helper function to get computer key for a MIDI note in the active octave
-  const getComputerKeyForNote = useCallback((midiNote: number): string | null => {
-    // Fix: Use C3 = 60 convention. C3 is octave 3, so C0 = 60 - (3 * 12) = 24
-    const noteOctave = Math.floor((midiNote - 24) / 12);
-    if (noteOctave !== activeOctave) return null;
-    
-    const noteInOctave = (midiNote - 24) % 12;
-    
-    // Find the computer key that maps to this note
-    for (const [key, offset] of Object.entries(keyboardMapping)) {
-      if (offset === noteInOctave) {
-        return key.toUpperCase();
-      }
-    }
-    return null;
-  }, [activeOctave, keyboardMapping]);
 
   const handleKeyClick = useCallback((midiNote: number) => {
     // Don't trigger key actions if we're dragging
@@ -414,7 +565,7 @@ export function VirtualMidiKeyboard({
         const isHovered = hoveredKey === midiNote;
         const isDragOver = dragOverKey === midiNote;
         const computerKey = getComputerKeyForNote(midiNote);
-        const isPressed = (computerKey && pressedKeys.has(computerKey.toLowerCase())) || mousePressedKey === midiNote;
+        const isPressed = (computerKey && pressedKeys.has(computerKey.toLowerCase())) || mousePressedKey === midiNote || midiPressedNotes.has(midiNote);
         
         // Define key colors based on state
         const whiteKeyColors = {
@@ -502,7 +653,7 @@ export function VirtualMidiKeyboard({
         const isHovered = hoveredKey === midiNote;
         const isDragOver = dragOverKey === midiNote;
         const computerKey = getComputerKeyForNote(midiNote);
-        const isPressed = (computerKey && pressedKeys.has(computerKey.toLowerCase())) || mousePressedKey === midiNote;
+        const isPressed = (computerKey && pressedKeys.has(computerKey.toLowerCase())) || mousePressedKey === midiNote || midiPressedNotes.has(midiNote);
         
         // Define key colors based on state
         const blackKeyColors = {
@@ -660,15 +811,66 @@ export function VirtualMidiKeyboard({
             color: 'var(--color-text-secondary)'
           }}>
             {!isMobile && (
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                fontWeight: 500
-              }}>
-                <i className="fas fa-check-circle" style={{ color: 'var(--color-text-secondary)', fontSize: iconSize }}></i>
-                {loadedSamplesCount} / 24 loaded
-              </div>
+              <>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  fontWeight: 500
+                }}>
+                  <i className="fas fa-check-circle" style={{ color: 'var(--color-text-secondary)', fontSize: iconSize }}></i>
+                  {loadedSamplesCount} / 24 loaded
+                </div>
+                <button
+                  onClick={() => {
+                    setIsMidiSelectorVisible(!isMidiSelectorVisible);
+                    const midiSelector = document.querySelector('.virtual-midi-keyboard .midi-device-selector') as HTMLElement;
+                    if (midiSelector) {
+                      midiSelector.style.display = isMidiSelectorVisible ? 'none' : 'block';
+                    }
+                  }}
+                  style={{
+                    background: isMidiSelectorVisible 
+                      ? 'var(--color-interactive-focus)' 
+                      : midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0
+                        ? 'var(--color-text-primary)'
+                        : 'var(--color-text-secondary)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    fontSize: '0.875rem',
+                    color: 'var(--color-white)',
+                    transition: 'all 0.2s ease',
+                    fontFamily: '"Montserrat", "Arial", sans-serif',
+                    fontWeight: 500,
+                    minHeight: '32px'
+                  }}
+                  onMouseEnter={e => {
+                    const hasConnectedDevices = midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0;
+                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible 
+                      ? 'var(--color-interactive-dark)' 
+                      : hasConnectedDevices
+                        ? 'var(--color-interactive-focus)'
+                        : 'var(--color-interactive-focus)';
+                  }}
+                  onMouseLeave={e => {
+                    const hasConnectedDevices = midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0;
+                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible 
+                      ? 'var(--color-interactive-focus)' 
+                      : hasConnectedDevices
+                        ? 'var(--color-text-primary)'
+                        : 'var(--color-text-secondary)';
+                  }}
+                  title="connect midi devices"
+                >
+                  <i className="fas fa-plug" style={{ fontSize: '0.75rem' }}></i>
+                  <span>midi</span>
+                </button>
+              </>
             )}
             <button
               onClick={onTogglePin}
@@ -691,6 +893,26 @@ export function VirtualMidiKeyboard({
               }}></i>
             </button>
           </div>
+        </div>
+
+        {/* MIDI Device Selector (Hidden by default) */}
+        <div 
+          className="midi-device-selector"
+          style={{ 
+            display: isMidiSelectorVisible ? 'block' : 'none',
+            padding: '0.75rem 1rem',
+            backgroundColor: 'var(--color-bg-primary)',
+            borderBottom: '1px solid var(--color-border-light)'
+          }}
+        >
+          <MidiDeviceSelector 
+            showInputsOnly={true} 
+            onChannelChange={(channel) => {
+              setLocalSelectedMidiChannel(channel);
+              localStorage.setItem('midi-channel', channel.toString());
+              onMidiChannelChange?.(channel);
+            }}
+          />
         </div>
 
         <div 
@@ -720,8 +942,8 @@ export function VirtualMidiKeyboard({
           }}>
             {renderKeys()}
 
-            {/* Compact Indicator Strip Over Keyboard - hidden on mobile */}
-            {!isMobile && (() => {
+            {/* Compact Indicator Strip Over Keyboard - hidden on mobile and when MIDI is connected */}
+            {!isMobile && !isMidiConnected && (() => {
               const octaveWidth = 168;
               const indicatorPadding = 24;
               const firstOctave = -2;

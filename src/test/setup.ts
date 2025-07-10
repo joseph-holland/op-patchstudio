@@ -43,6 +43,34 @@ MediaRecorderMock.isTypeSupported = vi.fn(() => true)
 
 global.MediaRecorder = MediaRecorderMock as any
 
+// Mock WebMIDI API
+const createMockMidiPort = (id: string, name: string, type: 'input' | 'output', manufacturer: string = 'Test Manufacturer') => ({
+  id,
+  name,
+  manufacturer,
+  type,
+  connection: 'open' as const,
+  state: 'connected' as const,
+  onmidimessage: null as any,
+  onstatechange: null as any,
+  send: vi.fn(),
+  open: vi.fn(() => Promise.resolve()),
+  close: vi.fn(() => Promise.resolve())
+})
+
+const createMockMidiAccess = (inputs: any[] = [], outputs: any[] = []) => ({
+  inputs: new Map(inputs.map(input => [input.id, input])),
+  outputs: new Map(outputs.map(output => [output.id, output])),
+  onstatechange: null as any,
+  sysexEnabled: false
+})
+
+// Mock navigator.requestMIDIAccess
+Object.defineProperty(navigator, 'requestMIDIAccess', {
+  writable: true,
+  value: vi.fn()
+})
+
 // Mock navigator.mediaDevices
 Object.defineProperty(navigator, 'mediaDevices', {
   writable: true,
@@ -76,3 +104,6 @@ const localStorageMock = {
 }
 global.localStorage = localStorageMock as any
 global.sessionStorage = localStorageMock as any
+
+// Export mock utilities for tests
+export { createMockMidiPort, createMockMidiAccess }

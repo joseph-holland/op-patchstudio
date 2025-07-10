@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { DrumKeyboard } from './DrumKeyboard';
 import { EnhancedTooltip } from '../common/EnhancedTooltip';
+import { MidiDeviceSelector } from '../common/MidiDeviceSelector';
 import { cookieUtils, COOKIE_KEYS } from '../../utils/cookies';
+import { useWebMidi } from '../../hooks/useWebMidi';
+import type { MidiEvent } from '../../utils/midi';
 
 interface DrumKeyboardContainerProps {
   onFileUpload?: (index: number, file: File) => void;
@@ -22,12 +25,73 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
   const [dynamicStyles, setDynamicStyles] = useState({});
   const [placeholderHeight, setPlaceholderHeight] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [selectedMidiChannel, setSelectedMidiChannel] = useState(() => {
+    const saved = localStorage.getItem('midi-channel');
+    const parsed = saved ? parseInt(saved, 10) : NaN;
+    // Clamp to 1-16; if invalid, default to 1
+    return parsed >= 1 && parsed <= 16 ? parsed : 1;
+  });
+
+  // Persist selected MIDI channel to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedMidiChannel >= 1 && selectedMidiChannel <= 16) {
+      localStorage.setItem('midi-channel', selectedMidiChannel.toString());
+    }
+  }, [selectedMidiChannel]);
 
   // Pin state with cookie persistence
   const [isDrumKeyboardPinned, setIsDrumKeyboardPinned] = useState(() => {
     const saved = cookieUtils.getCookie(COOKIE_KEYS.DRUM_KEYBOARD_PINNED);
     return saved === 'true';
   });
+
+  // MIDI event handling
+  const { onMidiEvent, state: midiState, initialize, refreshDevices } = useWebMidi();
+  const [isMidiSelectorVisible, setIsMidiSelectorVisible] = useState(false);
+
+  // Auto-initialize MIDI if not already initialized
+  useEffect(() => {
+    if (!midiState.isInitialized && !midiState.isConnecting) {
+      initialize();
+    }
+  }, [midiState.isInitialized, midiState.isConnecting, initialize]);
+
+  // Refresh MIDI devices when tab becomes visible (helps with device detection)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && midiState.isInitialized) {
+        console.log('[MIDI] Tab became visible, refreshing devices...');
+        refreshDevices();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [midiState.isInitialized, refreshDevices]);
+
+  // Function to hide MIDI selector
+  const hideMidiSelector = () => {
+    setIsMidiSelectorVisible(false);
+    const midiSelector = document.querySelector('.midi-device-selector') as HTMLElement;
+    if (midiSelector) {
+      midiSelector.style.display = 'none';
+    }
+  };
+
+  // Listen for MIDI note events and hide selector
+  useEffect(() => {
+    const handleMidiNote = (event: MidiEvent) => {
+      if (event.type === 'noteon' && event.velocity > 0) {
+        // Hide MIDI selector and collapse panel when a note is played
+        hideMidiSelector();
+      }
+    };
+
+    const cleanup = onMidiEvent(handleMidiNote);
+    return () => cleanup();
+  }, [onMidiEvent]);
 
   const loadedSamplesCount = state.drumSamples.filter(sample => sample && sample.isLoaded).length;
 
@@ -201,17 +265,68 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
             }}
           >
             {!isMobile && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  fontWeight: 500,
-                }}
-              >
-                <i className="fas fa-check-circle" style={{ color: 'var(--color-text-secondary)', fontSize: iconSize }}></i>
-                {loadedSamplesCount} / 24 loaded
-              </div>
+              <>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontWeight: 500,
+                  }}
+                >
+                  <i className="fas fa-check-circle" style={{ color: 'var(--color-text-secondary)', fontSize: iconSize }}></i>
+                  {loadedSamplesCount} / 24 loaded
+                </div>
+                <button
+                  onClick={() => {
+                    setIsMidiSelectorVisible(!isMidiSelectorVisible);
+                    const midiSelector = document.querySelector('.midi-device-selector') as HTMLElement;
+                    if (midiSelector) {
+                      midiSelector.style.display = isMidiSelectorVisible ? 'none' : 'block';
+                    }
+                  }}
+                  style={{
+                    background: isMidiSelectorVisible 
+                      ? 'var(--color-interactive-focus)' 
+                      : midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0
+                        ? 'var(--color-text-primary)'
+                        : 'var(--color-text-secondary)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    fontSize: '0.875rem',
+                    color: 'var(--color-white)',
+                    transition: 'all 0.2s ease',
+                    fontFamily: '"Montserrat", "Arial", sans-serif',
+                    fontWeight: 500,
+                    minHeight: '32px'
+                  }}
+                  onMouseEnter={e => {
+                    const hasConnectedDevices = midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0;
+                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible 
+                      ? 'var(--color-interactive-dark)' 
+                      : hasConnectedDevices
+                        ? 'var(--color-interactive-focus)'
+                        : 'var(--color-interactive-focus)';
+                  }}
+                  onMouseLeave={e => {
+                    const hasConnectedDevices = midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0;
+                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible 
+                      ? 'var(--color-interactive-focus)' 
+                      : hasConnectedDevices
+                        ? 'var(--color-text-primary)'
+                        : 'var(--color-text-secondary)';
+                  }}
+                  title="connect midi devices"
+                >
+                  <i className="fas fa-plug" style={{ fontSize: '0.75rem' }}></i>
+                  <span>midi</span>
+                </button>
+              </>
             )}
             <button
               onClick={togglePin}
@@ -236,14 +351,35 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
           </div>
         </div>
 
-        {/* Keyboard */}
-        <div style={{ 
-          padding: '0.5rem 0.5rem',
-          backgroundColor: 'var(--color-bg-primary)',
-          overflow: 'visible'
-        }}>
-          <DrumKeyboard onFileUpload={onFileUpload} />
+
+
+        {/* MIDI Device Selector (Hidden by default) */}
+        <div 
+          className="midi-device-selector"
+          style={{ 
+            display: isMidiSelectorVisible ? 'block' : 'none',
+            padding: '0.75rem 1rem',
+            backgroundColor: 'var(--color-bg-primary)',
+            borderBottom: '1px solid var(--color-border-light)'
+          }}
+        >
+          <MidiDeviceSelector
+            key={midiState.devices.length.toString()}
+            onChannelChange={(channel) => {
+              setSelectedMidiChannel(channel);
+              // localStorage update handled in effect
+            }}
+            showInputsOnly
+          />
         </div>
+
+        {/* Keyboard */}
+        <DrumKeyboard 
+          onFileUpload={onFileUpload}
+          selectedMidiChannel={selectedMidiChannel}
+          midiState={midiState}
+          onMidiEventExternal={onMidiEvent}
+        />
       </div>
     </>
   );
