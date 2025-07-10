@@ -421,13 +421,6 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel }: DrumKeyboard
     isMobile?: boolean;
     keyWidth?: number;
   }) => {
-    // Debug logging for OPXYKey props
-    console.log(`OPXYKey ${keyChar}:`, {
-      showKeyboardLabels,
-      isMobile,
-      isActiveOctave,
-      shouldShowLetters: showKeyboardLabels && !isMobile
-    });
     const hasContent = mapping && state.drumSamples[mapping.idx]?.isLoaded;
     const isActive = hasContent; // Key is only active when it has content
     

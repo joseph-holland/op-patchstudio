@@ -80,6 +80,11 @@ export function useSessionManagement() {
 
   // Auto-save session when samples are loaded or changed
   useEffect(() => {
+    // Don't auto-save if session restoration modal is open
+    if (state.isSessionRestorationModalOpen) {
+      return;
+    }
+    
     // Always save session when relevant state changes
     // Debounce the save to avoid excessive saves during rapid changes
     const timeoutId = setTimeout(() => {
@@ -91,7 +96,7 @@ export function useSessionManagement() {
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [state.drumSamples, state.multisampleFiles, state.drumSettings, state.multisampleSettings]);
+  }, [state.drumSamples, state.multisampleFiles, state.drumSettings, state.multisampleSettings, state.isSessionRestorationModalOpen]);
 
   // Load session
   const loadSession = useCallback(async () => {
@@ -110,20 +115,17 @@ export function useSessionManagement() {
         drumSettings: sessionData.drumSettings,
         multisampleSettings: sessionData.multisampleSettings
       });
-
-      // Restore settings
-      dispatch({
-        type: 'RESTORE_SESSION',
-        payload: {
-          drumSettings: sessionData.drumSettings,
-          multisampleSettings: sessionData.multisampleSettings,
-          drumSamples: [], // Will be populated below
-          multisampleFiles: [], // Will be populated below
-          selectedMultisample: sessionData.selectedMultisample,
-          isDrumKeyboardPinned: sessionData.isDrumKeyboardPinned,
-          isMultisampleKeyboardPinned: sessionData.isMultisampleKeyboardPinned,
-        }
+      console.log('Session data summary:', {
+        drumSamplesCount: sessionData.drumSamples.length,
+        multisampleFilesCount: sessionData.multisampleFiles.length,
+        selectedMultisample: sessionData.selectedMultisample,
+        isDrumKeyboardPinned: sessionData.isDrumKeyboardPinned,
+        isMultisampleKeyboardPinned: sessionData.isMultisampleKeyboardPinned
       });
+
+      // First, restore all samples and collect the restored data
+      const restoredDrumSamples: any[] = [];
+      const restoredMultisampleFiles: any[] = [];
 
       // Restore drum samples
       for (const storedSample of sessionData.drumSamples) {
@@ -135,110 +137,97 @@ export function useSessionManagement() {
             continue;
           }
           
-          // Load the sample into the state at its original index
-          const targetIndex = storedSample.originalIndex;
+          // Create the restored sample with all settings applied
+          const restoredSample = {
+            file: sampleData.file,
+            audioBuffer: sampleData.audioBuffer,
+            name: sampleData.file.name,
+            isLoaded: true,
+            inPoint: storedSample.settings.inPoint,
+            outPoint: storedSample.settings.outPoint,
+            playmode: storedSample.settings.playmode,
+            reverse: storedSample.settings.reverse,
+            tune: storedSample.settings.tune,
+            pan: storedSample.settings.pan,
+            gain: storedSample.settings.gain,
+            hasBeenEdited: storedSample.settings.hasBeenEdited,
+            originalBitDepth: sampleData.metadata.bitDepth,
+            originalSampleRate: sampleData.metadata.sampleRate,
+            originalChannels: sampleData.metadata.channels,
+            fileSize: sampleData.metadata.fileSize,
+            duration: sampleData.metadata.duration
+          };
           
-          dispatch({
-            type: 'LOAD_DRUM_SAMPLE',
-            payload: {
-              index: targetIndex,
-              file: sampleData.file,
-              audioBuffer: sampleData.audioBuffer,
-              metadata: sampleData.metadata
-            }
-          });
-          
-          // Apply the stored settings
-          dispatch({
-            type: 'UPDATE_DRUM_SAMPLE',
-            payload: {
-              index: targetIndex,
-              updates: {
-                inPoint: storedSample.settings.inPoint,
-                outPoint: storedSample.settings.outPoint,
-                playmode: storedSample.settings.playmode,
-                reverse: storedSample.settings.reverse,
-                tune: storedSample.settings.tune,
-                pan: storedSample.settings.pan,
-                gain: storedSample.settings.gain,
-                hasBeenEdited: storedSample.settings.hasBeenEdited,
-              }
-            }
-          });
+          // Place the sample at its original index
+          restoredDrumSamples[storedSample.originalIndex] = restoredSample;
         } catch (error) {
           console.error(`Failed to restore drum sample ${storedSample.sampleId}:`, error);
-          // Continue with other samples instead of failing completely
         }
       }
 
       // Restore multisample files
-      const multisampleLoadPromises = sessionData.multisampleFiles.map(async (storedFile) => {
+      for (const storedFile of sessionData.multisampleFiles) {
         try {
           // Load the sample from IndexedDB
           const sampleData = await sessionStorageIndexedDB.loadSampleFromSession(storedFile.sampleId);
           if (!sampleData) {
             console.error(`Failed to load multisample file ${storedFile.sampleId}`);
-            return null;
+            continue;
           }
           
-          // Load the file into the state
-          dispatch({
-            type: 'LOAD_MULTISAMPLE_FILE',
-            payload: {
-              file: sampleData.file,
-              audioBuffer: sampleData.audioBuffer,
-              metadata: sampleData.metadata,
-              rootNoteOverride: storedFile.rootNote
-            }
-          });
+          // Create the restored file with all settings applied
+          const restoredFile = {
+            file: sampleData.file,
+            audioBuffer: sampleData.audioBuffer,
+            name: sampleData.file.name,
+            isLoaded: true,
+            rootNote: storedFile.rootNote,
+            note: storedFile.note,
+            inPoint: storedFile.inPoint,
+            outPoint: storedFile.outPoint,
+            loopStart: storedFile.loopStart,
+            loopEnd: storedFile.loopEnd,
+            originalBitDepth: sampleData.metadata.bitDepth,
+            originalSampleRate: sampleData.metadata.sampleRate,
+            originalChannels: sampleData.metadata.channels,
+            fileSize: sampleData.metadata.fileSize,
+            duration: sampleData.metadata.duration
+          };
           
-          // Return the stored file data for later processing
-          return storedFile;
+          restoredMultisampleFiles.push(restoredFile);
         } catch (error) {
           console.error(`Failed to restore multisample file ${storedFile.sampleId}:`, error);
-          return null;
+        }
+      }
+
+      // Sort multisample files by rootNote descending (to match the original logic)
+      restoredMultisampleFiles.sort((a, b) => b.rootNote - a.rootNote);
+
+      // Now restore everything in one go with the complete state
+      console.log('Dispatching RESTORE_SESSION with:', {
+        drumSettings: sessionData.drumSettings,
+        multisampleSettings: sessionData.multisampleSettings,
+        drumSamplesCount: restoredDrumSamples.length,
+        multisampleFilesCount: restoredMultisampleFiles.length,
+        selectedMultisample: sessionData.selectedMultisample,
+        isDrumKeyboardPinned: sessionData.isDrumKeyboardPinned,
+        isMultisampleKeyboardPinned: sessionData.isMultisampleKeyboardPinned,
+      });
+      
+      dispatch({
+        type: 'RESTORE_SESSION',
+        payload: {
+          drumSettings: sessionData.drumSettings,
+          multisampleSettings: sessionData.multisampleSettings,
+          drumSamples: restoredDrumSamples,
+          multisampleFiles: restoredMultisampleFiles,
+          selectedMultisample: sessionData.selectedMultisample,
+          isDrumKeyboardPinned: sessionData.isDrumKeyboardPinned,
+          isMultisampleKeyboardPinned: sessionData.isMultisampleKeyboardPinned,
         }
       });
 
-      // Wait for all multisample files to be loaded
-      const loadedMultisampleFiles = await Promise.all(multisampleLoadPromises);
-      const validLoadedFiles = loadedMultisampleFiles.filter(file => file !== null);
-
-      // Now apply the stored settings to all loaded files
-      // Use a longer delay to ensure React state updates have completed
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Get the current state from the ref to avoid stale closure issues
-      const currentState = currentStateRef.current;
-      
-      validLoadedFiles.forEach((storedFile) => {
-        if (!storedFile) return;
-        
-        // Find the file in the current state by file name and rootNote
-        const fileIndex = currentState.multisampleFiles.findIndex((f: MultisampleFile | null) => 
-          f && f.name === storedFile.fileName && f.rootNote === storedFile.rootNote
-        );
-        
-        if (fileIndex !== -1) {
-          dispatch({
-            type: 'UPDATE_MULTISAMPLE_FILE',
-            payload: {
-              index: fileIndex,
-              updates: {
-                inPoint: storedFile.inPoint,
-                outPoint: storedFile.outPoint,
-                loopStart: storedFile.loopStart,
-                loopEnd: storedFile.loopEnd,
-              }
-            }
-          });
-        } else {
-          // Only log warning if we actually have files loaded but can't find this specific one
-          if (currentState.multisampleFiles.length > 0) {
-            console.warn(`Could not find multisample file to update settings for file ${storedFile.fileName} with rootNote ${storedFile.rootNote}`);
-          }
-        }
-      });
+      console.log('Session restoration completed successfully');
     } catch (error) {
       console.error('Failed to load session:', error);
     }
@@ -256,6 +245,11 @@ export function useSessionManagement() {
   // Auto-save session periodically (as backup)
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
+      // Don't auto-save if session restoration modal is open
+      if (state.isSessionRestorationModalOpen) {
+        return;
+      }
+      
       // Always save session periodically as backup
       if (saveSessionRef.current) {
         saveSessionRef.current();
@@ -263,7 +257,7 @@ export function useSessionManagement() {
     }, 30000); // Save every 30 seconds
 
     return () => clearInterval(autoSaveInterval);
-  }, [state.drumSamples, state.multisampleFiles, state.drumSettings, state.multisampleSettings]);
+  }, [state.drumSamples, state.multisampleFiles, state.drumSettings, state.multisampleSettings, state.isSessionRestorationModalOpen]);
 
   return {
     saveSession,
