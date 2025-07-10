@@ -22,7 +22,7 @@ export function MultisampleTool() {
   const { state, dispatch } = useAppContext();
   const { handleMultisampleUpload, clearMultisampleFile } = useFileUpload();
   const { generateMultisamplePatchFile } = usePatchGeneration();
-  const { play } = useAudioPlayer();
+  const { playWithADSR, releaseNote } = useAudioPlayer();
   const audioFileInputRef = useRef<HTMLInputElement>(null);
   const browseFilesRef = useRef<(() => void) | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -333,17 +333,52 @@ export function MultisampleTool() {
         // Apply pitch shifting
         const playbackRate = Math.pow(2, pitchOffset / 12);
         
-        // Use the audio player with gain control (same as drum keyboard)
-        await play(rootSample.audioBuffer, {
+        // Get ADSR settings from imported preset or use defaults
+        const adsrSettings = state.importedMultisamplePreset?.envelope?.amp || {
+          attack: 0,
+          decay: 0,
+          sustain: 32767,
+          release: 0
+        };
+        
+        // Get play mode from imported preset or use poly as default
+        const playMode = state.importedMultisamplePreset?.engine?.playmode || 'poly';
+        
+        // Use the ADSR-enabled audio player
+        const noteId = `multisample-${midiNote}-${Date.now()}`;
+        await playWithADSR(rootSample.audioBuffer, noteId, {
           playbackRate,
           gain: state.multisampleSettings.gain || 0,
           pan: 0, // No pan control for multisample
+          adsr: adsrSettings,
+          playMode: playMode as 'poly' | 'mono' | 'legato',
+          velocity: 127, // Full velocity for keyboard clicks
         });
       } catch (error) {
         console.error("Error playing pitched sample:", error);
       }
     }
-  }, [zoneMap, state.multisampleFiles, play, state.multisampleSettings.gain]);
+  }, [zoneMap, state.multisampleFiles, playWithADSR, state.multisampleSettings.gain, state.importedMultisamplePreset]);
+
+  // Handler for releasing a key (for ADSR release phase)
+  const handleKeyRelease = useCallback((midiNote: number) => {
+    // Release all notes that match this MIDI note (could be multiple if same note played multiple times)
+    // The audio player will handle finding and releasing the correct note(s)
+    // We'll try all possible noteIds for this midiNote
+    // (e.g., multisample-60, multisample-60-<timestamp>)
+    // For robust release, release all notes that start with `multisample-${midiNote}`
+    const activeNotes = (window as any).opPatchstudioActiveNotes || [];
+    if (Array.isArray(activeNotes)) {
+      activeNotes
+        .filter((id: string) => id.startsWith(`multisample-${midiNote}`))
+        .forEach((id: string) => releaseNote(id));
+    } else {
+      // Fallback: try to release any note that starts with the correct pattern
+      // Since we can't access the global active notes, we'll use a pattern approach
+      // The audio player will find and release all notes starting with this pattern
+      releaseNote(`multisample-${midiNote}-`);
+    }
+  }, [releaseNote]);
 
   // Handler for clicking an unassigned key
   const handleUnassignedKeyClick = useCallback((midiNote: number) => {
@@ -408,6 +443,7 @@ export function MultisampleTool() {
           <VirtualMidiKeyboard
             assignedNotes={Array.from(zoneMap.keys())}
             onKeyClick={handleKeyClick} // Pass the handler directly so source is respected
+            onKeyRelease={handleKeyRelease} // Add release handler for ADSR
             onUnassignedKeyClick={handleUnassignedKeyClick}
             onKeyDrop={handleKeyDrop}
             loadedSamplesCount={state.multisampleFiles.length}

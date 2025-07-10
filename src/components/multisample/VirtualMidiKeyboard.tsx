@@ -7,6 +7,7 @@ import type { MidiEvent } from '../../utils/midi';
 interface VirtualMidiKeyboardProps {
   assignedNotes?: number[]; // MIDI note numbers that have samples assigned
   onKeyClick?: (midiNote: number) => void;
+  onKeyRelease?: (midiNote: number) => void; // Add release handler for ADSR
   onUnassignedKeyClick?: (midiNote: number) => void;
   onKeyDrop?: (midiNote: number, files: File[]) => void;
   className?: string;
@@ -21,6 +22,7 @@ interface VirtualMidiKeyboardProps {
 export function VirtualMidiKeyboard({ 
   assignedNotes = [], 
   onKeyClick,
+  onKeyRelease,
   onUnassignedKeyClick,
   onKeyDrop,
   className = '',
@@ -199,6 +201,16 @@ export function VirtualMidiKeyboard({
           newSet.delete(key);
           return newSet;
         });
+        
+        // Trigger release for assigned notes on keyboard release
+        if (key in keyboardMapping) {
+          const noteOffset = keyboardMapping[key as keyof typeof keyboardMapping];
+          const midiNote = activeOctave * 12 + 24 + noteOffset;
+          
+          if (midiNote >= 0 && midiNote <= 127 && assignedNotes.includes(midiNote)) {
+            onKeyRelease?.(midiNote);
+          }
+        }
       }
     };
 
@@ -209,7 +221,7 @@ export function VirtualMidiKeyboard({
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
     };
-     }, [activeOctave, pressedKeys, keyboardMapping, changeOctave, assignedNotes, onKeyClick, onUnassignedKeyClick]);
+     }, [activeOctave, pressedKeys, keyboardMapping, changeOctave, assignedNotes, onKeyClick, onKeyRelease, onUnassignedKeyClick]);
 
   // Helper function to get computer key for a MIDI note in the active octave
   const getComputerKeyForNote = useCallback((midiNote: number): string | null => {
@@ -289,12 +301,17 @@ export function VirtualMidiKeyboard({
           }
         }, 150);
       } else {
-        // Note off - remove visual feedback immediately
+        // Note off - remove visual feedback immediately and trigger release
         setMidiPressedNotes(prev => {
           const newSet = new Set(prev);
           newSet.delete(midiNote);
           return newSet;
         });
+        
+        // Trigger release for assigned notes on MIDI note off
+        if (assignedNotes.includes(midiNote)) {
+          onKeyRelease?.(midiNote);
+        }
         
         // Also clear computer keyboard mapping
         const computerKey = getComputerKeyForNote(midiNote);
@@ -439,29 +456,7 @@ export function VirtualMidiKeyboard({
     ...dynamicStyles,
   };
 
-  const handleKeyClick = useCallback((midiNote: number) => {
-    // Don't trigger key actions if we're dragging
-    if (isDragging) return;
-    
-    const isAssigned = assignedNotes.includes(midiNote);
-    // Find the computer key for this midiNote in the current octave
-    const computerKey = getComputerKeyForNote(midiNote);
-    if (computerKey) {
-      setPressedKeys(prev => new Set([...prev, computerKey.toLowerCase()]));
-      setTimeout(() => {
-        setPressedKeys(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(computerKey.toLowerCase());
-          return newSet;
-        });
-      }, 150);
-    }
-    if (isAssigned) {
-      onKeyClick?.(midiNote);
-    } else {
-      onUnassignedKeyClick?.(midiNote);
-    }
-  }, [assignedNotes, onKeyClick, onUnassignedKeyClick, getComputerKeyForNote, isDragging]);
+
 
   const handleKeyMouseEnter = useCallback((midiNote: number) => {
     setHoveredKey(midiNote);
@@ -499,6 +494,59 @@ export function VirtualMidiKeyboard({
       onKeyDrop?.(midiNote, wavFiles);
     }
   }, [onKeyDrop]);
+
+  // Reusable event handlers for key interactions
+  const createKeyEventHandlers = useCallback((midiNote: number) => {
+    const isAssigned = assignedNotes.includes(midiNote);
+    
+    return {
+      onMouseDown: () => {
+        // Don't set pressed key if we're starting to drag
+        if (!isDragging) {
+          setMousePressedKey(midiNote);
+          // Trigger note on mouse down for immediate response
+          if (isAssigned) {
+            onKeyClick?.(midiNote);
+          } else {
+            onUnassignedKeyClick?.(midiNote);
+          }
+        }
+      },
+      onMouseUp: () => {
+        setMousePressedKey(null);
+        // Trigger release for ADSR
+        if (isAssigned) {
+          onKeyRelease?.(midiNote);
+        }
+      },
+      onMouseLeave: () => { 
+        setMousePressedKey(null); 
+        handleKeyMouseLeave();
+        // Trigger release for ADSR when mouse leaves key
+        if (isAssigned) {
+          onKeyRelease?.(midiNote);
+        }
+      },
+      onTouchStart: () => {
+        // Trigger note on touch start for immediate response
+        if (isAssigned) {
+          onKeyClick?.(midiNote);
+        } else {
+          onUnassignedKeyClick?.(midiNote);
+        }
+      },
+      onTouchEnd: () => {
+        // Trigger release for ADSR on touch end
+        if (isAssigned) {
+          onKeyRelease?.(midiNote);
+        }
+      },
+      onMouseEnter: () => handleKeyMouseEnter(midiNote),
+      onDragOver: (e: React.DragEvent) => handleKeyDragOver(e, midiNote),
+      onDragLeave: handleKeyDragLeave,
+      onDrop: (e: React.DragEvent) => handleKeyDrop(e, midiNote)
+    };
+  }, [assignedNotes, isDragging, onKeyClick, onKeyRelease, onUnassignedKeyClick, handleKeyMouseLeave, handleKeyMouseEnter, handleKeyDragOver, handleKeyDragLeave, handleKeyDrop]);
 
   // Mouse drag handlers for keyboard scrolling
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -575,6 +623,8 @@ export function VirtualMidiKeyboard({
           dragOver: 'var(--color-interactive-focus-ring)',
         };
         
+        const keyEventHandlers = createKeyEventHandlers(midiNote);
+        
         octaveKeys.push(
           <div
             key={`white-${midiNote}`}
@@ -606,19 +656,7 @@ export function VirtualMidiKeyboard({
               userSelect: 'none',
               boxShadow: isHovered ? '0 2px 4px rgba(0,0,0,0.1)' : '0 2px 6px rgba(0,0,0,0.3)',
             }}
-            onMouseDown={() => {
-              // Don't set pressed key if we're starting to drag
-              if (!isDragging) {
-                setMousePressedKey(midiNote);
-              }
-            }}
-            onMouseUp={() => setMousePressedKey(null)}
-            onMouseLeave={() => { setMousePressedKey(null); handleKeyMouseLeave(); }}
-            onClick={() => handleKeyClick(midiNote)}
-            onMouseEnter={() => handleKeyMouseEnter(midiNote)}
-            onDragOver={(e) => handleKeyDragOver(e, midiNote)}
-            onDragLeave={handleKeyDragLeave}
-            onDrop={(e) => handleKeyDrop(e, midiNote)}
+            {...keyEventHandlers}
           >
             {/* Octave marker for C notes - always visible, color changes */}
             {noteInOctave === 0 && (
@@ -663,6 +701,8 @@ export function VirtualMidiKeyboard({
           dragOver: 'var(--color-interactive-secondary)',
         };
         
+        const keyEventHandlers = createKeyEventHandlers(midiNote);
+        
         octaveKeys.push(
           <div
             key={`black-${midiNote}`}
@@ -689,19 +729,7 @@ export function VirtualMidiKeyboard({
               userSelect: 'none',
               boxShadow: isHovered ? '0 3px 8px rgba(0,0,0,0.5)' : '0 2px 4px rgba(0,0,0,0.3)',
             }}
-            onMouseDown={() => {
-              // Don't set pressed key if we're starting to drag
-              if (!isDragging) {
-                setMousePressedKey(midiNote);
-              }
-            }}
-            onMouseUp={() => setMousePressedKey(null)}
-            onMouseLeave={() => { setMousePressedKey(null); handleKeyMouseLeave(); }}
-            onClick={() => handleKeyClick(midiNote)}
-            onMouseEnter={() => handleKeyMouseEnter(midiNote)}
-            onDragOver={(e) => handleKeyDragOver(e, midiNote)}
-            onDragLeave={handleKeyDragLeave}
-            onDrop={(e) => handleKeyDrop(e, midiNote)}
+            {...keyEventHandlers}
           />
         );
       }

@@ -441,9 +441,6 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
     const hasContent = mapping && state.drumSamples[mapping.idx]?.isLoaded;
     const isActive = hasContent; // Key is only active when it has content
     
-    // Flag to prevent double-triggering between mouse events and click events
-    const [mouseTriggered, setMouseTriggered] = useState(false);
-    
     // Use keyWidth for all proportional sizing
     const baseSize = keyWidth;
     const width = isLarge ? baseSize * 1.5 + (keyChar === 'W' || keyChar === 'U' ? 1 : 0) : baseSize;
@@ -507,29 +504,6 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
         
         {/* Key button */}
         <button
-          onClick={() => {
-            console.log(`[DEBUG] onClick triggered for key: ${keyChar}, octave: ${octave}`);
-            if (mapping) {
-              console.log(`[DEBUG] Clicked key: ${keyChar}, octave: ${octave}, mapping.idx: ${mapping.idx}, isActive: ${isActive}`);
-              if (isActive) {
-                // Only trigger if mouse didn't already trigger it
-                if (!mouseTriggered) {
-                  console.log(`[DEBUG] onClick - playing sample at index: ${mapping.idx}`);
-                  playSample(mapping.idx);
-                } else {
-                  console.log(`[DEBUG] onClick - skipping because mouse already triggered`);
-                }
-              } else {
-                // Open file browser if key is empty
-                console.log(`[DEBUG] Opening file browser for index: ${mapping.idx}`);
-                openFileBrowser(mapping.idx);
-              }
-            } else {
-              console.log(`[DEBUG] No mapping found for key: ${keyChar}, octave: ${octave}`);
-            }
-            // Reset the flag
-            setMouseTriggered(false);
-          }}
           onMouseDown={() => {
             console.log(`[DEBUG] onMouseDown triggered for key: ${keyChar}, octave: ${octave}`);
             if (!mapping) return; // Need mapping to know which key
@@ -537,13 +511,39 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
               // Directly trigger sample playback for mouse events
               console.log(`[DEBUG] Mouse down - playing sample at index: ${mapping.idx}`);
               playSample(mapping.idx);
-              setMouseTriggered(true);
               // Add visual feedback for pressed key
               setPressedKeys(prev => new Set(prev).add(`${keyChar}:${octave}`));
+            } else {
+              // For inactive keys, open file browser directly
+              console.log(`[DEBUG] Mouse down - opening file browser for index: ${mapping.idx}`);
+              openFileBrowser(mapping.idx);
             }
           }}
           onMouseUp={() => {
             console.log(`[DEBUG] onMouseUp triggered for key: ${keyChar}, octave: ${octave}`);
+            // Remove visual feedback for released key
+            setPressedKeys(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(`${keyChar}:${octave}`);
+              return newSet;
+            });
+          }}
+          onTouchStart={() => {
+            console.log(`[DEBUG] onTouchStart triggered for key: ${keyChar}, octave: ${octave}`);
+            if (!mapping) return;
+            if (isActive) {
+              // For active keys, play sample on touch start
+              console.log(`[DEBUG] Touch start - playing sample at index: ${mapping.idx}`);
+              playSample(mapping.idx);
+              setPressedKeys(prev => new Set(prev).add(`${keyChar}:${octave}`));
+            } else {
+              // For inactive keys, open file browser on touch start
+              console.log(`[DEBUG] Touch start - opening file browser for index: ${mapping.idx}`);
+              openFileBrowser(mapping.idx);
+            }
+          }}
+          onTouchEnd={() => {
+            console.log(`[DEBUG] onTouchEnd triggered for key: ${keyChar}, octave: ${octave}`);
             // Remove visual feedback for released key
             setPressedKeys(prev => {
               const newSet = new Set(prev);
@@ -868,7 +868,8 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
           display: 'flex',
           justifyContent: 'center',
           margin: '1px',
-          width: 'calc(100% - 2px)'
+          width: 'calc(100% - 2px)',
+          padding: '1rem'
         }}>
           <div style={{
             display: 'inline-flex',
