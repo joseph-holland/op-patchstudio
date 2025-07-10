@@ -132,6 +132,8 @@ export function LibraryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const isMobile = window.innerWidth < 768;
   const pageSize = isMobile ? 10 : 15;
+  const [isLoadConfirmOpen, setIsLoadConfirmOpen] = useState(false);
+  const [pendingPresetToLoad, setPendingPresetToLoad] = useState<LibraryPreset | null>(null);
   
   // Ref to track current state for async operations
   const currentStateRef = useRef(state);
@@ -244,7 +246,21 @@ export function LibraryPage() {
     }
   };
 
+  // Helper: is there a session in progress?
+  const sessionInProgress = state.drumSamples.some(s => s.isLoaded) || state.multisampleFiles.length > 0;
+
+  // Wrapped handler for preset loading with confirmation
   const handleLoadPreset = async (preset: LibraryPreset) => {
+    if (sessionInProgress) {
+      setPendingPresetToLoad(preset);
+      setIsLoadConfirmOpen(true);
+      return;
+    }
+    await actuallyLoadPreset(preset);
+  };
+
+  // The actual preset loading logic (moved from old handleLoadPreset)
+  const actuallyLoadPreset = async (preset: LibraryPreset) => {
     try {
       // Switch to the appropriate tab
       dispatch({ type: 'SET_TAB', payload: preset.type });
@@ -623,6 +639,21 @@ export function LibraryPage() {
     setPresetToDelete(null);
   };
 
+  // Handler for confirming preset load
+  const handleConfirmLoadPreset = async () => {
+    if (pendingPresetToLoad) {
+      setIsLoadConfirmOpen(false);
+      await actuallyLoadPreset(pendingPresetToLoad);
+      setPendingPresetToLoad(null);
+    }
+  };
+
+  // Handler for cancelling preset load
+  const handleCancelLoadPreset = () => {
+    setIsLoadConfirmOpen(false);
+    setPendingPresetToLoad(null);
+  };
+
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -768,6 +799,17 @@ export function LibraryPage() {
           presetToDelete?.id === 'bulk'
             ? `are you sure you want to delete the ${selectedPresets.size} selected presets? this action cannot be undone.`
             : `are you sure you want to delete "${presetToDelete?.name}"? this action cannot be undone.`
+        }
+      />
+      {/* Confirmation for preset loading */}
+      <ConfirmationModal
+        isOpen={isLoadConfirmOpen}
+        onConfirm={handleConfirmLoadPreset}
+        onCancel={handleCancelLoadPreset}
+        message={
+          pendingPresetToLoad
+            ? `loading a preset will overwrite your current session. are you sure you want to load "${pendingPresetToLoad.name}"?`
+            : ''
         }
       />
     </>

@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
-import type { AppState, MultisampleFile } from '../context/AppContext';
+import type { AppState } from '../context/AppContext';
 import { sessionStorageIndexedDB } from '../utils/sessionStorageIndexedDB';
 
 export function useSessionManagement() {
