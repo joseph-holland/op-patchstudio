@@ -139,6 +139,9 @@ export function useAudioPlayer() {
     const scaledSustainLevel = sustainLevel * velocityScale;
     const scaledAttackPeak = 1 * velocityScale;
     
+    // Cancel any existing scheduled operations to prevent overlaps
+    gainNode.gain.cancelScheduledValues(startTime);
+    
     // Set initial gain to 0
     gainNode.gain.setValueAtTime(0, startTime);
     
@@ -178,13 +181,20 @@ export function useAudioPlayer() {
   ) => {
     const { releaseTime: adsrReleaseTime } = convertADSRValues(adsr);
     
+    // Ensure we're not scheduling operations in the past
+    const currentTime = gainNode.context.currentTime;
+    const safeReleaseTime = Math.max(releaseTime, currentTime + 0.001); // Add 1ms buffer
+    
+    // Cancel any pending scheduled operations to prevent overlaps
+    gainNode.gain.cancelScheduledValues(safeReleaseTime);
+    
     if (adsrReleaseTime > 0) {
       // Release: exponential curve to 0
       const releaseCurve = generateExponentialCurve(gainNode.gain.value, 0, 2.0);
-      gainNode.gain.setValueCurveAtTime(releaseCurve, releaseTime, adsrReleaseTime);
+      gainNode.gain.setValueCurveAtTime(releaseCurve, safeReleaseTime, adsrReleaseTime);
     } else {
       // Instant release
-      gainNode.gain.setValueAtTime(0, releaseTime);
+      gainNode.gain.setValueAtTime(0, safeReleaseTime);
     }
   }, [convertADSRValues, generateExponentialCurve]);
 
@@ -193,13 +203,34 @@ export function useAudioPlayer() {
     const noteState = activeNotesRef.current.get(noteId);
     if (!noteState) return;
 
+    // Prevent multiple release calls on the same note
+    if (noteState.envelopePhase === 'release' || noteState.envelopePhase === 'finished') {
+      return;
+    }
+
     const audioContext = noteState.gainNode.context;
     const currentTime = audioContext.currentTime;
 
     // Use the new ADSR envelope release function
-    releaseNoteWithADSR(noteState.gainNode, noteState.adsr, currentTime);
-    noteState.envelopePhase = 'release';
-    noteState.releaseTime = currentTime;
+    try {
+      releaseNoteWithADSR(noteState.gainNode, noteState.adsr, currentTime);
+      noteState.envelopePhase = 'release';
+      noteState.releaseTime = currentTime;
+    } catch (error) {
+      console.warn('Error during ADSR release, falling back to instant stop:', error);
+      // Fallback: stop the source immediately
+      try {
+        noteState.source.stop();
+      } catch (stopError) {
+        // Source might already be stopped
+      }
+      // Clean up immediately
+      activeNotesRef.current.delete(noteId);
+      noteState.source.disconnect();
+      noteState.gainNode.disconnect();
+      noteState.envelopePhase = 'finished';
+      return;
+    }
 
     // Get release time for cleanup
     const { releaseTime: adsrReleaseTime } = convertADSRValues(noteState.adsr);

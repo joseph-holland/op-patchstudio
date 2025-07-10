@@ -65,7 +65,8 @@ const defaultMockState = {
     importedDrumPreset: null,
     importedMultisamplePreset: null,
     isSessionRestorationModalOpen: false,
-    sessionInfo: null
+    sessionInfo: null,
+    midiNoteMapping: 'C3' as const
   },
   dispatch: mockDispatch
 }
@@ -203,7 +204,8 @@ describe('usePatchGeneration', () => {
         importedDrumPreset: null,
         importedMultisamplePreset: null,
         isSessionRestorationModalOpen: false,
-        sessionInfo: null
+        sessionInfo: null,
+        midiNoteMapping: 'C3' as const
       },
       dispatch: mockDispatch
     })
@@ -581,7 +583,8 @@ describe('usePatchGeneration', () => {
         ...defaultMockState.state,
         importedMultisamplePreset: null, // No preset imported
         isSessionRestorationModalOpen: false,
-        sessionInfo: null
+        sessionInfo: null,
+        midiNoteMapping: 'C3' as const
       }
     });
 

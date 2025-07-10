@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext';
 import { readWavMetadata } from '../utils/audio';
 
 export function useFileUpload() {
-  const { dispatch } = useAppContext();
+  const { state, dispatch } = useAppContext();
 
   const handleDrumSampleUpload = useCallback(async (file: File, index: number) => {
     try {
@@ -11,7 +11,7 @@ export function useFileUpload() {
       dispatch({ type: 'SET_ERROR', payload: null });
 
       // Enhanced audio processing with metadata extraction
-      const metadata = await readWavMetadata(file);
+      const metadata = await readWavMetadata(file, state.midiNoteMapping);
 
       dispatch({
         type: 'LOAD_DRUM_SAMPLE',
@@ -32,7 +32,7 @@ export function useFileUpload() {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [dispatch]);
+  }, [dispatch, state.midiNoteMapping]);
 
   const handleMultisampleUpload = useCallback(async (file: File, rootNoteOverride?: number) => {
     try {
@@ -40,7 +40,7 @@ export function useFileUpload() {
       dispatch({ type: 'SET_ERROR', payload: null });
 
       // Enhanced audio processing with metadata extraction
-      const metadata = await readWavMetadata(file);
+      const metadata = await readWavMetadata(file, state.midiNoteMapping);
 
       dispatch({
         type: 'LOAD_MULTISAMPLE_FILE',
@@ -61,7 +61,7 @@ export function useFileUpload() {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [dispatch]);
+  }, [dispatch, state.midiNoteMapping]);
 
   const clearDrumSample = useCallback((index: number) => {
     dispatch({ type: 'CLEAR_DRUM_SAMPLE', payload: index });

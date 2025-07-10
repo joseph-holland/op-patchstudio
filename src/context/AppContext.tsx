@@ -107,6 +107,9 @@ export interface AppState {
   // Session management
   isSessionRestorationModalOpen: boolean;
   sessionInfo: { timestamp: number; drumSamplesCount: number; multisampleFilesCount: number } | null;
+  
+  // MIDI note mapping convention
+  midiNoteMapping: 'C3' | 'C4';
 }
 
 // Define enhanced action types
@@ -151,7 +154,8 @@ export type AppAction =
   | { type: 'TOGGLE_MULTISAMPLE_KEYBOARD_PIN' }
   | { type: 'RESTORE_SESSION'; payload: { drumSettings: AppState['drumSettings']; multisampleSettings: AppState['multisampleSettings']; drumSamples: DrumSample[]; multisampleFiles: MultisampleFile[]; selectedMultisample: number | null; isDrumKeyboardPinned: boolean; isMultisampleKeyboardPinned: boolean } }
   | { type: 'SET_SESSION_RESTORATION_MODAL_OPEN'; payload: boolean }
-  | { type: 'SET_SESSION_INFO'; payload: { timestamp: number; drumSamplesCount: number; multisampleFilesCount: number } | null };
+  | { type: 'SET_SESSION_INFO'; payload: { timestamp: number; drumSamplesCount: number; multisampleFilesCount: number } | null }
+  | { type: 'SET_MIDI_NOTE_MAPPING'; payload: 'C3' | 'C4' };
 
 // Initial state
 const initialDrumSample: DrumSample = {
@@ -206,6 +210,17 @@ const getInitialPinState = (key: string): boolean => {
   }
 }
 
+// Function to get initial MIDI note mapping from cookie
+const getInitialMidiMapping = (): 'C3' | 'C4' => {
+  try {
+    const savedMapping = cookieUtils.getCookie(COOKIE_KEYS.MIDI_NOTE_MAPPING);
+    return savedMapping === 'C4' ? 'C4' : 'C3';
+  } catch (error) {
+    console.warn('Failed to load MIDI note mapping from cookie, defaulting to C3', error);
+    return 'C3';
+  }
+}
+
 const initialState: AppState = {
   currentTab: getInitialTab(),
   drumSettings: {
@@ -246,7 +261,8 @@ const initialState: AppState = {
   importedDrumPreset: null,
   importedMultisamplePreset: null,
   isSessionRestorationModalOpen: false,
-  sessionInfo: null
+  sessionInfo: null,
+  midiNoteMapping: getInitialMidiMapping()
 };
 
 // Enhanced reducer function
@@ -472,22 +488,22 @@ function appReducer(state: AppState, action: AppAction): AppState {
       if (action.payload.rootNoteOverride !== undefined) {
         // Prioritize the override from user interaction (e.g., clicking a specific key)
         detectedMidiNote = action.payload.rootNoteOverride;
-        detectedNote = midiNoteToString(detectedMidiNote);
+        detectedNote = midiNoteToString(detectedMidiNote, state.midiNoteMapping);
       } else if (action.payload.metadata.midiNote >= 0) {
         // Use MIDI note from WAV metadata
         detectedMidiNote = action.payload.metadata.midiNote;
-        detectedNote = midiNoteToString(action.payload.metadata.midiNote);
+        detectedNote = midiNoteToString(action.payload.metadata.midiNote, state.midiNoteMapping);
       } else {
         // Try to extract from filename - look for note pattern at the end
         try {
-          const [_, midiFromParse] = parseFilename(action.payload.file.name);
+          const [_, midiFromParse] = parseFilename(action.payload.file.name, state.midiNoteMapping);
           if (midiFromParse >= 0 && midiFromParse <= 127) {
             detectedMidiNote = midiFromParse;
-            detectedNote = midiNoteToString(midiFromParse);
+            detectedNote = midiNoteToString(midiFromParse, state.midiNoteMapping);
           }
         } catch {
           // Use default if can't detect
-          detectedNote = 'C4';
+          detectedNote = state.midiNoteMapping === 'C3' ? 'C4' : 'C5';
         }
       }
       
@@ -606,6 +622,26 @@ function appReducer(state: AppState, action: AppAction): AppState {
       
     case 'SET_SESSION_INFO':
       return { ...state, sessionInfo: action.payload };
+      
+    case 'SET_MIDI_NOTE_MAPPING':
+      // Save to cookie for persistence
+      try {
+        cookieUtils.setCookie(COOKIE_KEYS.MIDI_NOTE_MAPPING, action.payload, 30);
+      } catch (error) {
+        console.warn('Failed to save MIDI note mapping to cookie:', error);
+      }
+      
+      // Update note strings for all existing multisample files to reflect the new mapping
+      const mappingUpdatedFiles = state.multisampleFiles.map(file => ({
+        ...file,
+        note: file.isLoaded ? midiNoteToString(file.rootNote, action.payload) : file.note
+      }));
+      
+      return { 
+        ...state, 
+        midiNoteMapping: action.payload,
+        multisampleFiles: mappingUpdatedFiles
+      };
       
     default:
       return state;

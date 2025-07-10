@@ -5,6 +5,7 @@ import { useWebMidi } from '../../hooks/useWebMidi';
 import type { MidiEvent } from '../../utils/midi';
 import type { WebMidiState, WebMidiHookReturn } from '../../hooks/useWebMidi';
 
+
 // Drum key mapping for two octaves (matching legacy)
 const drumKeyMap = [
   // Lower octave (octave 0)

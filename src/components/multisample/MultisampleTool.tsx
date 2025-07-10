@@ -15,7 +15,7 @@ import { audioBufferToWav } from '../../utils/audio';
 import { cookieUtils, COOKIE_KEYS } from '../../utils/cookies';
 import { savePresetToLibrary } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
-
+import { ToggleSwitch } from '../common/ToggleSwitch';
 
 
 export function MultisampleTool() {
@@ -489,9 +489,24 @@ export function MultisampleTool() {
                 color: '#222',
                 fontSize: '1.25rem',
                 fontWeight: 300,
+                textTransform: 'lowercase',
+                letterSpacing: 0,
               }}>
                 sample management
               </h3>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+              <ToggleSwitch
+                leftLabel="c3=60"
+                rightLabel="c4=60"
+                isRight={state.midiNoteMapping === 'C4'}
+                onToggle={() => {
+                  dispatch({
+                    type: 'SET_MIDI_NOTE_MAPPING',
+                    payload: state.midiNoteMapping === 'C3' ? 'C4' : 'C3'
+                  })
+                }}
+              />
             </div>
           </div>
 

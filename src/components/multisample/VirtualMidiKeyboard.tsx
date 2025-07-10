@@ -3,6 +3,7 @@ import { EnhancedTooltip } from '../common/EnhancedTooltip';
 import { useWebMidi } from '../../hooks/useWebMidi';
 import { MidiDeviceSelector } from '../common/MidiDeviceSelector';
 import type { MidiEvent } from '../../utils/midi';
+import { useAppContext } from '../../context/AppContext';
 
 interface VirtualMidiKeyboardProps {
   assignedNotes?: number[]; // MIDI note numbers that have samples assigned
@@ -33,6 +34,7 @@ export function VirtualMidiKeyboard({
   onMidiChannelChange,
   isActive = true
 }: VirtualMidiKeyboardProps) {
+  const { state } = useAppContext();
   const containerRef = useRef<HTMLDivElement>(null);
   const placeholderRef = useRef<HTMLDivElement>(null);
   const keyboardScrollRef = useRef<HTMLDivElement>(null);
@@ -665,7 +667,7 @@ export function VirtualMidiKeyboard({
                 fontWeight: '600',
                 color: isAssigned ? 'var(--color-black)' : 'var(--color-text-secondary)'
               }}>
-                C{octave}
+                C{state.midiNoteMapping === 'C4' ? octave + 1 : octave}
               </span>
             )}
           </div>

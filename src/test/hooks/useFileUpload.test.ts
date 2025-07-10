@@ -90,6 +90,7 @@ describe('useFileUpload', () => {
         error: null,
         isDrumKeyboardPinned: false,
         isMultisampleKeyboardPinned: false,
+        midiNoteMapping: 'C3',
         drumSettings: {
           sampleRate: 44100,
           bitDepth: 16,
