@@ -39,7 +39,7 @@ export function MultisampleTool() {
   const [targetMidiNote, setTargetMidiNote] = useState<number | null>(null);
   const [selectedMidiChannel, setSelectedMidiChannel] = useState(() => {
     const saved = localStorage.getItem('midi-channel');
-    return saved ? parseInt(saved, 10) : 0;
+    return saved ? parseInt(saved, 10) : 1;
   });
 
   // Get pin state from context
