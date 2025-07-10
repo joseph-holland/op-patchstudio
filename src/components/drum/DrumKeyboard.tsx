@@ -3,6 +3,7 @@ import { useAppContext } from '../../context/AppContext';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { useWebMidi } from '../../hooks/useWebMidi';
 import type { MidiEvent } from '../../utils/midi';
+import type { WebMidiState, WebMidiHookReturn } from '../../hooks/useWebMidi';
 
 // Drum key mapping for two octaves (matching legacy)
 const drumKeyMap = [
@@ -45,9 +46,11 @@ const drumKeyMap = [
 interface DrumKeyboardProps {
   onFileUpload?: (index: number, file: File) => void;
   selectedMidiChannel?: number;
+  midiState?: WebMidiState;
+  onMidiEventExternal?: WebMidiHookReturn['onMidiEvent'];
 }
 
-export function DrumKeyboard({ onFileUpload, selectedMidiChannel }: DrumKeyboardProps = {}) {
+export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: externalMidiState, onMidiEventExternal }: DrumKeyboardProps = {}) {
   const { state } = useAppContext();
   const [currentOctave, setCurrentOctave] = useState(0);
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
@@ -57,7 +60,9 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel }: DrumKeyboard
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
   const { play } = useAudioPlayer();
-  const { onMidiEvent, state: midiState } = useWebMidi();
+  const internalWebMidi = useWebMidi();
+  const onMidiEvent = onMidiEventExternal ?? internalWebMidi.onMidiEvent;
+  const midiState = externalMidiState ?? internalWebMidi.state;
   
   // Debug: Test WebMidi.js availability
   useEffect(() => {
@@ -401,9 +406,9 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel }: DrumKeyboard
       inputDevices: midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length
     });
     
-    if (isMidiConnected && selectedMidiChannel !== undefined) {
+    if (isMidiConnected && selectedMidiChannel) {
       console.log('[DrumKeyboard] Setting up MIDI listener for channel:', selectedMidiChannel);
-      const cleanup = onMidiEvent(handleMidiEvent, selectedMidiChannel); // WebMidi.js uses 1-based channels
+      const cleanup = onMidiEvent(handleMidiEvent, selectedMidiChannel); // Listen on selected channel only
       
       // Cleanup function
       return () => {
@@ -414,7 +419,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel }: DrumKeyboard
       console.log('[DrumKeyboard] NOT setting up MIDI listener:', {
         isMidiConnected,
         selectedMidiChannel,
-        reason: !isMidiConnected ? 'MIDI not connected' : 'No channel selected'
+        reason: isMidiConnected ? 'No channel selected' : 'MIDI not connected'
       });
     }
   }, [isMidiConnected, selectedMidiChannel, onMidiEvent, handleMidiEvent, midiState.devices]);

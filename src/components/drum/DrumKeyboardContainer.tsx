@@ -27,8 +27,17 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [selectedMidiChannel, setSelectedMidiChannel] = useState(() => {
     const saved = localStorage.getItem('midi-channel');
-    return saved ? parseInt(saved, 10) : 1; // Default to channel 1 (1-based)
+    const parsed = saved ? parseInt(saved, 10) : NaN;
+    // Clamp to 1-16; if invalid, default to 1
+    return parsed >= 1 && parsed <= 16 ? parsed : 1;
   });
+
+  // Persist selected MIDI channel to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedMidiChannel >= 1 && selectedMidiChannel <= 16) {
+      localStorage.setItem('midi-channel', selectedMidiChannel.toString());
+    }
+  }, [selectedMidiChannel]);
 
   // Pin state with cookie persistence
   const [isDrumKeyboardPinned, setIsDrumKeyboardPinned] = useState(() => {
@@ -352,23 +361,23 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
             borderBottom: '1px solid var(--color-border-light)'
           }}
         >
-          <MidiDeviceSelector 
-            showInputsOnly={true} 
+          <MidiDeviceSelector
+            key={midiState.devices.length.toString()}
             onChannelChange={(channel) => {
               setSelectedMidiChannel(channel);
-              localStorage.setItem('midi-channel', channel.toString());
+              // localStorage update handled in effect
             }}
+            showInputsOnly
           />
         </div>
 
         {/* Keyboard */}
-        <div style={{ 
-          padding: '0.5rem 0.5rem',
-          backgroundColor: 'var(--color-bg-primary)',
-          overflow: 'visible'
-        }}>
-          <DrumKeyboard onFileUpload={onFileUpload} selectedMidiChannel={selectedMidiChannel} />
-        </div>
+        <DrumKeyboard 
+          onFileUpload={onFileUpload}
+          selectedMidiChannel={selectedMidiChannel}
+          midiState={midiState}
+          onMidiEventExternal={onMidiEvent}
+        />
       </div>
     </>
   );

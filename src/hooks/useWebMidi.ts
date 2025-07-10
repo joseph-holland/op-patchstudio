@@ -17,7 +17,7 @@ export interface WebMidiHookReturn {
   state: WebMidiState;
   initialize: () => Promise<boolean>;
   onMidiEvent: (callback: (event: MidiEvent) => void, channel?: number) => () => void;
-  offMidiEvent: (callback: (event: MidiEvent) => void) => void;
+  offMidiEvent: () => void;
   sendNoteOn: (note: number, velocity?: number, channel?: number) => void;
   sendNoteOff: (note: number, velocity?: number, channel?: number) => void;
   sendControlChange: (controller: number, value: number, channel?: number) => void;
@@ -41,6 +41,14 @@ export function useWebMidi(): WebMidiHookReturn {
     isConnecting: false,
     error: null
   });
+
+  // Populate devices if WebMidi is already enabled (e.g., other hook instance enabled earlier)
+  useEffect(() => {
+    if (WebMidi.enabled && state.devices.length === 0) {
+      const devices = getDevicesFromWebMidi();
+      setState(prev => ({ ...prev, devices }));
+    }
+  }, []);
 
   // Initialize WebMIDI
   const initialize = useCallback(async (): Promise<boolean> => {
@@ -173,89 +181,60 @@ export function useWebMidi(): WebMidiHookReturn {
 
   // MIDI event handlers
   const onMidiEvent = useCallback((callback: (event: MidiEvent) => void, channel?: number) => {
-    console.log(`[WebMidi] Adding MIDI event listener for channel ${channel !== undefined ? channel : 'all'}`);
-    console.log('[WebMidi] Channel parameter:', channel, 'Type:', typeof channel, 'Is undefined:', channel === undefined);
-    console.log('[WebMidi] Available inputs:', WebMidi.inputs.length);
-    
-    // Create a unique ID for this callback
-    const callbackId = Math.random().toString(36).substr(2, 9);
-    
-    // Create a filtered callback if channel is specified
-    console.log('[WebMidi] Creating callback - channel !== undefined:', channel !== undefined);
-    const extractEventChannel = (event: any) => {
-      if (typeof event.channel === 'number') return event.channel;
-      if (typeof event.message?.channel === 'number') return event.message.channel;
-      if (typeof event.target?.number === 'number') return event.target.number;
-      return 1;
+    console.log(`[useWebMidi] Attaching MIDI event listener for channel: ${channel || 'all'}`);
+
+    const handler = (event: any) => {
+      // Derive the MIDI channel as reliably as possible.
+      // Priority:
+      // 1. Explicit channel passed to onMidiEvent()
+      // 2. event.channel (only defined when listening on a specific InputChannel)
+      // 3. event.message?.channel (available on WebMidi.js v3 events)
+      // 4. event.target?.number (InputChannel objects expose their channel number)
+      const derivedChannel =
+        channel ??
+        event.channel ??
+        (event.message && typeof event.message.channel === 'number' ? event.message.channel : undefined) ??
+        (event.target && typeof event.target.number === 'number' ? event.target.number : undefined);
+
+      const midiEvent: MidiEvent = {
+        type: event.type,
+        note: event.note.number,
+        velocity: event.rawVelocity || 0,
+        channel: derivedChannel, // 1-16 (may be undefined for non-channel messages)
+        timestamp: event.timestamp,
+      };
+      callback(midiEvent);
     };
-    const filteredCallback = channel !== undefined 
-      ? (event: any) => {
-          console.log('[WebMidi] MIDI event received (filtered):', event);
-          console.log('[WebMidi] Event structure:', {
-            target: event.target,
-            channel: event.channel,
-            targetNumber: event.target?.number,
-            message: event.message
-          });
-          const eventChannel = extractEventChannel(event);
-          console.log('[WebMidi] Event channel:', eventChannel, 'Expected channel:', channel);
-          if (eventChannel === channel) { // Both are 1-based (1-16)
-            const midiEvent: MidiEvent = {
-              type: event.type,
-              note: event.note.number,
-              velocity: event.rawVelocity,
-              channel: eventChannel, // 1-based (1-16)
-              timestamp: event.timestamp
-            };
-            console.log('[WebMidi] Calling callback with event:', midiEvent);
-            callback(midiEvent);
-          }
-        }
-      : (event: any) => {
-          console.log('[WebMidi] MIDI event received (unfiltered):', event);
-          console.log('[WebMidi] Event structure:', {
-            target: event.target,
-            channel: event.channel,
-            targetNumber: event.target?.number,
-            message: event.message
-          });
-          const eventChannel = extractEventChannel(event);
-          console.log('[WebMidi] Event channel:', eventChannel);
-          const midiEvent: MidiEvent = {
-            type: event.type,
-            note: event.note.number,
-            velocity: event.rawVelocity,
-                          channel: eventChannel, // 1-based (1-16)
-            timestamp: event.timestamp
-          };
-          console.log('[WebMidi] Calling callback with event:', midiEvent);
-          callback(midiEvent);
-        };
-    
-    // Store the callback with its ID for cleanup
-    (filteredCallback as any).callbackId = callbackId;
-    
-    // Add listener to all inputs
-    WebMidi.inputs.forEach((input: any) => {
-      console.log(`[WebMidi] Adding listeners to input: ${input.name}`);
-      // Only add the appropriate callback based on whether channel filtering is needed
-      input.addListener('noteon', filteredCallback);
-      input.addListener('noteoff', filteredCallback);
+
+    WebMidi.inputs.forEach(input => {
+      // If a specific channel (1-16) is provided, listen on that channel.
+      // Otherwise, listen on the entire input (all channels).
+      const target = (channel && channel >= 1 && channel <= 16)
+        ? input.channels[channel]
+        : input;
+      
+      (target as any).addListener('noteon', handler);
+      (target as any).addListener('noteoff', handler);
     });
-    
-    // Return cleanup function
+
+    // Return a cleanup function
     return () => {
-      console.log('[WebMidi] Cleaning up MIDI event listeners for callback:', callbackId);
-      WebMidi.inputs.forEach((input: any) => {
-        input.removeListener('noteon', filteredCallback);
-        input.removeListener('noteoff', filteredCallback);
+      console.log(`[useWebMidi] Detaching MIDI event listener for channel: ${channel || 'all'}`);
+      WebMidi.inputs.forEach(input => {
+        const target = (channel && channel >= 1 && channel <= 16)
+          ? input.channels[channel]
+          : input;
+        
+        (target as any).removeListener('noteon', handler);
+        (target as any).removeListener('noteoff', handler);
       });
     };
   }, []);
 
-  const offMidiEvent = useCallback((_callback: (event: MidiEvent) => void) => {
-    console.log('[WebMidi] Removing MIDI event listener (deprecated - use cleanup function)');
-    // This function is deprecated - use the cleanup function returned by onMidiEvent instead
+  const offMidiEvent = useCallback(() => {
+    // This is more complex to implement correctly with the current onMidiEvent structure.
+    // For now, the cleanup function returned by onMidiEvent should be used.
+    console.warn('[useWebMidi] offMidiEvent is not fully implemented. Use the cleanup function from onMidiEvent.');
   }, []);
 
   // MIDI output functions
