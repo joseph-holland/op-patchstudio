@@ -50,6 +50,7 @@ export function VirtualMidiKeyboard({
   const [isMidiSelectorVisible, setIsMidiSelectorVisible] = useState(false);
   const [localSelectedMidiChannel, setLocalSelectedMidiChannel] = useState(selectedMidiChannel || 0);
   const [midiTriggeredKeys, setMidiTriggeredKeys] = useState<Set<string>>(new Set());
+  const [midiPressedNotes, setMidiPressedNotes] = useState<Set<number>>(new Set());
 
   // Auto-initialize MIDI on component mount
   useEffect(() => {
@@ -235,32 +236,50 @@ export function VirtualMidiKeyboard({
         // Hide MIDI selector when a note is played
         hideMidiSelector();
         
-        // Add keyboard key press effect for visual feedback with timeout
+        // Add visual feedback for ALL keys (not just current octave)
+        setMidiPressedNotes(prev => new Set([...prev, midiNote]));
+        
+        // Also handle computer keyboard mapping for current octave
         const computerKey = getComputerKeyForNote(midiNote);
         if (computerKey) {
           const keyLower = computerKey.toLowerCase();
           // Mark this key as MIDI-triggered to prevent keyboard handler from firing
           setMidiTriggeredKeys(prev => new Set([...prev, keyLower]));
           setPressedKeys(prev => new Set([...prev, keyLower]));
-          // Remove visual feedback after 150ms (same as mouse clicks)
-          setTimeout(() => {
-            setPressedKeys(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(keyLower);
-              return newSet;
-            });
-            // Clear MIDI trigger flag after a short delay
+        }
+        
+        // Remove visual feedback after 150ms (same as mouse clicks)
+        setTimeout(() => {
+          setMidiPressedNotes(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(midiNote);
+            return newSet;
+          });
+          // Clear computer keyboard mapping after a short delay
+          if (computerKey) {
             setTimeout(() => {
+              setPressedKeys(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(computerKey.toLowerCase());
+                return newSet;
+              });
               setMidiTriggeredKeys(prev => {
                 const newSet = new Set(prev);
-                newSet.delete(keyLower);
+                newSet.delete(computerKey.toLowerCase());
                 return newSet;
               });
             }, 50);
-          }, 150);
-        }
+          }
+        }, 150);
       } else {
         // Note off - remove visual feedback immediately
+        setMidiPressedNotes(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(midiNote);
+          return newSet;
+        });
+        
+        // Also clear computer keyboard mapping
         const computerKey = getComputerKeyForNote(midiNote);
         if (computerKey) {
           const keyLower = computerKey.toLowerCase();
@@ -269,7 +288,6 @@ export function VirtualMidiKeyboard({
             newSet.delete(keyLower);
             return newSet;
           });
-          // Also clear MIDI trigger flag
           setMidiTriggeredKeys(prev => {
             const newSet = new Set(prev);
             newSet.delete(keyLower);
@@ -524,7 +542,7 @@ export function VirtualMidiKeyboard({
         const isHovered = hoveredKey === midiNote;
         const isDragOver = dragOverKey === midiNote;
         const computerKey = getComputerKeyForNote(midiNote);
-        const isPressed = (computerKey && pressedKeys.has(computerKey.toLowerCase())) || mousePressedKey === midiNote;
+        const isPressed = (computerKey && pressedKeys.has(computerKey.toLowerCase())) || mousePressedKey === midiNote || midiPressedNotes.has(midiNote);
         
         // Define key colors based on state
         const whiteKeyColors = {
@@ -612,7 +630,7 @@ export function VirtualMidiKeyboard({
         const isHovered = hoveredKey === midiNote;
         const isDragOver = dragOverKey === midiNote;
         const computerKey = getComputerKeyForNote(midiNote);
-        const isPressed = (computerKey && pressedKeys.has(computerKey.toLowerCase())) || mousePressedKey === midiNote;
+        const isPressed = (computerKey && pressedKeys.has(computerKey.toLowerCase())) || mousePressedKey === midiNote || midiPressedNotes.has(midiNote);
         
         // Define key colors based on state
         const blackKeyColors = {
