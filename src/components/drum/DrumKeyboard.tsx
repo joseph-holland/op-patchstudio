@@ -90,28 +90,65 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = e.touches[0].clientX; // Initialize end position to start position
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     touchEndX.current = e.touches[0].clientX;
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
     if (!touchStartX.current || !touchEndX.current) return;
     
-    const distance = touchStartX.current - touchEndX.current;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
+    const distance = Math.abs(touchStartX.current - touchEndX.current);
 
-    if (isLeftSwipe && currentOctave === 0) {
-      // Swipe left: go to octave 1
-      setCurrentOctave(1);
-    } else if (isRightSwipe && currentOctave === 1) {
-      // Swipe right: go back to octave 0
-      setCurrentOctave(0);
+    // It's a swipe
+    if (distance > minSwipeDistance) {
+      const isLeftSwipe = touchStartX.current - touchEndX.current > 0;
+      if (isLeftSwipe && currentOctave === 0) {
+        setCurrentOctave(1);
+      } else if (!isLeftSwipe && currentOctave === 1) {
+        setCurrentOctave(0);
+      }
+    } 
+    // It's a tap
+    else {
+      const touch = e.changedTouches[0];
+      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+      const keyButton = targetElement?.closest('button[data-keychar]');
+      
+      if (keyButton) {
+        const keyChar = keyButton.getAttribute('data-keychar');
+        const octaveStr = keyButton.getAttribute('data-octave');
+        
+        if (keyChar && octaveStr) {
+          const octave = parseInt(octaveStr, 10);
+          const mapping = drumKeyMap[octave]?.[keyChar as keyof typeof drumKeyMap[0]];
+          
+          if (mapping) {
+            const hasContent = state.drumSamples[mapping.idx]?.isLoaded;
+            if (hasContent) {
+              playSample(mapping.idx);
+            } else {
+              openFileBrowser(mapping.idx);
+            }
+
+            // brief visual feedback for the tap
+            const keyIdentifier = `${keyChar}:${octave}`;
+            setPressedKeys(prev => new Set(prev).add(keyIdentifier));
+            setTimeout(() => {
+              setPressedKeys(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(keyIdentifier);
+                return newSet;
+              });
+            }, 150);
+          }
+        }
+      }
     }
 
-    // Reset touch positions
+    // Reset for next touch
     touchStartX.current = null;
     touchEndX.current = null;
   };
@@ -156,15 +193,10 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
   const isMidiConnected = midiState.isInitialized && inputDevices.length > 0;
 
   const playSample = async (index: number) => {
-    console.log(`[DEBUG] playSample called with index: ${index}`);
     const sample = state.drumSamples[index];
-    console.log(`[DEBUG] Sample at index ${index}:`, sample);
     if (!sample?.isLoaded || !sample.audioBuffer) {
-      console.log(`[DEBUG] Sample at index ${index} is not loaded or has no audioBuffer`);
       return;
     }
-
-    console.log(`[DEBUG] Playing sample: ${sample.name} at index ${index}`);
     try {
       await play(sample.audioBuffer, {
         inFrame: sample.inPoint !== undefined ? Math.floor(sample.inPoint * sample.audioBuffer.sampleRate) : 0,
@@ -257,7 +289,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
   const handleMidiEvent = useCallback((event: MidiEvent) => {
     if (event.type === 'noteon' && event.velocity > 0) {
       const note = event.note;
-      console.log(`[MIDI] Drum keyboard received note: ${note} (velocity: ${event.velocity}, channel: ${event.channel})`);
+
       
       // Map MIDI note to drum sample index
       const drumIndex = getDrumIndexFromMidiNote(note);
@@ -277,7 +309,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
           setPressedKeys(prev => new Set([...prev, `${keyChar}:${keyOctave}`]));
         }
       } else {
-        console.log(`[MIDI] No drum mapping found for note: ${note}`);
+        // No drum mapping found for note
       }
     } else if (event.type === 'noteoff') {
       const note = event.note;
@@ -385,16 +417,15 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
         cleanup();
       };
     } else if (!isMidiConnected) {
-      console.log(`[MIDI] Drum keyboard: No MIDI devices connected`);
+      // No MIDI devices connected
     } else if (!selectedMidiChannel) {
-      console.log(`[MIDI] Drum keyboard: No MIDI channel selected`);
+      // No MIDI channel selected
     }
   }, [isMidiConnected, selectedMidiChannel, onMidiEvent, handleMidiEvent, midiState.devices, state.currentTab]);
 
   // Helper functions to create common OPXYKey props
   const createKeyProps = (keyChar: string, octave: number, isLarge = false, circleOffset: 'left' | 'right' | 'center' = 'center') => {
     const mapping = drumKeyMap[octave][keyChar as keyof typeof drumKeyMap[0]];
-    console.log(`[DEBUG] createKeyProps: keyChar=${keyChar}, octave=${octave}, mapping=`, mapping);
     return {
       keyChar,
       mapping,
@@ -442,6 +473,16 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
     const hasContent = mapping && state.drumSamples[mapping.idx]?.isLoaded;
     const isActive = hasContent; // Key is only active when it has content
     
+    // This function contains the core action for the key
+    const handleActivate = () => {
+      if (!mapping) return;
+      if (isActive) {
+        playSample(mapping.idx);
+      } else {
+        openFileBrowser(mapping.idx);
+      }
+    };
+
     // Use keyWidth for all proportional sizing
     const baseSize = keyWidth;
     const width = isLarge ? baseSize * 1.5 + (keyChar === 'W' || keyChar === 'U' ? 1 : 0) : baseSize;
@@ -505,53 +546,64 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
         
         {/* Key button */}
         <button
-          onMouseDown={() => {
-            console.log(`[DEBUG] onMouseDown triggered for key: ${keyChar}, octave: ${octave}`);
-            if (!mapping) return; // Need mapping to know which key
-            if (isActive) {
-              // Directly trigger sample playback for mouse events
-              console.log(`[DEBUG] Mouse down - playing sample at index: ${mapping.idx}`);
-              playSample(mapping.idx);
-              // Add visual feedback for pressed key
-              setPressedKeys(prev => new Set(prev).add(`${keyChar}:${octave}`));
-            } else {
-              // For inactive keys, open file browser directly
-              console.log(`[DEBUG] Mouse down - opening file browser for index: ${mapping.idx}`);
-              openFileBrowser(mapping.idx);
-            }
+          // data attributes are used by the mobile touch handler
+          data-keychar={keyChar}
+          data-octave={octave}
+          // an empty onClick is for accessibility, but we prevent double-firing
+          onClick={(e) => { e.preventDefault(); }}
+          
+          // --- MOUSE & PEN EVENTS ---
+          onPointerDown={(e) => {
+            // This handler is for MOUSE ONLY to preserve press-and-hold.
+            // Touch is handled by the container.
+            if (e.pointerType !== 'mouse') return;
+            handleActivate();
+            setPressedKeys(prev => new Set(prev).add(`${keyChar}:${octave}`));
           }}
-          onMouseUp={() => {
-            console.log(`[DEBUG] onMouseUp triggered for key: ${keyChar}, octave: ${octave}`);
-            // Remove visual feedback for released key
+          onPointerUp={(e) => {
+            if (e.pointerType !== 'mouse') return;
             setPressedKeys(prev => {
               const newSet = new Set(prev);
               newSet.delete(`${keyChar}:${octave}`);
               return newSet;
             });
           }}
-          onTouchStart={() => {
-            console.log(`[DEBUG] onTouchStart triggered for key: ${keyChar}, octave: ${octave}`);
-            if (!mapping) return;
-            if (isActive) {
-              // For active keys, play sample on touch start
-              console.log(`[DEBUG] Touch start - playing sample at index: ${mapping.idx}`);
-              playSample(mapping.idx);
-              setPressedKeys(prev => new Set(prev).add(`${keyChar}:${octave}`));
-            } else {
-              // For inactive keys, open file browser on touch start
-              console.log(`[DEBUG] Touch start - opening file browser for index: ${mapping.idx}`);
-              openFileBrowser(mapping.idx);
+          onMouseLeave={(e) => {
+            // Also clear visual state if mouse leaves while pressed down
+            if (e.buttons === 1) { // 1 means left mouse button is down
+              setPressedKeys(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(`${keyChar}:${octave}`);
+                return newSet;
+              });
             }
           }}
-          onTouchEnd={() => {
-            console.log(`[DEBUG] onTouchEnd triggered for key: ${keyChar}, octave: ${octave}`);
-            // Remove visual feedback for released key
-            setPressedKeys(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(`${keyChar}:${octave}`);
-              return newSet;
-            });
+          
+          // --- KEYBOARD EVENTS ---
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleActivate();
+              setPressedKeys(prev => new Set(prev).add(`${keyChar}:${octave}`));
+            }
           }}
+          onKeyUp={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setPressedKeys(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(`${keyChar}:${octave}`);
+                return newSet;
+              });
+            }
+          }}
+          
+          // --- DRAG & DROP AND ACCESSIBILITY ---
+          tabIndex={0}
+          role="button"
+          aria-label={`${mapping ? mapping.label : 'Empty'} drum key ${keyChar.toUpperCase()}`}
+          aria-pressed={isPressed}
+          aria-describedby={mapping ? `drum-key-${mapping.idx}-${octave}` : undefined}
           onDragOver={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -603,15 +655,17 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
             boxShadow: isActive ? '0 4px 12px rgba(0, 0, 0, 0.18)' : '0 2px 6px rgba(0, 0, 0, 0.1)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            outline: 'none'
           }}
-          onMouseEnter={(e) => {
-            if (!isActive || isPressed) return;
-            e.currentTarget.style.background = 'var(--color-keyboard-key-active-bg)';
+          onFocus={(e) => {
+            // Add focus ring for keyboard navigation
+            e.currentTarget.style.outline = '2px solid var(--color-interactive-focus)';
+            e.currentTarget.style.outlineOffset = '2px';
           }}
-          onMouseLeave={(e) => {
-            if (!isActive || isPressed) return;
-            e.currentTarget.style.background = 'var(--color-keyboard-key-active-bg)';
+          onBlur={(e) => {
+            // Remove focus ring
+            e.currentTarget.style.outline = 'none';
           }}
         >
           {/* Outer ring around black circle */}
@@ -660,16 +714,19 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
               pointerEvents: 'none',
               zIndex: 2
             }}>
-              <div style={{
-                backgroundColor: 'var(--color-border-primary)', // slate from theme
-                color: '#fff', // white text
-                fontSize: `${baseSize * (9/56)}px`,
-                fontWeight: '600',
-                padding: `${baseSize * (2/56)}px ${baseSize * (4/56)}px`,
-                borderRadius: '2px',
-                lineHeight: '1',
-                letterSpacing: '0.5px'
-              }}>
+              <div 
+                id={`drum-key-${mapping.idx}-${octave}`}
+                style={{
+                  backgroundColor: 'var(--color-border-primary)', // slate from theme
+                  color: '#fff', // white text
+                  fontSize: `${baseSize * (9/56)}px`,
+                  fontWeight: '600',
+                  padding: `${baseSize * (2/56)}px ${baseSize * (4/56)}px`,
+                  borderRadius: '2px',
+                  lineHeight: '1',
+                  letterSpacing: '0.5px'
+                }}
+              >
                 {mapping.label}
               </div>
             </div>
@@ -680,10 +737,14 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
   };
 
   return (
-    <div style={{ 
-      fontFamily: '"Montserrat", "Arial", sans-serif',
-      userSelect: 'none'
-    }}>
+    <div 
+      role="group"
+      aria-label="Drum keyboard"
+      style={{ 
+        fontFamily: '"Montserrat", "Arial", sans-serif',
+        userSelect: 'none'
+      }}
+    >
       {/* Hidden file input for browsing files */}
       <input
         ref={fileInputRef}
@@ -783,7 +844,11 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
                 transition: 'transform 0.3s ease-out'
               }}>
                 {/* Octave 0 Panel */}
-                <div style={{ width: '50%', flexShrink: 0 }}>
+                <div 
+                  role="group"
+                  aria-label="Lower octave drum keys"
+                  style={{ width: '50%', flexShrink: 0 }}
+                >
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -808,7 +873,11 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
                 </div>
 
                 {/* Octave 1 Panel */}
-                <div style={{ width: '50%', flexShrink: 0 }}>
+                <div 
+                  role="group"
+                  aria-label="Upper octave drum keys"
+                  style={{ width: '50%', flexShrink: 0 }}
+                >
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -886,13 +955,17 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
             boxShadow: '0 2px 8px var(--color-shadow-primary)'
           }}>
           {/* Octave 1 (Lower) */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '1px',
-            position: 'relative'
-          }}>
+          <div 
+            role="group"
+            aria-label="Lower octave drum keys"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1px',
+              position: 'relative'
+            }}
+          >
             
             {/* Top row */}
             <div style={{ 
@@ -931,13 +1004,17 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
           </div>
 
           {/* Octave 2 (Upper) */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '1px',
-            position: 'relative'
-          }}>
+          <div 
+            role="group"
+            aria-label="Upper octave drum keys"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1px',
+              position: 'relative'
+            }}
+          >
             
             {/* Top row */}
             <div style={{ 
