@@ -105,5 +105,61 @@ const localStorageMock = {
 global.localStorage = localStorageMock as any
 global.sessionStorage = localStorageMock as any
 
+// Patch AudioParam and GainNode to support setValueCurveAtTime for ADSR tests
+class MockAudioParam {
+  value = 1;
+  setValueCurveAtTime = vi.fn();
+  setValueAtTime = vi.fn();
+  linearRampToValueAtTime = vi.fn();
+}
+global.AudioParam = MockAudioParam as any;
+// Patch createGain to return a gain node with a writable gain property
+const origCreateGain = global.AudioContext.prototype?.createGain;
+if (origCreateGain) {
+  global.AudioContext.prototype.createGain = function () {
+    const gainNode = origCreateGain.call(this);
+    // Overwrite gain with a writable property
+    Object.defineProperty(gainNode, 'gain', {
+      value: new MockAudioParam(),
+      writable: true,
+      configurable: true,
+      enumerable: true
+    });
+    return gainNode;
+  };
+}
+// Patch canvas context for setLineDash and basic 2D methods
+try {
+  const origGetContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (...args) {
+    if (args[0] === '2d') {
+      // Return a persistent mock object for each canvas
+      const ctx = {
+        setLineDash: vi.fn(),
+        beginPath: vi.fn(),
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        stroke: vi.fn(),
+        arc: vi.fn(),
+        fill: vi.fn(),
+        clearRect: vi.fn(),
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        drawImage: vi.fn(),
+        save: vi.fn(),
+        restore: vi.fn(),
+        translate: vi.fn(),
+        scale: vi.fn(),
+        rotate: vi.fn(),
+        // Add any other needed 2d context methods here
+      };
+      return ctx as any;
+    }
+    return origGetContext ? origGetContext.apply(this, args) : null;
+  };
+} catch (e) {
+  // If we can't mock, ignore and let tests skip or fail gracefully
+}
+
 // Export mock utilities for tests
 export { createMockMidiPort, createMockMidiAccess }

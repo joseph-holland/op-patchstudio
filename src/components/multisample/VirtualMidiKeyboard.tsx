@@ -7,6 +7,7 @@ import type { MidiEvent } from '../../utils/midi';
 interface VirtualMidiKeyboardProps {
   assignedNotes?: number[]; // MIDI note numbers that have samples assigned
   onKeyClick?: (midiNote: number) => void;
+  onKeyRelease?: (midiNote: number) => void; // Add release handler for ADSR
   onUnassignedKeyClick?: (midiNote: number) => void;
   onKeyDrop?: (midiNote: number, files: File[]) => void;
   className?: string;
@@ -21,6 +22,7 @@ interface VirtualMidiKeyboardProps {
 export function VirtualMidiKeyboard({ 
   assignedNotes = [], 
   onKeyClick,
+  onKeyRelease,
   onUnassignedKeyClick,
   onKeyDrop,
   className = '',
@@ -199,6 +201,16 @@ export function VirtualMidiKeyboard({
           newSet.delete(key);
           return newSet;
         });
+        
+        // Trigger release for assigned notes on keyboard release
+        if (key in keyboardMapping) {
+          const noteOffset = keyboardMapping[key as keyof typeof keyboardMapping];
+          const midiNote = activeOctave * 12 + 24 + noteOffset;
+          
+          if (midiNote >= 0 && midiNote <= 127 && assignedNotes.includes(midiNote)) {
+            onKeyRelease?.(midiNote);
+          }
+        }
       }
     };
 
@@ -289,12 +301,17 @@ export function VirtualMidiKeyboard({
           }
         }, 150);
       } else {
-        // Note off - remove visual feedback immediately
+        // Note off - remove visual feedback immediately and trigger release
         setMidiPressedNotes(prev => {
           const newSet = new Set(prev);
           newSet.delete(midiNote);
           return newSet;
         });
+        
+        // Trigger release for assigned notes on MIDI note off
+        if (assignedNotes.includes(midiNote)) {
+          onKeyRelease?.(midiNote);
+        }
         
         // Also clear computer keyboard mapping
         const computerKey = getComputerKeyForNote(midiNote);
@@ -439,29 +456,7 @@ export function VirtualMidiKeyboard({
     ...dynamicStyles,
   };
 
-  const handleKeyClick = useCallback((midiNote: number) => {
-    // Don't trigger key actions if we're dragging
-    if (isDragging) return;
-    
-    const isAssigned = assignedNotes.includes(midiNote);
-    // Find the computer key for this midiNote in the current octave
-    const computerKey = getComputerKeyForNote(midiNote);
-    if (computerKey) {
-      setPressedKeys(prev => new Set([...prev, computerKey.toLowerCase()]));
-      setTimeout(() => {
-        setPressedKeys(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(computerKey.toLowerCase());
-          return newSet;
-        });
-      }, 150);
-    }
-    if (isAssigned) {
-      onKeyClick?.(midiNote);
-    } else {
-      onUnassignedKeyClick?.(midiNote);
-    }
-  }, [assignedNotes, onKeyClick, onUnassignedKeyClick, getComputerKeyForNote, isDragging]);
+
 
   const handleKeyMouseEnter = useCallback((midiNote: number) => {
     setHoveredKey(midiNote);
@@ -610,11 +605,40 @@ export function VirtualMidiKeyboard({
               // Don't set pressed key if we're starting to drag
               if (!isDragging) {
                 setMousePressedKey(midiNote);
+                // Trigger note on mouse down for immediate response
+                if (assignedNotes.includes(midiNote)) {
+                  onKeyClick?.(midiNote);
+                }
               }
             }}
-            onMouseUp={() => setMousePressedKey(null)}
-            onMouseLeave={() => { setMousePressedKey(null); handleKeyMouseLeave(); }}
-            onClick={() => handleKeyClick(midiNote)}
+            onMouseUp={() => {
+              setMousePressedKey(null);
+              // Trigger release for ADSR
+              if (assignedNotes.includes(midiNote)) {
+                onKeyRelease?.(midiNote);
+              }
+            }}
+            onMouseLeave={() => { 
+              setMousePressedKey(null); 
+              handleKeyMouseLeave();
+              // Trigger release for ADSR when mouse leaves key
+              if (assignedNotes.includes(midiNote)) {
+                onKeyRelease?.(midiNote);
+              }
+            }}
+            onTouchStart={() => {
+              // Trigger note on touch start for immediate response
+              if (assignedNotes.includes(midiNote)) {
+                onKeyClick?.(midiNote);
+              }
+            }}
+            onTouchEnd={() => {
+              // Trigger release for ADSR on touch end
+              if (assignedNotes.includes(midiNote)) {
+                onKeyRelease?.(midiNote);
+              }
+            }}
+
             onMouseEnter={() => handleKeyMouseEnter(midiNote)}
             onDragOver={(e) => handleKeyDragOver(e, midiNote)}
             onDragLeave={handleKeyDragLeave}
@@ -693,12 +717,39 @@ export function VirtualMidiKeyboard({
               // Don't set pressed key if we're starting to drag
               if (!isDragging) {
                 setMousePressedKey(midiNote);
+                // Trigger note on mouse down for immediate response
+                if (assignedNotes.includes(midiNote)) {
+                  onKeyClick?.(midiNote);
+                }
               }
             }}
-            onMouseUp={() => setMousePressedKey(null)}
-            onMouseLeave={() => { setMousePressedKey(null); handleKeyMouseLeave(); }}
-            onClick={() => handleKeyClick(midiNote)}
-            onMouseEnter={() => handleKeyMouseEnter(midiNote)}
+            onMouseUp={() => {
+              setMousePressedKey(null);
+              // Trigger release for ADSR
+              if (assignedNotes.includes(midiNote)) {
+                onKeyRelease?.(midiNote);
+              }
+            }}
+            onMouseLeave={() => { 
+              setMousePressedKey(null); 
+              handleKeyMouseLeave();
+              // Trigger release for ADSR when mouse leaves key
+              if (assignedNotes.includes(midiNote)) {
+                onKeyRelease?.(midiNote);
+              }
+            }}
+            onTouchStart={() => {
+              // Trigger note on touch start for immediate response
+              if (assignedNotes.includes(midiNote)) {
+                onKeyClick?.(midiNote);
+              }
+            }}
+            onTouchEnd={() => {
+              // Trigger release for ADSR on touch end
+              if (assignedNotes.includes(midiNote)) {
+                onKeyRelease?.(midiNote);
+              }
+            }}
             onDragOver={(e) => handleKeyDragOver(e, midiNote)}
             onDragLeave={handleKeyDragLeave}
             onDrop={(e) => handleKeyDrop(e, midiNote)}
