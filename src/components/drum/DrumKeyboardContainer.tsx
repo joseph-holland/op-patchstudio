@@ -49,25 +49,12 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
   const { onMidiEvent, state: midiState, initialize } = useWebMidi();
   const [isMidiSelectorVisible, setIsMidiSelectorVisible] = useState(false);
 
-  // Auto-initialize MIDI on component mount
+  // Auto-initialize MIDI if not already initialized
   useEffect(() => {
-    if (midiState.isSupported && !midiState.isInitialized && !midiState.isConnecting) {
-      console.log('[DrumKeyboardContainer] Auto-initializing MIDI...');
+    if (!midiState.isInitialized && !midiState.isConnecting) {
       initialize();
     }
-  }, [midiState.isSupported, midiState.isInitialized, midiState.isConnecting, initialize]);
-
-  // Debug: Log MIDI state
-  useEffect(() => {
-    console.log('[DrumKeyboardContainer] MIDI State:', {
-      isSupported: midiState.isSupported,
-      isInitialized: midiState.isInitialized,
-      deviceCount: midiState.devices.length,
-      devices: midiState.devices.map(d => ({ name: d.name, type: d.type, state: d.state })),
-      selectedChannel: selectedMidiChannel,
-      isSelectorVisible: isMidiSelectorVisible
-    });
-  }, [midiState, selectedMidiChannel, isMidiSelectorVisible]);
+  }, [midiState.isInitialized, midiState.isConnecting, initialize]);
 
   // Function to hide MIDI selector
   const hideMidiSelector = () => {

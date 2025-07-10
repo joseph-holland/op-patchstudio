@@ -52,13 +52,12 @@ export function VirtualMidiKeyboard({
   const [midiTriggeredKeys, setMidiTriggeredKeys] = useState<Set<string>>(new Set());
   const [midiPressedNotes, setMidiPressedNotes] = useState<Set<number>>(new Set());
 
-  // Auto-initialize MIDI on component mount
+  // Auto-initialize MIDI if not already initialized
   useEffect(() => {
-    if (midiState.isSupported && !midiState.isInitialized && !midiState.isConnecting) {
-      console.log('[VirtualMidiKeyboard] Auto-initializing MIDI...');
+    if (!midiState.isInitialized && !midiState.isConnecting) {
       initialize();
     }
-  }, [midiState.isSupported, midiState.isInitialized, midiState.isConnecting, initialize]);
+  }, [midiState.isInitialized, midiState.isConnecting, initialize]);
 
   // Check if MIDI is connected (initialized and has input devices)
   const inputDevices = midiState.devices.filter(device => device.type === 'input' && device.state === 'connected');
@@ -225,6 +224,7 @@ export function VirtualMidiKeyboard({
   const handleMidiEvent = useCallback((event: MidiEvent) => {
     if (event.type === 'noteon' || event.type === 'noteoff') {
       const midiNote = event.note;
+      console.log(`[MIDI] Virtual keyboard received note: ${midiNote} (velocity: ${event.velocity}, channel: ${event.channel})`);
       
       if (event.type === 'noteon' && event.velocity > 0) {
         // Note on - only trigger playback for assigned notes, not file browser for unassigned
@@ -301,21 +301,22 @@ export function VirtualMidiKeyboard({
   // MIDI event handling for multisample keyboard
   useEffect(() => {
     if (!midiState.isInitialized) {
-      console.log('[VirtualMidiKeyboard] MIDI not initialized, skipping event handler');
       return;
     }
 
-    console.log('[VirtualMidiKeyboard] Setting up MIDI event handler for channel:', localSelectedMidiChannel);
-    
-    const cleanup = onMidiEvent(handleMidiEvent, localSelectedMidiChannel);
-    
-    return () => {
-      console.log('[VirtualMidiKeyboard] Cleaning up MIDI event handler');
-      if (cleanup) {
+    // Set up MIDI event listener
+    if (isMidiConnected && localSelectedMidiChannel) {
+      const cleanup = onMidiEvent(handleMidiEvent, localSelectedMidiChannel);
+      
+      return () => {
         cleanup();
-      }
-    };
-  }, [midiState.isInitialized, localSelectedMidiChannel, onMidiEvent, handleMidiEvent]);
+      };
+    } else if (!isMidiConnected) {
+      console.log(`[MIDI] Virtual keyboard: No MIDI devices connected`);
+    } else if (!localSelectedMidiChannel) {
+      console.log(`[MIDI] Virtual keyboard: No MIDI channel selected`);
+    }
+  }, [isMidiConnected, localSelectedMidiChannel, onMidiEvent, handleMidiEvent]);
 
   // Center the keyboard on the active octave when it changes or on mount
   useEffect(() => {

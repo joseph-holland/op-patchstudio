@@ -61,80 +61,109 @@ class WebMidiManager {
 
   // Initialize WebMIDI access
   public async initialize(): Promise<boolean> {
-    if (!this.isSupported) {
-      console.warn('WebMIDI is not supported in this browser');
-      return false;
-    }
-
     if (this.isInitialized) {
       return true;
     }
 
-    try {
-      // Use type assertion to avoid TypeScript conflicts
-      const nav = navigator as any;
-      this.midiAccess = await nav.requestMIDIAccess({
-        sysex: false, // We don't need system exclusive messages
-        software: true // Allow software MIDI ports
-      });
+    if (!this.isSupported) {
+      console.error('[MIDI] WebMIDI is not supported in this browser');
+      return false;
+    }
 
+    try {
+      console.log('[MIDI] Initializing WebMIDI...');
+      this.midiAccess = await navigator.requestMIDIAccess();
+      console.log('[MIDI] WebMIDI access granted');
+      
       this.setupEventListeners();
       this.isInitialized = true;
       
-      console.log('WebMIDI initialized successfully');
+      console.log('[MIDI] WebMIDI initialized successfully');
       return true;
     } catch (error) {
-      console.error('Failed to initialize WebMIDI:', error);
+      console.error('[MIDI] Failed to initialize WebMIDI:', error);
       return false;
     }
   }
 
-  // Setup MIDI port event listeners
+  // Setup event listeners for device changes
   private setupEventListeners(): void {
     if (!this.midiAccess) return;
 
-    // Handle port connections
+    // Handle device connections
     this.midiAccess.onstatechange = (event: any) => {
       const port = event.port;
-      this.updateDeviceState(port);
-      this.notifyDeviceListeners();
+      
+      if (port.type === 'input') {
+        if (port.connection === 'open') {
+          this.addInputDevice(port);
+        } else {
+          this.updateDeviceState(port);
+        }
+      } else if (port.type === 'output') {
+        if (port.connection === 'open') {
+          this.addOutputDevice(port);
+        } else {
+          this.updateDeviceState(port);
+        }
+      }
     };
 
-    // Setup existing ports
+    // Add existing devices
     this.midiAccess.inputs.forEach((input: any) => {
-      this.addInputDevice(input);
+      if (input.connection === 'open') {
+        this.addInputDevice(input);
+      }
     });
 
     this.midiAccess.outputs.forEach((output: any) => {
-      this.addOutputDevice(output);
+      if (output.connection === 'open') {
+        this.addOutputDevice(output);
+      }
     });
+
+    console.log(`[MIDI] Found ${this.midiAccess.inputs.size} input(s) and ${this.midiAccess.outputs.size} output(s)`);
   }
 
-  // Add an input device
+  // Add input device
   private addInputDevice(input: any): void {
     this.inputDevices.set(input.id, input);
+    console.log(`[MIDI] Input device connected: ${input.name || 'Unknown'}`);
     
     input.onmidimessage = (event: any) => {
       this.handleMidiMessage(event);
     };
 
     this.updateDeviceState(input);
+    this.notifyDeviceListeners();
   }
 
-  // Add an output device
+  // Add output device
   private addOutputDevice(output: any): void {
     this.outputDevices.set(output.id, output);
+    console.log(`[MIDI] Output device connected: ${output.name || 'Unknown'}`);
     this.updateDeviceState(output);
+    this.notifyDeviceListeners();
   }
 
   // Update device state
   private updateDeviceState(port: any): void {
-    // Update the device in the appropriate map
-    if (port.type === 'input') {
-      this.inputDevices.set(port.id, port);
-    }
-    if (port.type === 'output') {
-      this.outputDevices.set(port.id, port);
+    const device = this.inputDevices.get(port.id) || this.outputDevices.get(port.id);
+    if (device) {
+      const oldState = device.state;
+      device.state = port.connection === 'open' ? 'connected' : 'disconnected';
+      
+      if (oldState !== device.state) {
+        console.log(`[MIDI] Device ${device.name || 'Unknown'} ${device.state}`);
+        this.notifyDeviceListeners();
+      }
+    } else {
+      // Device not in our maps yet, add it
+      if (port.type === 'input') {
+        this.addInputDevice(port);
+      } else if (port.type === 'output') {
+        this.addOutputDevice(port);
+      }
     }
   }
 
@@ -147,16 +176,14 @@ class WebMidiManager {
       return; // Ignore empty messages
     }
 
-    // Only log and process messages with 3 or more bytes (note/control messages)
+    // Only process messages with 3 or more bytes (note/control messages)
     if (data.length >= 3) {
-      console.log('Raw MIDI message received:', { data, timestamp }); // Debug logging
-
       // Parse MIDI message
       const status = data[0];
       const channel = status & 0x0F;
       const messageType = status & 0xF0;
 
-      console.log(`MIDI Message - Status: ${status.toString(16)}, Channel: ${channel}, Type: ${messageType.toString(16)}`); // Debug logging
+      console.log(`[MIDI] Raw MIDI data:`, { data: Array.from(data), status: status.toString(16), channel, messageType: messageType.toString(16) });
 
       let midiEvent: MidiEvent | null = null;
 
@@ -169,7 +196,7 @@ class WebMidiManager {
             channel,
             timestamp
           };
-          console.log('Note Off event:', midiEvent); // Debug logging
+          console.log(`[MIDI] Note Off: ${data[1]} (velocity: ${data[2]}, channel: ${channel + 1})`);
           break;
 
         case 0x90: // Note On
@@ -182,7 +209,9 @@ class WebMidiManager {
             channel,
             timestamp
           };
-          console.log('Note On event:', midiEvent); // Debug logging
+          if (velocity > 0) {
+            console.log(`[MIDI] Note On: ${data[1]} (velocity: ${velocity}, channel: ${channel + 1})`);
+          }
           break;
 
         case 0xB0: // Control Change
@@ -193,12 +222,11 @@ class WebMidiManager {
             channel,
             timestamp
           };
-          console.log('Control Change event:', midiEvent); // Debug logging
+          console.log(`[MIDI] Control Change: CC${data[1]} = ${data[2]} (channel: ${channel + 1})`);
           break;
       }
 
       if (midiEvent) {
-        console.log('Notifying MIDI event listeners:', midiEvent); // Debug logging
         this.notifyEventListeners(midiEvent);
       }
     } else {
@@ -310,7 +338,6 @@ class WebMidiManager {
 
   // Notify event listeners
   private notifyEventListeners(event: MidiEvent): void {
-    console.log(`Notifying ${this.eventListeners.size} MIDI event listeners`); // Debug logging
     this.eventListeners.forEach(listener => {
       try {
         listener(event);

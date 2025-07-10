@@ -11,13 +11,7 @@ export function useSessionManagement() {
 
   // Save current session
   const saveSession = useCallback(async () => {
-    try {
-      // Debug: Log what we're about to save
-      console.log('Saving session with settings:', {
-        drumSettings: state.drumSettings,
-        multisampleSettings: state.multisampleSettings
-      });
-      
+    try {      
       await sessionStorageIndexedDB.saveSession(state);
     } catch (error) {
       console.error('Failed to save session:', error);
@@ -33,6 +27,11 @@ export function useSessionManagement() {
     const checkForPreviousSession = async () => {
       // Don't check if user has already declined to restore a session
       if (hasUserDeclinedSessionRef.current) {
+        return;
+      }
+      
+      // Don't check if a preset is being loaded
+      if (window.sessionStorage.getItem('loading-preset') === 'true') {
         return;
       }
 
@@ -85,6 +84,11 @@ export function useSessionManagement() {
       return;
     }
     
+    // Don't auto-save if a preset is being loaded
+    if (window.sessionStorage.getItem('loading-preset') === 'true') {
+      return;
+    }
+    
     // Always save session when relevant state changes
     // Debounce the save to avoid excessive saves during rapid changes
     const timeoutId = setTimeout(() => {
@@ -109,19 +113,6 @@ export function useSessionManagement() {
         console.log('No session data available to restore');
         return;
       }
-
-      // Debug: Log what we're about to restore
-      console.log('Restoring session settings:', {
-        drumSettings: sessionData.drumSettings,
-        multisampleSettings: sessionData.multisampleSettings
-      });
-      console.log('Session data summary:', {
-        drumSamplesCount: sessionData.drumSamples.length,
-        multisampleFilesCount: sessionData.multisampleFiles.length,
-        selectedMultisample: sessionData.selectedMultisample,
-        isDrumKeyboardPinned: sessionData.isDrumKeyboardPinned,
-        isMultisampleKeyboardPinned: sessionData.isMultisampleKeyboardPinned
-      });
 
       // First, restore all samples and collect the restored data
       const restoredDrumSamples: any[] = [];
@@ -247,6 +238,11 @@ export function useSessionManagement() {
     const autoSaveInterval = setInterval(() => {
       // Don't auto-save if session restoration modal is open
       if (state.isSessionRestorationModalOpen) {
+        return;
+      }
+      
+      // Don't auto-save if a preset is being loaded
+      if (window.sessionStorage.getItem('loading-preset') === 'true') {
         return;
       }
       

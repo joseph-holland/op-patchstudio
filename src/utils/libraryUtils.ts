@@ -49,7 +49,8 @@ async function prepareDrumSamplesForStorage(drumSamples: AppState['drumSamples']
           duration: sample.duration,
           bitDepth: sample.originalBitDepth,
           sampleRate: sample.originalSampleRate,
-          channels: sample.originalChannels
+          channels: sample.originalChannels,
+          fileSize: sample.fileSize
         }
       });
     }
@@ -72,10 +73,21 @@ async function prepareMultisampleFilesForStorage(multisampleFiles: AppState['mul
         ...rest,
         audioBlob,
         metadata: {
+          // Basic WAV properties
           duration: file.duration,
           bitDepth: file.originalBitDepth,
           sampleRate: file.originalSampleRate,
-          channels: file.originalChannels
+          channels: file.originalChannels,
+          fileSize: file.fileSize,
+          // MIDI note information
+          midiNote: file.rootNote,
+          // Loop information
+          hasLoopData: true, // We always have loop data since we set defaults
+          loopStart: file.loopStart,
+          loopEnd: file.loopEnd,
+          // Format information
+          format: 'PCM',
+          dataLength: file.fileSize || 0
         }
       };
     }

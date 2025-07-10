@@ -138,6 +138,36 @@ export function LibraryPage() {
   // Ref to track current state for async operations
   const currentStateRef = useRef(state);
   currentStateRef.current = state;
+  
+  // Ref to track files that need updates after loading
+  const pendingUpdatesRef = useRef<Array<{file: any, updates: any}>>([]);
+
+  // Apply pending updates when multisample files change
+  useEffect(() => {
+    if (pendingUpdatesRef.current.length > 0 && state.multisampleFiles.length > 0) {
+      pendingUpdatesRef.current.forEach(({ file, updates }) => {
+        // Find the file in the current state by name and rootNote
+        const fileIndex = state.multisampleFiles.findIndex(f => 
+          f && f.name === file.file.name && f.rootNote === file.rootNote
+        );
+        
+        if (fileIndex !== -1) {
+          dispatch({
+            type: 'UPDATE_MULTISAMPLE_FILE',
+            payload: {
+              index: fileIndex,
+              updates
+            }
+          });
+        } else {
+          console.warn(`Could not find multisample file to update settings for file ${file.file.name} with rootNote ${file.rootNote}`);
+        }
+      });
+      
+      // Clear the pending updates
+      pendingUpdatesRef.current = [];
+    }
+  }, [state.multisampleFiles, dispatch]);
 
   // Calculate paginated presets
   const paginatedPresets = filteredPresets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -262,6 +292,18 @@ export function LibraryPage() {
   // The actual preset loading logic (moved from old handleLoadPreset)
   const actuallyLoadPreset = async (preset: LibraryPreset) => {
     try {
+      // Set a flag to prevent session restoration from interfering
+      window.sessionStorage.setItem('loading-preset', 'true');
+      
+      // Clear any pending updates from previous loads
+      pendingUpdatesRef.current = [];
+      
+      // Clear any existing session to avoid interference
+      await sessionStorageIndexedDB.clearCurrentSession();
+      
+      // Reset any saved to library flags to ensure clean state
+      await sessionStorageIndexedDB.resetSavedToLibraryFlag();
+      
       // Switch to the appropriate tab
       dispatch({ type: 'SET_TAB', payload: preset.type });
 
@@ -385,50 +427,49 @@ export function LibraryPage() {
           typeof file.metadata.duration === 'number'
         );
         
-        // Load all files and collect their data for later updates
-        const filesWithUpdates = filesToLoad.map(file => ({
-          file,
-          updates: {
-            inPoint: file.inPoint || 0,
-            outPoint: file.outPoint || file.audioBuffer.duration,
-            loopStart: file.loopStart || file.audioBuffer.duration * 0.2,
-            loopEnd: file.loopEnd || file.audioBuffer.duration * 0.8,
-          }
-        }));
-        
-        // Load all files first
-        filesWithUpdates.forEach(({ file }) => {
-          dispatch({
-            type: 'LOAD_MULTISAMPLE_FILE',
-            payload: {
-              file: file.file,
-              audioBuffer: file.audioBuffer,
-              metadata: file.metadata,
-              rootNoteOverride: file.rootNote
-            }
-          });
-        });
-        
-        // Wait for React state updates to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Now apply updates by finding each file in the current state
-        filesWithUpdates.forEach(({ file, updates }) => {
-          // Find the file in the current state by name and rootNote
-          const fileIndex = currentStateRef.current.multisampleFiles.findIndex(f => 
-            f && f.name === file.file.name && f.rootNote === file.rootNote
-          );
-          
-          if (fileIndex !== -1) {
+        // Load all files with their complete settings in a single operation
+        filesToLoad.forEach((file) => {
+          try {
+            // Create a complete metadata object with all required properties
+            const completeMetadata = {
+              ...file.metadata,
+              // Ensure we have all the properties that LOAD_MULTISAMPLE_FILE expects
+              duration: file.metadata.duration,
+              bitDepth: file.metadata.bitDepth,
+              sampleRate: file.metadata.sampleRate,
+              channels: file.metadata.channels,
+              fileSize: file.metadata.fileSize,
+              midiNote: file.rootNote, // Use the stored rootNote as midiNote
+              hasLoopData: true, // We always have loop data since we set defaults
+              loopStart: file.loopStart || file.audioBuffer.duration * 0.2,
+              loopEnd: file.loopEnd || file.audioBuffer.duration * 0.8,
+              format: 'PCM',
+              dataLength: file.metadata.fileSize || 0
+            };
+            
             dispatch({
-              type: 'UPDATE_MULTISAMPLE_FILE',
+              type: 'LOAD_MULTISAMPLE_FILE',
               payload: {
-                index: fileIndex,
-                updates
+                file: file.file,
+                audioBuffer: file.audioBuffer,
+                metadata: completeMetadata,
+                rootNoteOverride: file.rootNote
               }
             });
-          } else {
-            console.warn(`Could not find multisample file to update settings for file ${file.file.name} with rootNote ${file.rootNote}`);
+            
+            // Apply the stored settings immediately after loading
+            pendingUpdatesRef.current.push({
+              file: file,
+              updates: {
+                inPoint: file.inPoint || 0,
+                outPoint: file.outPoint || file.audioBuffer.duration,
+                loopStart: file.loopStart || file.audioBuffer.duration * 0.2,
+                loopEnd: file.loopEnd || file.audioBuffer.duration * 0.8,
+              }
+            });
+            
+          } catch (error) {
+            console.error('Failed to load multisample file:', file.file.name, error);
           }
         });
 
@@ -457,6 +498,9 @@ export function LibraryPage() {
           message: 'failed to load preset'
         }
       });
+    } finally {
+      // Clear the loading flag after the preset is loaded
+      window.sessionStorage.removeItem('loading-preset');
     }
   };
 

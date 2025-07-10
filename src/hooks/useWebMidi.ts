@@ -24,16 +24,6 @@ export interface WebMidiHookReturn {
 }
 
 export function useWebMidi(): WebMidiHookReturn {
-  // Debug: Test WebMidi.js availability
-  console.log('[useWebMidi] Hook initialized');
-  console.log('[useWebMidi] WebMidi object:', {
-    exists: typeof WebMidi !== 'undefined',
-    supported: WebMidi?.supported,
-    enabled: WebMidi?.enabled,
-    inputs: WebMidi?.inputs?.length,
-    outputs: WebMidi?.outputs?.length
-  });
-
   const [state, setState] = useState<WebMidiState>({
     isSupported: WebMidi.supported,
     isInitialized: WebMidi.enabled,
@@ -52,18 +42,14 @@ export function useWebMidi(): WebMidiHookReturn {
 
   // Initialize WebMIDI
   const initialize = useCallback(async (): Promise<boolean> => {
-    console.log('[WebMidi] Starting initialization...');
-    console.log('[WebMidi] Supported:', WebMidi.supported);
-    console.log('[WebMidi] Enabled:', WebMidi.enabled);
-    
+    console.log('[MIDI] Starting WebMIDI initialization...');
     setState(prev => ({ ...prev, isConnecting: true, error: null }));
 
     try {
       // If WebMidi is already enabled, just update the state
       if (WebMidi.enabled) {
-        console.log('[WebMidi] WebMidi already enabled, updating state...');
+        console.log('[MIDI] WebMIDI already enabled, updating device list...');
         const devices = getDevicesFromWebMidi();
-        console.log('[WebMidi] Found devices:', devices);
         
         setState(prev => ({
           ...prev,
@@ -73,16 +59,14 @@ export function useWebMidi(): WebMidiHookReturn {
           error: null
         }));
 
-        console.log('[WebMidi] State updated successfully');
         return true;
       }
 
-      console.log('[WebMidi] Calling WebMidi.enable()...');
+      console.log('[MIDI] Enabling WebMIDI...');
       await WebMidi.enable();
-      console.log('[WebMidi] WebMidi.enable() completed');
+      console.log('[MIDI] WebMIDI enabled successfully');
       
       const devices = getDevicesFromWebMidi();
-      console.log('[WebMidi] Found devices:', devices);
       
       setState(prev => ({
         ...prev,
@@ -92,10 +76,9 @@ export function useWebMidi(): WebMidiHookReturn {
         error: null
       }));
 
-      console.log('[WebMidi] Initialization successful');
       return true;
     } catch (error) {
-      console.error('[WebMidi] Initialization failed:', error);
+      console.error('[MIDI] Initialization failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setState(prev => ({
         ...prev,
@@ -109,7 +92,6 @@ export function useWebMidi(): WebMidiHookReturn {
   // Auto-initialize if WebMidi is already enabled
   useEffect(() => {
     if (WebMidi.enabled && !state.isInitialized) {
-      console.log('[WebMidi] Auto-initializing (WebMidi already enabled)');
       const devices = getDevicesFromWebMidi();
       setState(prev => ({
         ...prev,
@@ -124,13 +106,8 @@ export function useWebMidi(): WebMidiHookReturn {
   const getDevicesFromWebMidi = (): MidiDevice[] => {
     const devices: MidiDevice[] = [];
     
-    console.log('[WebMidi] Getting devices...');
-    console.log('[WebMidi] Inputs:', WebMidi.inputs.length);
-    console.log('[WebMidi] Outputs:', WebMidi.outputs.length);
-    
     // Add input devices
     WebMidi.inputs.forEach((input: any) => {
-      console.log('[WebMidi] Input device:', input.name, input.id, input.connection);
       devices.push({
         id: input.id,
         name: input.name || 'Unknown Input',
@@ -142,7 +119,6 @@ export function useWebMidi(): WebMidiHookReturn {
 
     // Add output devices
     WebMidi.outputs.forEach((output: any) => {
-      console.log('[WebMidi] Output device:', output.name, output.id, output.connection);
       devices.push({
         id: output.id,
         name: output.name || 'Unknown Output',
@@ -152,13 +128,20 @@ export function useWebMidi(): WebMidiHookReturn {
       });
     });
 
+    console.log(`[MIDI] Found ${WebMidi.inputs.length} input(s) and ${WebMidi.outputs.length} output(s)`);
+    if (devices.length > 0) {
+      devices.forEach(device => {
+        console.log(`[MIDI] ${device.type.toUpperCase()}: ${device.name} (${device.state})`);
+      });
+    }
+
     return devices;
   };
 
   // Device listener
   useEffect(() => {
     const handlePortsChanged = () => {
-      console.log('[WebMidi] Ports changed event received');
+      console.log('[MIDI] Device list changed, updating...');
       setState(prev => ({ 
         ...prev, 
         devices: getDevicesFromWebMidi(),
@@ -167,13 +150,11 @@ export function useWebMidi(): WebMidiHookReturn {
     };
 
     if (WebMidi.enabled) {
-      console.log('[WebMidi] Adding portschanged listener');
       WebMidi.addListener('portschanged', handlePortsChanged);
     }
 
     return () => {
       if (WebMidi.enabled) {
-        console.log('[WebMidi] Removing portschanged listener');
         WebMidi.removeListener('portschanged', handlePortsChanged);
       }
     };
@@ -181,9 +162,18 @@ export function useWebMidi(): WebMidiHookReturn {
 
   // MIDI event handlers
   const onMidiEvent = useCallback((callback: (event: MidiEvent) => void, channel?: number) => {
-    console.log(`[useWebMidi] Attaching MIDI event listener for channel: ${channel || 'all'}`);
+    console.log(`[MIDI] Setting up event listener for channel: ${channel || 'all'}`);
 
     const handler = (event: any) => {
+      // console.log(`[MIDI] Raw event received:`, {
+      //   type: event.type,
+      //   note: event.note?.number,
+      //   velocity: event.rawVelocity,
+      //   channel: event.channel,
+      //   target: event.target?.number,
+      //   message: event.message?.channel
+      // });
+
       // Derive the MIDI channel as reliably as possible.
       // Priority:
       // 1. Explicit channel passed to onMidiEvent()
@@ -203,10 +193,13 @@ export function useWebMidi(): WebMidiHookReturn {
         channel: derivedChannel, // 1-16 (may be undefined for non-channel messages)
         timestamp: event.timestamp,
       };
+
+      // console.log(`[MIDI] Processed event:`, midiEvent);
       callback(midiEvent);
     };
 
     WebMidi.inputs.forEach(input => {
+      // console.log(`[MIDI] Adding listeners to input: ${input.name}`);
       // If a specific channel (1-16) is provided, listen on that channel.
       // Otherwise, listen on the entire input (all channels).
       const target = (channel && channel >= 1 && channel <= 16)
@@ -219,7 +212,7 @@ export function useWebMidi(): WebMidiHookReturn {
 
     // Return a cleanup function
     return () => {
-      console.log(`[useWebMidi] Detaching MIDI event listener for channel: ${channel || 'all'}`);
+      // console.log(`[MIDI] Removing event listener for channel: ${channel || 'all'}`);
       WebMidi.inputs.forEach(input => {
         const target = (channel && channel >= 1 && channel <= 16)
           ? input.channels[channel]
@@ -239,21 +232,18 @@ export function useWebMidi(): WebMidiHookReturn {
 
   // MIDI output functions
   const sendNoteOn = useCallback((note: number, velocity: number = 127, channel: number = 0) => {
-    console.log(`[WebMidi] Sending Note On: note=${note}, velocity=${velocity}, channel=${channel}`);
     WebMidi.outputs.forEach((output: any) => {
       output.channels[channel + 1]?.sendNoteOn(note, { rawAttack: velocity });
     });
   }, []);
 
   const sendNoteOff = useCallback((note: number, velocity: number = 0, channel: number = 0) => {
-    console.log(`[WebMidi] Sending Note Off: note=${note}, velocity=${velocity}, channel=${channel}`);
     WebMidi.outputs.forEach((output: any) => {
       output.channels[channel + 1]?.sendNoteOff(note, { rawRelease: velocity });
     });
   }, []);
 
   const sendControlChange = useCallback((controller: number, value: number, channel: number = 0) => {
-    console.log(`[WebMidi] Sending Control Change: controller=${controller}, value=${value}, channel=${channel}`);
     WebMidi.outputs.forEach((output: any) => {
       output.channels[channel + 1]?.sendControlChange(controller, value);
     });

@@ -64,15 +64,6 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
   const onMidiEvent = onMidiEventExternal ?? internalWebMidi.onMidiEvent;
   const midiState = externalMidiState ?? internalWebMidi.state;
   
-  // Debug: Test WebMidi.js availability
-  useEffect(() => {
-    console.log('[DrumKeyboard] Component mounted');
-    console.log('[DrumKeyboard] WebMidi.js test:', {
-      supported: typeof window !== 'undefined' && 'WebMidi' in window,
-      navigator: typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator
-    });
-  }, []);
-  
   // Touch/swipe handling for mobile
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
@@ -162,20 +153,6 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
   // Check if MIDI is connected (initialized and has input devices)
   const inputDevices = midiState.devices.filter(device => device.type === 'input' && device.state === 'connected');
   const isMidiConnected = midiState.isInitialized && inputDevices.length > 0;
-  
-  // Debug logging for MIDI connection state
-  console.log('=== MIDI CONNECTION DEBUG ===');
-  console.log('MIDI State:', {
-    isInitialized: midiState.isInitialized,
-    totalDeviceCount: midiState.devices.length,
-    inputDeviceCount: inputDevices.length,
-    isMidiConnected,
-    showKeyboardLabels: !isMidiConnected,
-    isMobile,
-    allDevices: midiState.devices.map(d => ({ name: d.name, type: d.type, state: d.state })),
-    inputDevices: inputDevices.map(d => ({ name: d.name, type: d.type, state: d.state }))
-  });
-  console.log('=== END MIDI DEBUG ===');
 
   const playSample = async (index: number) => {
     const sample = state.drumSamples[index];
@@ -269,50 +246,35 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
 
   // MIDI event handling
   const handleMidiEvent = useCallback((event: MidiEvent) => {
-    console.log('[DrumKeyboard] MIDI event received:', event);
-    console.log('[DrumKeyboard] Event details:', {
-      type: event.type,
-      note: (event.type === 'noteon' || event.type === 'noteoff') ? event.note : undefined,
-      velocity: (event.type === 'noteon' || event.type === 'noteoff') ? event.velocity : undefined,
-      channel: event.channel,
-      timestamp: event.timestamp
-    });
-    
     if (event.type === 'noteon' && event.velocity > 0) {
       const note = event.note;
-      console.log('[DrumKeyboard] Processing MIDI note:', note);
+      console.log(`[MIDI] Drum keyboard received note: ${note} (velocity: ${event.velocity}, channel: ${event.channel})`);
+      
       // Map MIDI note to drum sample index
       const drumIndex = getDrumIndexFromMidiNote(note);
       if (drumIndex !== null) {
-        console.log('[DrumKeyboard] Found drum index:', drumIndex, 'for note:', note);
         // Determine which octave this note belongs to and switch if needed
         const isUpperOctave = drumIndex >= 12;
         if (isUpperOctave && currentOctave !== 1) {
-          console.log('[DrumKeyboard] Switching to upper octave for MIDI note:', note);
           setCurrentOctave(1);
         } else if (!isUpperOctave && currentOctave !== 0) {
-          console.log('[DrumKeyboard] Switching to lower octave for MIDI note:', note);
           setCurrentOctave(0);
         }
-        console.log('[DrumKeyboard] Playing sample at index:', drumIndex);
         playSample(drumIndex);
         // Add visual feedback by finding the key character
         const keyChar = getKeyCharFromDrumIndex(drumIndex);
         if (keyChar) {
-          console.log('[DrumKeyboard] Adding visual feedback for key:', keyChar);
           setPressedKeys(prev => new Set([...prev, keyChar]));
         }
       } else {
-        console.log('[DrumKeyboard] No drum mapping found for MIDI note:', note);
+        console.log(`[MIDI] No drum mapping found for note: ${note}`);
       }
     } else if (event.type === 'noteoff') {
       const note = event.note;
-      console.log('[DrumKeyboard] Processing MIDI note off:', note);
       const drumIndex = getDrumIndexFromMidiNote(note);
       if (drumIndex !== null) {
         const keyChar = getKeyCharFromDrumIndex(drumIndex);
         if (keyChar) {
-          console.log('[DrumKeyboard] Removing visual feedback for key:', keyChar);
           setPressedKeys(prev => {
             const newSet = new Set(prev);
             newSet.delete(keyChar);
@@ -399,28 +361,17 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
 
   // Set up MIDI event listener
   useEffect(() => {
-    console.log('[DrumKeyboard] MIDI listener setup check:', {
-      isMidiConnected,
-      selectedMidiChannel,
-      deviceCount: midiState.devices.length,
-      inputDevices: midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length
-    });
-    
     if (isMidiConnected && selectedMidiChannel) {
-      console.log('[DrumKeyboard] Setting up MIDI listener for channel:', selectedMidiChannel);
       const cleanup = onMidiEvent(handleMidiEvent, selectedMidiChannel); // Listen on selected channel only
       
       // Cleanup function
       return () => {
-        console.log('[DrumKeyboard] Cleaning up MIDI listener');
         cleanup();
       };
-    } else {
-      console.log('[DrumKeyboard] NOT setting up MIDI listener:', {
-        isMidiConnected,
-        selectedMidiChannel,
-        reason: isMidiConnected ? 'No channel selected' : 'MIDI not connected'
-      });
+    } else if (!isMidiConnected) {
+      console.log(`[MIDI] Drum keyboard: No MIDI devices connected`);
+    } else if (!selectedMidiChannel) {
+      console.log(`[MIDI] Drum keyboard: No MIDI channel selected`);
     }
   }, [isMidiConnected, selectedMidiChannel, onMidiEvent, handleMidiEvent, midiState.devices]);
 
