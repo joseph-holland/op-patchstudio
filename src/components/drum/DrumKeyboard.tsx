@@ -868,7 +868,8 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
           display: 'flex',
           justifyContent: 'center',
           margin: '1px',
-          width: 'calc(100% - 2px)'
+          width: 'calc(100% - 2px)',
+          padding: '1rem'
         }}>
           <div style={{
             display: 'inline-flex',
