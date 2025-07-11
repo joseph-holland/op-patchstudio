@@ -1,4 +1,13 @@
+import { useState, useEffect } from 'react';
+import { getAppVersion } from '../../utils/version';
+
 export function Footer() {
+  const [version, setVersion] = useState<string>('');
+
+  useEffect(() => {
+    getAppVersion().then(setVersion);
+  }, []);
+
   return (
     <footer style={{ 
       textAlign: 'center', 
@@ -29,6 +38,15 @@ export function Footer() {
           style={{ color: 'var(--color-text-secondary)' }}
         >
           github repo
+        </a>
+        <span style={{ color: 'var(--color-text-tertiary)' }}>|</span>
+        <a 
+          href="/CHANGELOG.md" 
+          target="_blank" 
+          rel="noopener"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          v{version}
         </a>
 
       </div>

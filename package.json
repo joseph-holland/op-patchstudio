@@ -1,7 +1,7 @@
 {
   "name": "op-patchstudio",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.8.0",
   "type": "module",
   "description": "Free & open source preset creator for OP synthesizers. Upload samples, edit waveforms, adjust settingsand generate patches instantly.",
   "repository": {
@@ -28,7 +28,9 @@
     "pre-commit": "npm run test && npm run build",
     "generate-icons": "node scripts/generate-pwa-icons.js",
     "generate-icons-advanced": "node scripts/generate-pwa-icons-advanced.js",
-    "generate-favicons": "node scripts/generate-all-favicons.js"
+    "generate-favicons": "node scripts/generate-all-favicons.js",
+    "update-version": "node scripts/update-version.js",
+    "update-changelog": "node scripts/update-changelog.js"
   },
   "dependencies": {
     "@carbon/react": "^1.85.1",
