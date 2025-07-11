@@ -1,6 +1,7 @@
 {
   "name": "OP-PatchStudio [unofficial]",
   "short_name": "OP-PatchStudio",
+  "version": "0.8.0",
   "description": "Free and open source preset creator for OP synthesizers. Upload samples, edit waveforms, adjust settings and generate patches instantly.",
   "start_url": "/",
   "display": "standalone",
@@ -9,7 +10,11 @@
   "orientation": "any",
   "scope": "/",
   "lang": "en",
-  "categories": ["music", "utilities", "productivity"],
+  "categories": [
+    "music",
+    "utilities",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "/assets/icon-72x72.png",
@@ -86,4 +91,4 @@
       ]
     }
   ]
-} 
+}

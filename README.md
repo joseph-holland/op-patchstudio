@@ -114,5 +114,5 @@ See [MIGRATION_COMPLETION_SUMMARY.md](MIGRATION_COMPLETION_SUMMARY.md) for detai
 
 OP-PatchStudio is an unofficial tool not affiliated with or endorsed by teenage engineering.
 this software is provided "as is" without warranty of any kind. use at your own risk. for educational and personal use only.
-OP-XY, OP-1 are a registered trademarks of teenage engineering.
+OP-XY, OP-1 and OP-Z are registered trademarks of teenage engineering.
 
