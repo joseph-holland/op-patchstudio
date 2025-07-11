@@ -40,5 +40,6 @@ export const COOKIE_KEYS = {
   LAST_TAB: 'opxy_last_tab',
   DRUM_KEYBOARD_PINNED: 'opxy_drum_keyboard_pinned',
   MULTISAMPLE_KEYBOARD_PINNED: 'opxy_multisample_keyboard_pinned',
+  MIDI_NOTE_MAPPING: 'opxy_midi_note_mapping',
   // Add other cookie keys here as needed
 } as const; 

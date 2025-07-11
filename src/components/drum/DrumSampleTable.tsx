@@ -10,6 +10,7 @@ import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { DrumSampleSettingsModal } from './DrumSampleSettingsModal';
 import { IconButton } from '../common/IconButton';
 
+
 interface DrumSampleTableProps {
   onFileUpload: (index: number, file: File) => void;
   onClearSample: (index: number) => void;

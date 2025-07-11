@@ -5,6 +5,7 @@ import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { SmallWaveform } from '../common/SmallWaveform';
 import { EnhancedTooltip } from '../common/EnhancedTooltip';
 import { WaveformZoomModal } from '../common/WaveformZoomModal';
+
 import { midiNoteToString, noteStringToMidiValue } from '../../utils/audio';
 
 
@@ -90,8 +91,8 @@ export function MultisampleSampleTable({
       return (midiNum >= 0 && midiNum <= 127) ? midiNum : -1;
     }
     
-    // Try to parse as note name
-    return noteStringToMidiValue(trimmed);
+    // Try to parse as note name, using current mapping
+    return noteStringToMidiValue(trimmed, state.midiNoteMapping);
   };
 
   // File drag and drop handlers for the entire table
@@ -513,7 +514,7 @@ export function MultisampleSampleTable({
                       <div style={{ textAlign: 'left' }}>
                         <input
                           type="text"
-                          value={editingNotes[index] ?? midiNoteToString(sample.rootNote || 60)}
+                          value={editingNotes[index] ?? midiNoteToString(sample.rootNote || 60, state.midiNoteMapping)}
                           onChange={(e) => handleNoteChange(index, e.target.value)}
                           onBlur={() => handleNoteBlur(index)}
                           onKeyDown={(e) => handleNoteKeyDown(index, e)}
@@ -724,7 +725,8 @@ export function MultisampleSampleTable({
         borderBottom: 'none',
         fontSize: '0.8rem',
         fontWeight: 'bold',
-        color: c.textSecondary
+        color: c.textSecondary,
+        position: 'relative'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           key
@@ -876,7 +878,7 @@ export function MultisampleSampleTable({
                       <div style={{ textAlign: 'center' }}>
                         <input
                           type="text"
-                          value={editingNotes[index] ?? midiNoteToString(sample.rootNote || 60)}
+                          value={editingNotes[index] ?? midiNoteToString(sample.rootNote || 60, state.midiNoteMapping)}
                           onChange={(e) => handleNoteChange(index, e.target.value)}
                           onBlur={() => handleNoteBlur(index)}
                           onKeyDown={(e) => handleNoteKeyDown(index, e)}

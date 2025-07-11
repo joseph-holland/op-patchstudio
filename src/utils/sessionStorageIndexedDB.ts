@@ -278,7 +278,7 @@ export class SessionStorageManagerIndexedDB {
   }
 
   // Load sample from IndexedDB
-  async loadSampleFromSession(sampleId: string): Promise<{ file: File; audioBuffer: AudioBuffer; metadata: any } | null> {
+  async loadSampleFromSession(sampleId: string, mapping: 'C3' | 'C4' = 'C3'): Promise<{ file: File; audioBuffer: AudioBuffer; metadata: any } | null> {
     try {
       const sampleData = await indexedDB.getSample(sampleId);
       if (!sampleData) return null;
@@ -288,7 +288,7 @@ export class SessionStorageManagerIndexedDB {
       const audioBuffer = await this.arrayBufferToAudioBuffer(sampleData.data);
       
       // Parse WAV metadata
-      const metadata = await readWavMetadata(file);
+      const metadata = await readWavMetadata(file, mapping);
       
       return { file, audioBuffer, metadata };
     } catch (error) {

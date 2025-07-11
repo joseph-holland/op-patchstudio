@@ -2,6 +2,7 @@
 // Enhanced with TypeScript types and improved functionality
 
 import { audioContextManager } from './audioContext';
+import { AUDIO_CONSTANTS } from './constants';
 
 // Constants preserved from legacy for compatibility
 const HEADER_LENGTH = 44;
@@ -34,7 +35,7 @@ interface WavMetadata extends WavHeader, SmplChunk {
 }
 
 // Enhanced WAV metadata parsing with SMPL chunk support
-export async function readWavMetadata(file: File): Promise<WavMetadata> {
+export async function readWavMetadata(file: File, mapping: 'C3' | 'C4' = 'C3'): Promise<WavMetadata> {
   const arrayBuffer = await file.arrayBuffer();
   const dataView = new DataView(arrayBuffer);
   
@@ -49,7 +50,7 @@ export async function readWavMetadata(file: File): Promise<WavMetadata> {
   const calculatedDuration = header.dataLength / (header.bitDepth / 8) / header.channels / header.sampleRate;
   
   // Parse SMPL chunk for loop data and MIDI note with proper fallbacks
-  const smplData = parseSmplChunk(dataView, header.sampleRate, calculatedDuration, file.name);
+  const smplData = parseSmplChunk(dataView, header.sampleRate, calculatedDuration, file.name, mapping);
   
   return {
     ...header,
@@ -119,7 +120,7 @@ function parseWavHeader(dataView: DataView): WavHeader {
 }
 
 // Parse SMPL chunk for loop data and MIDI note information
-function parseSmplChunk(dataView: DataView, sampleRate: number, duration: number, filename: string): SmplChunk {
+function parseSmplChunk(dataView: DataView, sampleRate: number, duration: number, filename: string, mapping: 'C3' | 'C4' = 'C3'): SmplChunk {
   let offset = 12;
   
   // Default values - use duration-based defaults like legacy code
@@ -172,7 +173,7 @@ function parseSmplChunk(dataView: DataView, sampleRate: number, duration: number
   // Fallback: parse root note from filename if not found in SMPL chunk
   if (midiNote < 0) {
     try {
-      const parsed = parseFilename(filename);
+      const parsed = parseFilename(filename, mapping);
       if (parsed && parsed.length > 1) {
         midiNote = parsed[1];
       }
@@ -474,7 +475,7 @@ export function findNearestZeroCrossing(
       bestPosition = i;
       
       // If we found a true zero crossing, return immediately
-      if (amplitude < 0.001) {
+      if (amplitude < AUDIO_CONSTANTS.ZERO_CROSSING_THRESHOLD) {
         break;
       }
     }
@@ -632,7 +633,7 @@ export function getInvalidPresetNameChars(name: string): string[] {
   return invalidChars ? [...new Set(invalidChars)] : [];
 }
 
-export function parseFilename(filename: string): [string, number] {
+export function parseFilename(filename: string, mapping: 'C3' | 'C4' = 'C3'): [string, number] {
   const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
   const match = nameWithoutExt.match(/(.+?)[\s\-]*([A-G](?:b|#)?\d|\d{1,3})$/i);
   if (!match) {
@@ -642,7 +643,7 @@ export function parseFilename(filename: string): [string, number] {
   const noteOrNumber = match[2];
   
   if (/^[A-G](?:b|#)?\d$/i.test(noteOrNumber)) {
-    return [baseName, noteStringToMidiValue(noteOrNumber)];
+    return [baseName, noteStringToMidiValue(noteOrNumber, mapping)];
   }
   return [baseName, parseInt(noteOrNumber, 10)];
 }
@@ -652,10 +653,14 @@ export const NOTE_NAMES = [
   "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
 ];
 
-export function midiNoteToString(value: number): string {
+export function midiNoteToString(value: number, mapping: 'C3' | 'C4' = 'C3'): string {
   if (value < 0 || value > 127) return '';
   const noteNumber = value % 12;
-  const octave = Math.floor(value / 12) - 2;
+  // C3=60: octave = Math.floor(value / 12) - 2
+  // C4=60: octave = Math.floor(value / 12) - 1
+  const octave = mapping === 'C3'
+    ? Math.floor(value / 12) - 2
+    : Math.floor(value / 12) - 1;
   return `${NOTE_NAMES[noteNumber]}${octave}`;
 }
 
@@ -669,7 +674,7 @@ const NOTE_NAME_TO_SEMITONE: Record<string, number> = {
   'B': 11
 };
 
-export function noteStringToMidiValue(note: string): number {
+export function noteStringToMidiValue(note: string, mapping: 'C3' | 'C4' = 'C3'): number {
   const match = note.match(/^([A-Ga-g])([#b]?)(-?\d+)$/);
   if (!match) throw new Error('Bad note format');
   const [, letter, accidental, octaveStr] = match;
@@ -677,7 +682,12 @@ export function noteStringToMidiValue(note: string): number {
   const semitone = NOTE_NAME_TO_SEMITONE[base];
   if (semitone === undefined) throw new Error('Bad note');
   const octave = parseInt(octaveStr, 10);
-  return (octave + 2) * 12 + semitone;
+  // C3=60: (octave + 2) * 12 + semitone
+  // C4=60: (octave + 1) * 12 + semitone
+  return (mapping === 'C3'
+    ? (octave + 2) * 12
+    : (octave + 1) * 12
+  ) + semitone;
 }
 
 // Enhanced base template objects for OP-XY patches

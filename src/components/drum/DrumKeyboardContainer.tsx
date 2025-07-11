@@ -60,7 +60,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && midiState.isInitialized) {
-        console.log('[MIDI] Tab became visible, refreshing devices...');
+
         refreshDevices();
       }
     };

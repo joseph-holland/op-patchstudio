@@ -126,13 +126,23 @@ describe('audio utilities', () => {
   describe('midiNoteToString', () => {
     it('should convert MIDI note numbers to note strings correctly', () => {
       expect(midiNoteToString(60)).toBe('C3')
-      expect(midiNoteToString(69)).toBe('A3')
       expect(midiNoteToString(72)).toBe('C4')
+      expect(midiNoteToString(84)).toBe('C5')
+    })
+
+    it('should respect mapping mode for C3=60 vs C4=60', () => {
+      // C3=60 mode (default)
+      expect(midiNoteToString(60, 'C3')).toBe('C3')
+      expect(midiNoteToString(72, 'C3')).toBe('C4')
+      
+      // C4=60 mode
+      expect(midiNoteToString(60, 'C4')).toBe('C4')
+      expect(midiNoteToString(72, 'C4')).toBe('C5')
     })
 
     it('should handle sharps correctly', () => {
       expect(midiNoteToString(61)).toBe('C#3')
-      expect(midiNoteToString(70)).toBe('A#3')
+      expect(midiNoteToString(66)).toBe('F#3')
     })
 
     it('should handle edge cases', () => {
@@ -148,9 +158,19 @@ describe('audio utilities', () => {
 
   describe('noteStringToMidiValue', () => {
     it('should convert note strings to MIDI note numbers correctly', () => {
+      expect(noteStringToMidiValue('C3')).toBe(60)
       expect(noteStringToMidiValue('C4')).toBe(72)
-      expect(noteStringToMidiValue('A4')).toBe(81)
       expect(noteStringToMidiValue('C5')).toBe(84)
+    })
+
+    it('should respect mapping mode for C3=60 vs C4=60', () => {
+      // C3=60 mode (default)
+      expect(noteStringToMidiValue('C3', 'C3')).toBe(60)
+      expect(noteStringToMidiValue('C4', 'C3')).toBe(72)
+      
+      // C4=60 mode
+      expect(noteStringToMidiValue('C4', 'C4')).toBe(60)
+      expect(noteStringToMidiValue('C5', 'C4')).toBe(72)
     })
 
     it('should handle sharps correctly', () => {
@@ -262,29 +282,29 @@ describe('audio utilities', () => {
 
   describe('parseFilename', () => {
     it('should parse filename with note', () => {
-      const [name, note] = parseFilename('Bass C4.wav')
+      const [name, note] = parseFilename('Bass C4.wav', 'C3')
       expect(name).toBe('Bass')
       expect(note).toBe(72)
     })
 
     it('should parse filename with number', () => {
-      const [name, note] = parseFilename('Kick 1.wav')
+      const [name, note] = parseFilename('Kick 1.wav', 'C3')
       expect(name).toBe('Kick')
       expect(note).toBe(1)
     })
 
     it('should handle sharps and flats', () => {
-      const [name1, note1] = parseFilename('Sample C#4.wav')
+      const [name1, note1] = parseFilename('Sample C#4.wav', 'C3')
       expect(name1).toBe('Sample')
       expect(note1).toBe(73)
 
-      const [name2, note2] = parseFilename('Sample Db4.wav')
+      const [name2, note2] = parseFilename('Sample Db4.wav', 'C3')
       expect(name2).toBe('Sample')
       expect(note2).toBe(73)
     })
 
     it('should throw error for invalid filename', () => {
-      expect(() => parseFilename('invalid.wav')).toThrow(
+      expect(() => parseFilename('invalid.wav', 'C3')).toThrow(
         "Filename 'invalid.wav' does not match the expected pattern."
       )
     })

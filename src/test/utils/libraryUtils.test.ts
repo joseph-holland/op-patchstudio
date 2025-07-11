@@ -408,7 +408,8 @@ describe('Drum Sample Index Preservation', () => {
       importedDrumPreset: null,
       importedMultisamplePreset: null,
       isSessionRestorationModalOpen: false,
-      sessionInfo: null
+      sessionInfo: null,
+      midiNoteMapping: 'C3' as const
     };
 
     // Set up the mock to return the expected preset data
@@ -549,7 +550,8 @@ describe('Drum Sample Index Preservation', () => {
       importedDrumPreset: null,
       importedMultisamplePreset: null,
       isSessionRestorationModalOpen: false,
-      sessionInfo: null
+      sessionInfo: null,
+      midiNoteMapping: 'C3' as const
     };
 
     // Set up the mock to return the expected empty preset data
@@ -672,7 +674,8 @@ describe('Multisample Loop Points Preservation', () => {
       importedDrumPreset: null,
       importedMultisamplePreset: null,
       isSessionRestorationModalOpen: false,
-      sessionInfo: null
+      sessionInfo: null,
+      midiNoteMapping: 'C3' as const
     };
 
     // Set up the mock to return the expected multisample preset data

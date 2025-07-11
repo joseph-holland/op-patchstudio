@@ -3,6 +3,8 @@ import { EnhancedTooltip } from '../common/EnhancedTooltip';
 import { useWebMidi } from '../../hooks/useWebMidi';
 import { MidiDeviceSelector } from '../common/MidiDeviceSelector';
 import type { MidiEvent } from '../../utils/midi';
+import { useAppContext } from '../../context/AppContext';
+import { UI_CONSTANTS } from '../../utils/constants';
 
 interface VirtualMidiKeyboardProps {
   assignedNotes?: number[]; // MIDI note numbers that have samples assigned
@@ -33,6 +35,7 @@ export function VirtualMidiKeyboard({
   onMidiChannelChange,
   isActive = true
 }: VirtualMidiKeyboardProps) {
+  const { state } = useAppContext();
   const containerRef = useRef<HTMLDivElement>(null);
   const placeholderRef = useRef<HTMLDivElement>(null);
   const keyboardScrollRef = useRef<HTMLDivElement>(null);
@@ -277,7 +280,7 @@ export function VirtualMidiKeyboard({
           setPressedKeys(prev => new Set([...prev, keyLower]));
         }
         
-        // Remove visual feedback after 150ms (same as mouse clicks)
+        // Remove visual feedback after timeout (same as mouse clicks)
         setTimeout(() => {
           setMidiPressedNotes(prev => {
             const newSet = new Set(prev);
@@ -299,7 +302,7 @@ export function VirtualMidiKeyboard({
               });
             }, 50);
           }
-        }, 150);
+        }, UI_CONSTANTS.VISUAL_FEEDBACK_TIMEOUT);
       } else {
         // Note off - remove visual feedback immediately and trigger release
         setMidiPressedNotes(prev => {
@@ -665,7 +668,7 @@ export function VirtualMidiKeyboard({
                 fontWeight: '600',
                 color: isAssigned ? 'var(--color-black)' : 'var(--color-text-secondary)'
               }}>
-                C{octave}
+                C{state.midiNoteMapping === 'C4' ? octave + 1 : octave}
               </span>
             )}
           </div>
