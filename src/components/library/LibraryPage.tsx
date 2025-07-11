@@ -413,7 +413,8 @@ export function LibraryPage() {
         }
         
         // Clear existing files and load new ones
-        for (let i = 0; i < state.multisampleFiles.length; i++) {
+        // Clear from end to beginning to avoid index shifting issues
+        for (let i = state.multisampleFiles.length - 1; i >= 0; i--) {
           dispatch({ type: 'CLEAR_MULTISAMPLE_FILE', payload: i });
         }
         
