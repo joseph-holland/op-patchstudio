@@ -11,6 +11,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import semver from 'semver';
 
 const args = process.argv.slice(2);
 const updateType = args[0];
@@ -25,21 +26,30 @@ const packageJsonPath = path.join(process.cwd(), 'package.json');
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const currentVersion = packageJson.version;
 
-// Parse version
-const [major, minor, patch] = currentVersion.split('.').map(Number);
+// Validate current version using semver
+if (!semver.valid(currentVersion)) {
+  console.error(`❌ Invalid version format: ${currentVersion}`);
+  console.error('Version must follow semantic versioning (e.g., 1.2.3)');
+  process.exit(1);
+}
 
-// Calculate new version
+// Calculate new version using semver
 let newVersion;
 switch (updateType) {
   case 'patch':
-    newVersion = `${major}.${minor}.${patch + 1}`;
+    newVersion = semver.inc(currentVersion, 'patch');
     break;
   case 'minor':
-    newVersion = `${major}.${minor + 1}.0`;
+    newVersion = semver.inc(currentVersion, 'minor');
     break;
   case 'major':
-    newVersion = `${major + 1}.0.0`;
+    newVersion = semver.inc(currentVersion, 'major');
     break;
+}
+
+if (!newVersion) {
+  console.error('❌ Failed to increment version');
+  process.exit(1);
 }
 
 console.log(`Updating version from ${currentVersion} to ${newVersion}...`);

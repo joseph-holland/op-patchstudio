@@ -40,14 +40,18 @@ export function Footer() {
           github repo
         </a>
         <span style={{ color: 'var(--color-text-tertiary)' }}>|</span>
-        <a 
-          href="/CHANGELOG.md" 
-          target="_blank" 
-          rel="noopener"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
-          v{version}
-        </a>
+        {version ? (
+          <a 
+            href="/CHANGELOG.md" 
+            target="_blank" 
+            rel="noopener"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            v{version}
+          </a>
+        ) : (
+          <span style={{ color: 'var(--color-text-secondary)' }}>loading version...</span>
+        )}
 
       </div>
       <div style={{ marginTop: '0.5rem' }}>

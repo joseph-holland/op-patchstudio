@@ -35,7 +35,8 @@ if (changelog.includes(`## [${version}]`)) {
 
 // Find the [Unreleased] section and replace it with the new version
 const unreleasedPattern = /## \[Unreleased\]/;
-const newVersionEntry = `## [${version}] - ${today}${description ? ` - ${description}` : ''}
+const newVersionEntry = `## [${version}] - ${today}
+${description ? `\n${description}\n` : ''}
 
 ### Added
 - N/A

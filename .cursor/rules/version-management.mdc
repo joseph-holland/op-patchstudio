@@ -1,0 +1,58 @@
+---
+description: rules for changelog and version management
+globs: ["CHANGELOG.md", "**/*.ts", "**/*.tsx"]
+alwaysApply: true
+---
+
+# Version Management
+
+## Version Number Updates
+- Follow semantic versioning (MAJOR.MINOR.PATCH)
+- For bug fixes: increment PATCH version (x.x.here)
+- For new features: increment MINOR version (x.here.x)
+- For breaking changes: increment MAJOR version (here.x.x) - only update by maintainer
+
+## Required Updates When Making Changes
+1. **Update version using script** - `npm run update-version -- [patch|minor|major]`
+   - This automatically updates both `package.json` and `public/manifest.json`
+2. **Update `CHANGELOG.md`** - add entry under [Unreleased] section with:
+   - Description of changes under appropriate category (Added/Changed/Fixed)
+   - Move [Unreleased] to new version section when releasing
+   - **Always include today's date** when creating new version entries (YYYY-MM-DD format)
+3. **Copy CHANGELOG.md to public directory** - `cp CHANGELOG.md public/CHANGELOG.md`
+
+## Version Display
+- Version is automatically loaded from manifest.json and displayed in footer
+- Footer shows: "github repo | v{version}" where version links to CHANGELOG.md
+- Version utility: `src/utils/version.ts` handles loading from manifest
+
+## Version Update Script
+- Use `npm run update-version -- patch` for bug fixes (0.7.0 → 0.7.1)
+- Use `npm run update-version -- minor` for new features (0.7.0 → 0.8.0)
+- Use `npm run update-version -- major` for breaking changes (0.7.0 → 1.0.0)
+- Script automatically updates both package.json and manifest.json
+
+## Example CHANGELOG Entry
+```markdown
+## [Unreleased]
+
+### Added
+- New feature description
+
+### Changed
+- Changed behavior description
+
+### Fixed
+- Bug fix description
+
+## [0.8.0] - 2024-12-19
+
+### Added
+- New feature description
+
+### Changed
+- Changed behavior description
+
+### Fixed
+- Bug fix description
+``` 
