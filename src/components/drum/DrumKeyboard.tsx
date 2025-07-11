@@ -4,6 +4,7 @@ import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { useWebMidi } from '../../hooks/useWebMidi';
 import type { MidiEvent } from '../../utils/midi';
 import type { WebMidiState, WebMidiHookReturn } from '../../hooks/useWebMidi';
+import { UI_CONSTANTS } from '../../utils/constants';
 
 
 // Drum key mapping for two octaves (matching legacy)
@@ -142,7 +143,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
                 newSet.delete(keyIdentifier);
                 return newSet;
               });
-            }, 150);
+            }, UI_CONSTANTS.VISUAL_FEEDBACK_TIMEOUT);
           }
         }
       }

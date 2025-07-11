@@ -2,6 +2,7 @@
 // Enhanced with TypeScript types and improved functionality
 
 import { audioContextManager } from './audioContext';
+import { AUDIO_CONSTANTS } from './constants';
 
 // Constants preserved from legacy for compatibility
 const HEADER_LENGTH = 44;
@@ -474,7 +475,7 @@ export function findNearestZeroCrossing(
       bestPosition = i;
       
       // If we found a true zero crossing, return immediately
-      if (amplitude < 0.001) {
+      if (amplitude < AUDIO_CONSTANTS.ZERO_CROSSING_THRESHOLD) {
         break;
       }
     }

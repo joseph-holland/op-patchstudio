@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { audioContextManager } from '../utils/audioContext';
+import { AUDIO_CONSTANTS } from '../utils/constants';
 
 export interface AudioPlaybackOptions {
   startTime?: number;
@@ -183,7 +184,7 @@ export function useAudioPlayer() {
     
     // Ensure we're not scheduling operations in the past
     const currentTime = gainNode.context.currentTime;
-    const safeReleaseTime = Math.max(releaseTime, currentTime + 0.001); // Add 1ms buffer
+    const safeReleaseTime = Math.max(releaseTime, currentTime + AUDIO_CONSTANTS.AUDIO_SCHEDULE_BUFFER);
     
     // Cancel any pending scheduled operations to prevent overlaps
     gainNode.gain.cancelScheduledValues(safeReleaseTime);
