@@ -514,11 +514,7 @@ export function MultisampleSampleTable({
                       <div style={{ textAlign: 'left' }}>
                         <input
                           type="text"
-                          value={editingNotes[index] ?? (() => {
-                            const noteStr = midiNoteToString(sample.rootNote || 60, state.midiNoteMapping);
-                            console.log(`Desktop note display for sample ${index}: MIDI ${sample.rootNote || 60} -> ${noteStr} (mapping: ${state.midiNoteMapping})`);
-                            return noteStr;
-                          })()}
+                          value={editingNotes[index] ?? midiNoteToString(sample.rootNote || 60, state.midiNoteMapping)}
                           onChange={(e) => handleNoteChange(index, e.target.value)}
                           onBlur={() => handleNoteBlur(index)}
                           onKeyDown={(e) => handleNoteKeyDown(index, e)}
@@ -882,11 +878,7 @@ export function MultisampleSampleTable({
                       <div style={{ textAlign: 'center' }}>
                         <input
                           type="text"
-                          value={editingNotes[index] ?? (() => {
-                            const noteStr = midiNoteToString(sample.rootNote || 60, state.midiNoteMapping);
-                            console.log(`Note display for sample ${index}: MIDI ${sample.rootNote || 60} -> ${noteStr} (mapping: ${state.midiNoteMapping})`);
-                            return noteStr;
-                          })()}
+                          value={editingNotes[index] ?? midiNoteToString(sample.rootNote || 60, state.midiNoteMapping)}
                           onChange={(e) => handleNoteChange(index, e.target.value)}
                           onBlur={() => handleNoteBlur(index)}
                           onKeyDown={(e) => handleNoteKeyDown(index, e)}
