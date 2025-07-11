@@ -502,8 +502,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
             detectedNote = midiNoteToString(midiFromParse, state.midiNoteMapping);
           }
         } catch {
-          // Use default if can't detect
-          detectedNote = state.midiNoteMapping === 'C3' ? 'C4' : 'C5';
+          // Use default if can't detect - derive note string from detectedMidiNote
+          detectedNote = midiNoteToString(detectedMidiNote, state.midiNoteMapping);
         }
       }
       
