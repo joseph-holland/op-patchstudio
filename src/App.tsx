@@ -121,8 +121,10 @@ function AppContent() {
           <Content style={{ 
             padding: isMobileDevice ? '0.5rem' : '2rem',
             backgroundColor: 'var(--color-surface-tertiary)',
-            maxWidth: '1400px',
-            margin: '0 auto'
+            maxWidth: '1000px',
+            margin: '0 auto',
+            width: '100%',
+            boxSizing: 'border-box'
           }}>
             {currentRoute === 'feedback' ? (
               <FeedbackPage />
