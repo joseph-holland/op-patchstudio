@@ -1,6 +1,6 @@
 // Patch generation utilities for OP-XY drum and multisample presets
 import JSZip from 'jszip';
-import { convertAudioFormat, sanitizeName, LOOP_END_PADDING } from './audio';
+import { convertAudioFormat, sanitizeName, LOOP_END_PADDING, generateFilename } from './audio';
 import { baseDrumJson } from '../components/drum/baseDrumJson';
 import { baseMultisampleJson } from '../components/multisample/baseMultisampleJson';
 import { percentToInternal } from './valueConversions';
@@ -142,7 +142,9 @@ export async function generateDrumPatch(
     const sample = state.drumSamples[i];
     if (!sample.isLoaded || !sample.file || !sample.audioBuffer) continue;
 
-    const outputName = sanitizeName(sample.file.name);
+    const outputName = state.drumSettings.renameFiles 
+      ? generateFilename(state.drumSettings.presetName, state.drumSettings.filenameSeparator, 'drum', i, sample.file.name)
+      : sanitizeName(sample.file.name);
     const originalSampleRate = sample.originalSampleRate || sample.audioBuffer.sampleRate;
     const duration = sample.audioBuffer.duration;
 
@@ -271,7 +273,9 @@ export async function generateMultisamplePatch(
   for (const sample of validSamples) {
     if (!sample.file || !sample.audioBuffer) continue;
 
-    const outputName = sanitizeName(sample.file.name);
+    const outputName = state.multisampleSettings.renameFiles 
+      ? generateFilename(state.multisampleSettings.presetName, state.multisampleSettings.filenameSeparator, 'multisample', sample.rootNote, sample.file.name)
+      : sanitizeName(sample.file.name);
     const originalSampleRate = sample.originalSampleRate || sample.audioBuffer.sampleRate;
     const duration = sample.audioBuffer.duration;
     const sampleNote = sample.rootNote >= 0 ? sample.rootNote : 60 + sample.originalIndex;

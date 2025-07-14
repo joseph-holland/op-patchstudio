@@ -16,6 +16,10 @@ interface GeneratePresetSectionProps {
   onSaveToLibrary: () => void;
   onDownloadPreset: () => void;
   inputId: string;
+  renameFiles: boolean;
+  onRenameFilesChange: (enabled: boolean) => void;
+  filenameSeparator: ' ' | '-' | '_';
+  onFilenameSeparatorChange: (separator: ' ' | '-' | '_') => void;
 }
 
 export function GeneratePresetSection({
@@ -31,7 +35,11 @@ export function GeneratePresetSection({
   onResetAll,
   onSaveToLibrary,
   onDownloadPreset,
-  inputId
+  inputId,
+  renameFiles,
+  onRenameFilesChange,
+  filenameSeparator,
+  onFilenameSeparatorChange
 }: GeneratePresetSectionProps) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -80,16 +88,21 @@ export function GeneratePresetSection({
         padding: isMobile ? '1rem' : '2rem',
       }}>
 
-        {/* Preset Name */}
-        <div style={{
-          marginBottom: '2rem',
-          paddingBottom: '1.5rem',
-          borderBottom: '1px solid var(--color-border-light)'
-        }}>
-          <div style={{ 
-            width: isMobile ? '100%' : '33.333%'
-          }}>
-            <div style={{ width: '100%' }}>
+        {/* Preset Name and File Renaming Controls */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'stretch' : 'center',
+            gap: isMobile ? '1.5rem' : 0,
+            marginBottom: '2rem',
+            paddingBottom: '1.5rem',
+            borderBottom: '1px solid var(--color-border-light)'
+          }}
+        >
+          {/* Preset Name Input */}
+          <div style={{ width: isMobile ? '100%' : '50%', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
+            <div style={{ width: isMobile ? '100%' : '80%' }}>
               <PresetNameInput
                 id={inputId}
                 labelText="preset name"
@@ -113,7 +126,6 @@ export function GeneratePresetSection({
                     isPropagationStopped: () => false,
                     persist: () => {}
                   } as React.ChangeEvent<HTMLInputElement>;
-                  
                   onPresetNameChange(syntheticEvent);
                 }}
                 placeholder="enter preset name..."
@@ -138,6 +150,95 @@ export function GeneratePresetSection({
                 }
               `}</style>
             </div>
+          </div>
+
+          {/* File Renaming Controls */}
+          <div
+            style={{
+              width: isMobile ? '100%' : '50%',
+              minWidth: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              marginTop: isMobile ? '1.5rem' : 0,
+              alignItems: isMobile ? 'center' : 'flex-start',
+              justifyContent: 'flex-start',
+              boxSizing: 'border-box',
+              paddingLeft: isMobile ? 0 : '2rem',
+              textAlign: isMobile ? 'center' : 'left',
+            }}
+          >
+            {/* Rename Files Toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
+              <input
+                type="checkbox"
+                id={`rename-files-${inputId}`}
+                checked={renameFiles}
+                onChange={(e) => onRenameFilesChange(e.target.checked)}
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  accentColor: 'var(--color-interactive-focus)'
+                }}
+              />
+              <label
+                htmlFor={`rename-files-${inputId}`}
+                style={{
+                  fontSize: '0.9rem',
+                  color: 'var(--color-text-primary)',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  width: isMobile ? 'auto' : undefined,
+                  textAlign: isMobile ? 'center' : 'left',
+                }}
+              >
+                rename files with preset name
+              </label>
+            </div>
+
+            {/* Filename Separator Options */}
+            {renameFiles && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
+                <div style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--color-text-secondary)',
+                  marginBottom: '0.25rem',
+                  textAlign: isMobile ? 'center' : 'left',
+                  width: isMobile ? '100%' : 'auto',
+                }}>
+                  filename separator:
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
+                  {([' ', '-'] as const).map((separator) => (
+                    <label
+                      key={separator}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        color: 'var(--color-text-primary)',
+                        userSelect: 'none',
+                        textAlign: isMobile ? 'center' : 'left',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name={`filename-separator-${inputId}`}
+                        value={separator}
+                        checked={filenameSeparator === separator}
+                        onChange={() => onFilenameSeparatorChange(separator)}
+                        style={{ accentColor: 'var(--color-interactive-focus)' }}
+                      />
+                      <span>
+                        {separator === ' ' ? "space ' '" : "hyphen '-'"}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         

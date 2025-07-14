@@ -47,7 +47,9 @@ const defaultMockState = {
         velocity: 100,
         volume: 100,
         width: 100
-      }
+      },
+      renameFiles: false,
+      filenameSeparator: ' ' as ' '
     },
     multisampleSettings: {
       sampleRate: 44100,
@@ -59,7 +61,9 @@ const defaultMockState = {
       cutAtLoopEnd: false,
       gain: 0,
       loopEnabled: true,
-      loopOnRelease: true
+      loopOnRelease: true,
+      renameFiles: false,
+      filenameSeparator: ' ' as ' '
     },
     notifications: [],
     importedDrumPreset: null,
@@ -186,7 +190,9 @@ describe('usePatchGeneration', () => {
             velocity: 100,
             volume: 100,
             width: 100
-          }
+          },
+          renameFiles: false,
+          filenameSeparator: ' ' as ' '
         },
         multisampleSettings: {
           sampleRate: 44100,
@@ -198,7 +204,9 @@ describe('usePatchGeneration', () => {
           cutAtLoopEnd: false,
           gain: 0,
           loopEnabled: true,
-          loopOnRelease: true
+          loopOnRelease: true,
+          renameFiles: false,
+          filenameSeparator: ' ' as ' '
         },
         notifications: [],
         importedDrumPreset: null,

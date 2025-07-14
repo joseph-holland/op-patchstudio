@@ -778,6 +778,49 @@ export function getPatchSizeWarning(sizeBytes: number): string | null {
 }
 
 /**
+ * Generate a new filename based on preset name and sample type
+ * @param presetName - The preset name to use as base
+ * @param separator - The separator to use between parts (' ', '-', '_')
+ * @param type - The type of sample ('drum' or 'multisample')
+ * @param index - The sample index (for drum) or note (for multisample)
+ * @param originalName - The original filename (for extension)
+ * @returns The new filename
+ */
+export function generateFilename(
+  presetName: string, 
+  separator: ' ' | '-' | '_', 
+  type: 'drum' | 'multisample', 
+  index: number, 
+  originalName: string
+): string {
+  // Only allow space or hyphen as separator
+  if (separator === '_') separator = '-';
+  // Get file extension from original name
+  const extension = originalName.includes('.') ? originalName.split('.').pop() : 'wav';
+  // Normalize all separators in the preset name only (space, hyphen, underscore)
+  let normalizedPresetName = presetName.replace(/[ _-]+/g, separator).replace(new RegExp(`^${separator}+|${separator}+$`, 'g'), '');
+  // Now sanitize (remove any other invalid characters, but allow the chosen separator)
+  let allowed = separator === ' ' ? ' ' : '\-';
+  let cleanPresetName = normalizedPresetName.replace(new RegExp(`[^a-zA-Z0-9${allowed}]`, 'g'), '');
+  if (type === 'drum') {
+    // Short drum key labels by index (from DrumKeyboard.tsx)
+    const drumShortLabels = [
+      'KD1', 'KD2', 'SD1', 'SD2', 'RIM', 'CLP', 'TB', 'SH', 'CH', 'CL', 'OH', 'CAB',
+      'RC', 'CC', 'LT', 'COW', 'MT', 'HT', 'LC', 'HC', 'TRI', 'LT', 'WS', 'GUI'
+    ];
+    const drumLabel = drumShortLabels[index] || `DRUM${index + 1}`;
+    return `${cleanPresetName}${separator}${drumLabel}.${extension}`;
+  } else {
+    // For multisample, use note names
+    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const octave = Math.floor((index - 60) / 12) + 3; // C3 = 60 convention
+    const noteName = noteNames[index % 12];
+    const noteString = `${noteName}${octave}`;
+    return `${cleanPresetName}${separator}${noteString}.${extension}`;
+  }
+}
+
+/**
  * Get the effective sample rate (NO upsampling)
  * Matches legacy behavior: "0"=keep original, "44100"=44.1kHz, "22050"=22kHz, "11025"=11kHz
  */

@@ -473,6 +473,10 @@ export function DrumTool() {
           onSaveToLibrary={handleSaveToLibrary}
           onDownloadPreset={handleDownloadPreset}
           inputId="preset-name"
+          renameFiles={state.drumSettings.renameFiles}
+          onRenameFilesChange={(enabled) => dispatch({ type: 'SET_DRUM_RENAME_FILES', payload: enabled })}
+          filenameSeparator={state.drumSettings.filenameSeparator}
+          onFilenameSeparatorChange={(separator) => dispatch({ type: 'SET_DRUM_FILENAME_SEPARATOR', payload: separator })}
         />
       </div>
 

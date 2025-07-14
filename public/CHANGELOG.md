@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.10.0] - 2025-07-15
+
+### Added
+- File renaming feature for generated presets: users can now choose to rename all exported sample files with the preset name.
+- Filename separator options: choose between space ' ' or hyphen '-' for generated filenames.
+- Drum sample filenames now use short drum key labels (e.g., KD1, CLP, TRI) for OP-XY compatibility.
+- UI controls for file renaming and separator selection, with responsive layout for desktop and mobile.
+
+### Changed
+- All generated filenames are now fully OP-XY compliant: only a-z, A-Z, 0-9, space, #, -, (, ), and dot are allowed; underscores are no longer supported.
+- All internal separators in preset names are normalized to the selected separator.
+- Improved layout and alignment of the "generate preset" section for better usability.
+
+### Fixed
+- Type errors and test coverage for new file renaming logic and state.
+- Ensured all test mocks and state objects include new file renaming properties.
+
 ## [0.9.0] - 2025-07-14
 
 ### Changed
