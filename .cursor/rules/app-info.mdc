@@ -1,5 +1,5 @@
 ---
-description: general info on op-patchstudio app
+description: general info on OP-PatchStudio app
 globs:  ["**/*.ts", "**/*.tsx", "**/*.scss"]
 alwaysApply: false
 ---

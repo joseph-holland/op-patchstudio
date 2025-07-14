@@ -1,53 +1,53 @@
 # OP-PatchStudio
 
-**free & open source preset creator for OP synthesizers. upload samples, edit waveforms, adjust settings and generate patches instantly.**
+**free & open source preset creator for op synthesizers. upload samples, edit waveforms, adjust settings and generate patches instantly.**
 
-![OP-PatchStudio Preview](public/assets/preview-image.png)
+![op-patchstudio preview](public/assets/preview-image.png)
 
 
-![OP-PatchStudio Preview](public/assets/preview-image-2.png)
+![OP-PatchStudio preview](public/assets/preview-image-2.png)
 
 - **live demo:** [OP-PatchStudio](https://op-patch.studio/)
-- **GitHub:** [github.com/joseph-holland/op-patchstudio](https://github.com/joseph-holland/op-patchstudio)
+- **github:** [github.com/joseph-holland/op-patchstudio](https://github.com/joseph-holland/op-patchstudio)
 
 ## features
 
-- **comprehensive preset generation** for OP synthesizers (currently OP-XY, more devices coming soon)
-- **modern, responsive ui** built with React, TypeScript, and Carbon Design System  
+- **comprehensive preset generation** for op synthesizers (currently op-xy, more devices coming soon)
+- **modern, responsive ui** built with react, typescript, and carbon design system  
 - **drag-and-drop sample assignment** for drum and multisample presets
 - **advanced waveform editing** with interactive zoom modal and marker adjustment
 - **snap-to-zero-crossing** functionality for clean sample trimming
 - **real-time audio processing** with sample rate conversion (44/22/11khz) and format optimization
-- **accessibility-compliant interface** with WCAG AA touch targets and keyboard navigation
+- **accessibility-compliant interface** with wcag aa touch targets and keyboard navigation
 - **live patch size monitoring** with optimization recommendations
 - **advanced preset settings** including envelopes, tuning, velocity sensitivity, and modulation
 
 ## development setup
 
-This project has been migrated to React with TypeScript for improved maintainability and modularity.
+this project has been migrated to react with typescript for improved maintainability and modularity.
 
 ### requirements
 
-- Node.js 18+ 
+- node.js 18+ 
 - npm or yarn
 
 ### installation
 
 ```bash
-# Clone the repository
+# clone the repository
 git clone https://github.com/joseph-holland/op-patchstudio.git
 cd op-patchstudio
 
-# Install dependencies
+# install dependencies
 npm install
 
-# Start development server
+# start development server
 npm run dev
 
-# Build for production
+# build for production
 npm run build
 
-# Run tests
+# run tests
 npm run test
 ```
 
@@ -55,15 +55,15 @@ npm run test
 
 ```
 /src
-  /components         # React UI components (Carbon-based, OP-XY themed)
-    /common          # Shared components
-    /drum           # Drum-specific components
-    /multisample    # Multisample-specific components
-  /hooks              # Custom hooks for state, file I/O, audio, etc.
-  /utils              # Pure JS/TS logic: audio, patch, file mgmt
-  /theme              # Custom Carbon theme and style overrides
-  /context            # App/global context providers
-  App.tsx
+  /components         # react ui components (carbon-based, op-xy themed)
+    /common          # shared components
+    /drum           # drum-specific components
+    /multisample    # multisample-specific components
+  /hooks              # custom hooks for state, file i/o, audio, etc.
+  /utils              # pure js/ts logic: audio, patch, file mgmt
+  /theme              # custom carbon theme and style overrides
+  /context            # app/global context providers
+  app.tsx
   main.tsx
 ```
 
@@ -75,37 +75,37 @@ npm run test
 4. assign notes (for multisample), adjust settings and use the advanced dialog for detailed control.
 5. optionally, use **import settings** to load engine-level settings from existing preset files.
 6. click **generate patch** to download your preset as a zip file.
-7. unzip and copy the folder to your OP-XY's `presets` directory via usb.
+7. unzip and copy the folder to your op-xy's `presets` directory via usb.
 
 ## progressive web app (pwa)
 
-OP-PatchStudio is available as a Progressive Web App for offline use and quick access.
+OP-PatchStudio is available as a progressive web app for offline use and quick access.
 
 ### install for offline use
 
-- **desktop**: Look for the install icon in your browser's address bar or menu
-- **mobile**: Use your browser's "Add to Home Screen" option
-- **automatic prompt**: The app will show an install prompt when available
+- **desktop**: look for the install icon in your browser's address bar or menu
+- **mobile**: use your browser's "add to home screen" option
+- **automatic prompt**: the app will show an install prompt when available
 
 ### pwa features
 
-- **offline functionality**: Core features work without internet connection
-- **home screen access**: Launch directly from your device's home screen
-- **app shortcuts**: Quick access to Drum and Multisample tools
-- **automatic updates**: App updates automatically when online
-- **native app experience**: Runs like a native app with full-screen mode
+- **offline functionality**: core features work without internet connection
+- **home screen access**: launch directly from your device's home screen
+- **app shortcuts**: quick access to drum and multisample tools
+- **automatic updates**: app updates automatically when online
+- **native app experience**: runs like a native app with full-screen mode
 
 ### offline capabilities
 
-- ✅ Create and edit drum presets
-- ✅ Create and edit multisample presets  
-- ✅ Waveform editing and sample processing
-- ✅ Generate and download patch files
-- ⚠️ Sample upload requires internet connection
-- ⚠️ Some advanced features may require online access
+- ✅ create and edit drum presets
+- ✅ create and edit multisample presets  
+- ✅ waveform editing and sample processing
+- ✅ generate and download patch files
+- ⚠️ sample upload requires internet connection
+- ⚠️ some advanced features may require online access
 
 
-See [MIGRATION_COMPLETION_SUMMARY.md](MIGRATION_COMPLETION_SUMMARY.md) for detailed progress report.
+see [migration_completion_summary.md](migration_completion_summary.md) for detailed progress report.
 
 ## credits
 
@@ -114,5 +114,5 @@ See [MIGRATION_COMPLETION_SUMMARY.md](MIGRATION_COMPLETION_SUMMARY.md) for detai
 
 OP-PatchStudio is an unofficial tool not affiliated with or endorsed by teenage engineering.
 this software is provided "as is" without warranty of any kind. use at your own risk. for educational and personal use only.
-OP-XY, OP-1 and OP-Z are registered trademarks of teenage engineering.
+op-xy, op-1 and op-z are registered trademarks of teenage engineering.
 
