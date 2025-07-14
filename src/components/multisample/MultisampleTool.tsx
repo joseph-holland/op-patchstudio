@@ -260,6 +260,10 @@ export function MultisampleTool() {
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: true });
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE', payload: true });
         
+        // Reset file renaming settings to defaults
+        dispatch({ type: 'SET_MULTISAMPLE_RENAME_FILES', payload: false });
+        dispatch({ type: 'SET_MULTISAMPLE_FILENAME_SEPARATOR', payload: ' ' });
+        
         // Reset saved to library flag since we're starting fresh
         await sessionStorageIndexedDB.resetSavedToLibraryFlag();
         
@@ -410,7 +414,9 @@ export function MultisampleTool() {
     state.multisampleSettings.channels !== 0 ||
     state.multisampleSettings.normalize !== false || // Normalize settings changed
     state.multisampleSettings.normalizeLevel !== -6.0 ||
-            state.multisampleSettings.cutAtLoopEnd !== false // Trim to loop end changed
+    state.multisampleSettings.renameFiles !== false || // File renaming settings changed
+    state.multisampleSettings.filenameSeparator !== ' ' ||
+    state.multisampleSettings.cutAtLoopEnd !== false // Trim to loop end changed
     // Note: Multisample preset settings are handled in MultisamplePresetSettings component
   );
 

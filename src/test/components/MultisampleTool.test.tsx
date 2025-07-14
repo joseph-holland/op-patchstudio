@@ -7,6 +7,10 @@ import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 // Mock dependencies
 vi.mock('../../context/AppContext');
 vi.mock('../../hooks/useAudioPlayer');
+vi.mock('../../utils/audio', () => ({
+  audioBufferToWav: vi.fn(() => new ArrayBuffer(8)),
+  getPatchSizeWarning: vi.fn(() => ({ warning: false, percentage: 0 })),
+}));
 vi.mock('../../hooks/useFileUpload', () => ({
   useFileUpload: () => ({
     handleMultisampleUpload: vi.fn(),
@@ -20,6 +24,52 @@ vi.mock('../../hooks/usePatchGeneration', () => ({
     generateDrumPatchFile: vi.fn(),
     generateMultisamplePatchFile: vi.fn(),
   }),
+}));
+
+// Mock common components
+vi.mock('../../components/common/ConfirmationModal', () => ({
+  ConfirmationModal: ({ isOpen, message }: { isOpen: boolean; message: string }) => 
+    isOpen ? <div data-testid="confirmation-modal">{message}</div> : null,
+}));
+
+vi.mock('../../components/common/RecordingModal', () => ({
+  RecordingModal: ({ isOpen }: { isOpen: boolean }) => 
+    isOpen ? <div data-testid="recording-modal">Recording Modal</div> : null,
+}));
+
+vi.mock('../../components/common/AudioProcessingSection', () => ({
+  AudioProcessingSection: () => <div data-testid="audio-processing-section">Audio Processing Section</div>,
+}));
+
+vi.mock('../../components/common/GeneratePresetSection', () => ({
+  GeneratePresetSection: ({ hasChangesFromDefaults }: { hasChangesFromDefaults: boolean }) => (
+    <div data-testid="generate-preset-section">
+      <span data-testid="has-changes-from-defaults">{hasChangesFromDefaults.toString()}</span>
+    </div>
+  ),
+}));
+
+vi.mock('../../components/common/ErrorDisplay', () => ({
+  ErrorDisplay: ({ message }: { message: string }) => 
+    message ? <div data-testid="error-display">{message}</div> : null,
+}));
+
+vi.mock('../../components/common/ToggleSwitch', () => ({
+  ToggleSwitch: ({ leftLabel, rightLabel, isRight, onToggle }: any) => (
+    <div data-testid="toggle-switch">
+      <button onClick={onToggle}>
+        {isRight ? rightLabel : leftLabel}
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('../../components/multisample/MultisampleSampleTable', () => ({
+  MultisampleSampleTable: () => <div data-testid="multisample-sample-table">Multisample Sample Table</div>,
+}));
+
+vi.mock('../../components/multisample/MultisamplePresetSettings', () => ({
+  MultisamplePresetSettings: () => <div data-testid="multisample-preset-settings">Multisample Preset Settings</div>,
 }));
 
 // Mock canvas and ResizeObserver for test environment
@@ -139,6 +189,8 @@ describe('MultisampleTool ADSR Integration', () => {
       gain: 0,
       loopEnabled: true,
       loopOnRelease: true,
+      renameFiles: false,
+      filenameSeparator: ' ',
     },
     importedMultisamplePreset: {
       engine: {
@@ -405,4 +457,6 @@ describe('MultisampleTool ADSR Integration', () => {
       );
     });
   });
+
+
 }); 

@@ -784,6 +784,7 @@ export function getPatchSizeWarning(sizeBytes: number): string | null {
  * @param type - The type of sample ('drum' or 'multisample')
  * @param index - The sample index (for drum) or note (for multisample)
  * @param originalName - The original filename (for extension)
+ * @param mapping - The MIDI note mapping convention ('C3' or 'C4')
  * @returns The new filename
  */
 export function generateFilename(
@@ -791,7 +792,8 @@ export function generateFilename(
   separator: ' ' | '-' | '_', 
   type: 'drum' | 'multisample', 
   index: number, 
-  originalName: string
+  originalName: string,
+  mapping: 'C3' | 'C4' = 'C3'
 ): string {
   // Only allow space or hyphen as separator
   if (separator === '_') separator = '-';
@@ -804,18 +806,22 @@ export function generateFilename(
   let cleanPresetName = normalizedPresetName.replace(new RegExp(`[^a-zA-Z0-9${allowed}]`, 'g'), '');
   if (type === 'drum') {
     // Short drum key labels by index (from DrumKeyboard.tsx)
+    // Keep original labels to match TE docs, handle duplicate 'LT' in filename generation
     const drumShortLabels = [
       'KD1', 'KD2', 'SD1', 'SD2', 'RIM', 'CLP', 'TB', 'SH', 'CH', 'CL', 'OH', 'CAB',
       'RC', 'CC', 'LT', 'COW', 'MT', 'HT', 'LC', 'HC', 'TRI', 'LT', 'WS', 'GUI'
     ];
-    const drumLabel = drumShortLabels[index] || `DRUM${index + 1}`;
+    let drumLabel = drumShortLabels[index] || `DRUM${index + 1}`;
+    
+    // Handle duplicate 'LT' entries - second LT becomes 'LT2' in filename
+    if (drumLabel === 'LT' && index === 21) {
+      drumLabel = 'LT2';
+    }
+    
     return `${cleanPresetName}${separator}${drumLabel}.${extension}`;
   } else {
-    // For multisample, use note names
-    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const octave = Math.floor((index - 60) / 12) + 3; // C3 = 60 convention
-    const noteName = noteNames[index % 12];
-    const noteString = `${noteName}${octave}`;
+    // For multisample, use note names with proper MIDI mapping
+    const noteString = midiNoteToString(index, mapping);
     return `${cleanPresetName}${separator}${noteString}.${extension}`;
   }
 }
