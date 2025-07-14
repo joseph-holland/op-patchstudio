@@ -200,40 +200,17 @@ export interface ConversionOptions {
   gain?: number; // dB
   cutAtLoopEnd?: boolean;
   loopEnd?: number; // Sample position to trim at (if cutAtLoopEnd is true)
+  applyLimiter?: boolean; // Apply limiter to prevent clipping
 }
 
 /**
- * Normalize an AudioBuffer to a target level in dBFS using RMS
+ * Normalize an AudioBuffer to a target level in dBFS using peak normalization
  * @param audioBuffer - The audio buffer to normalize
- * @param targetLevelDB - Target level in dBFS (default: -6.0)
+ * @param targetLevelDB - Target level in dBFS (default: -0.1)
  * @returns The normalized audio buffer
  */
-export async function normalizeAudioBuffer(audioBuffer: AudioBuffer, targetLevelDB: number = -6.0): Promise<AudioBuffer> {
-  // Calculate RMS across all channels
-  let sumOfSquares = 0;
-  let totalSamples = 0;
-  
-  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
-    const channelData = audioBuffer.getChannelData(ch);
-    for (let i = 0; i < channelData.length; i++) {
-      sumOfSquares += channelData[i] * channelData[i];
-      totalSamples++;
-    }
-  }
-  
-  if (totalSamples === 0) {
-    return audioBuffer;
-  }
-  
-  const rms = Math.sqrt(sumOfSquares / totalSamples);
-  
-  if (rms === 0) {
-    return audioBuffer;
-  }
-  
-  // Calculate normalization gain to reach the target level
-  const targetAmplitude = Math.pow(10, targetLevelDB / 20);
-  const normalizeGain = targetAmplitude / rms;
+export async function normalizeAudioBuffer(audioBuffer: AudioBuffer, targetLevelDB: number = -1.0): Promise<AudioBuffer> {
+  const normalizeGain = calculatePeakNormalizationGain(audioBuffer, targetLevelDB);
   
   // Create a new audio buffer with the same properties
   const audioContext = await audioContextManager.getAudioContext();
@@ -257,39 +234,76 @@ export async function normalizeAudioBuffer(audioBuffer: AudioBuffer, targetLevel
 }
 
 /**
- * Calculate RMS normalization gain factor for an AudioBuffer
+ * Calculate peak normalization gain factor for an AudioBuffer
  * @param audioBuffer - The audio buffer to analyze
- * @param targetLevelDB - Target level in dBFS (default: -6.0)
+ * @param targetLevelDB - Target level in dBFS (default: -1.0)
  * @returns The gain factor to apply, or 1.0 if no normalization needed
  */
-export function calculateNormalizationGain(audioBuffer: AudioBuffer, targetLevelDB: number = -6.0): number {
-  // Calculate RMS across all channels
-  let sumOfSquares = 0;
-  let totalSamples = 0;
-  
+export function calculatePeakNormalizationGain(audioBuffer: AudioBuffer, targetLevelDB: number = -1.0): number {
+  // Find maximum amplitude across all channels
+  let maxAmplitude = 0;
   for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
     const channelData = audioBuffer.getChannelData(ch);
     for (let i = 0; i < channelData.length; i++) {
-      sumOfSquares += channelData[i] * channelData[i];
-      totalSamples++;
+      const amplitude = Math.abs(channelData[i]);
+      if (amplitude > maxAmplitude) {
+        maxAmplitude = amplitude;
+      }
     }
   }
-  
-  if (totalSamples === 0) {
+  if (maxAmplitude === 0) {
     return 1.0;
   }
-  
-  const rms = Math.sqrt(sumOfSquares / totalSamples);
-  
-  if (rms === 0) {
-    return 1.0;
-  }
-  
-  // Calculate normalization gain to reach the target level
   const targetAmplitude = Math.pow(10, targetLevelDB / 20);
-  const normalizeGain = targetAmplitude / rms;
-  
+  const normalizeGain = targetAmplitude / maxAmplitude;
   return normalizeGain;
+}
+
+/**
+ * Create a limiter for audio processing
+ * @param audioContext - The audio context (can be AudioContext or OfflineAudioContext)
+ * @returns A configured DynamicsCompressor node
+ */
+export function createLimiter(audioContext: BaseAudioContext): DynamicsCompressorNode {
+  const limiter = audioContext.createDynamicsCompressor();
+  
+  // Professional limiter settings
+  limiter.threshold.setValueAtTime(-1, audioContext.currentTime);    // -1dB threshold
+  limiter.knee.setValueAtTime(0, audioContext.currentTime);          // Hard knee
+  limiter.ratio.setValueAtTime(20, audioContext.currentTime);        // 20:1 ratio
+  limiter.attack.setValueAtTime(0.001, audioContext.currentTime);    // 1ms attack
+  limiter.release.setValueAtTime(0.01, audioContext.currentTime);    // 10ms release
+  
+  return limiter;
+}
+
+/**
+ * Apply limiter to audio buffer
+ * @param audioBuffer - The audio buffer to process
+ * @returns The limited audio buffer
+ */
+export async function applyLimiter(audioBuffer: AudioBuffer): Promise<AudioBuffer> {
+  // Create offline context for processing
+  const offlineContext = audioContextManager.createOfflineContext(
+    audioBuffer.numberOfChannels,
+    audioBuffer.length,
+    audioBuffer.sampleRate
+  );
+  
+  // Create limiter from the offline context
+  const limiter = createLimiter(offlineContext);
+  
+  // Create buffer source
+  const source = offlineContext.createBufferSource();
+  source.buffer = audioBuffer;
+  
+  // Connect: source → limiter → destination
+  source.connect(limiter);
+  limiter.connect(offlineContext.destination);
+  
+  source.start(0);
+  
+  return await offlineContext.startRendering();
 }
 
 /**
@@ -341,6 +355,7 @@ export async function convertAudioFormat(
   const normalize = options.normalize || false;
   const normalizeLevel = options.normalizeLevel || 0;
   const gain = options.gain || 0;
+  const shouldApplyLimiter = options.applyLimiter !== undefined ? options.applyLimiter : true;
   
   // Apply trim to loop end if enabled (do this first to get correct duration)
   let processedBuffer = audioBuffer;
@@ -370,7 +385,7 @@ export async function convertAudioFormat(
 
   // Apply normalization if enabled
   if (normalize) {
-    const normalizeGain = calculateNormalizationGain(processedBuffer, normalizeLevel);
+    const normalizeGain = calculatePeakNormalizationGain(processedBuffer, normalizeLevel);
     gainValue *= normalizeGain;
   }
 
@@ -420,7 +435,14 @@ export async function convertAudioFormat(
 
   source.start(0);
   
-  return await offlineContext.startRendering();
+  let result = await offlineContext.startRendering();
+  
+  // Apply limiter if enabled
+  if (shouldApplyLimiter) {
+    result = await applyLimiter(result);
+  }
+  
+  return result;
 }
 
 // Calculate preset size with accurate conversion estimation

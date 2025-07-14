@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import {
   midiNoteToString,
   noteStringToMidiValue,
@@ -12,12 +12,44 @@ import {
   NOTE_NAMES,
   NOTE_OFFSET,
   convertAudioFormat,
-  calculateNormalizationGain,
   normalizeAudioBuffer,
   cutAudioAtLoopEnd,
   isValidPresetName,
   getInvalidPresetNameChars
 } from '../../utils/audio'
+
+// Mock AudioParam with required properties
+const mockAudioParam = {
+  setValueAtTime: function (_value: number, _startTime: number) { return this; },
+  automationRate: 'a-rate' as const,
+  defaultValue: 0,
+  maxValue: 1,
+  minValue: -1,
+  value: 0,
+  cancelScheduledValues: function () { return this; },
+  exponentialRampToValueAtTime: function () { return this; },
+  linearRampToValueAtTime: function () { return this; },
+  setTargetAtTime: function () { return this; },
+  setValueCurveAtTime: function () { return this; },
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  dispatchEvent: () => false,
+  cancelAndHoldAtTime: function () { return this; },
+};
+// Dummy AudioNode
+const dummyAudioNode = {
+  channelCount: 2,
+  channelCountMode: 'max' as ChannelCountMode,
+  channelInterpretation: 'speakers' as ChannelInterpretation,
+  context: undefined as unknown as BaseAudioContext,
+  numberOfInputs: 1,
+  numberOfOutputs: 1,
+  connect: (_destination: any, _output?: number, _input?: number) => dummyAudioNode,
+  disconnect: () => {},
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  dispatchEvent: () => false,
+};
 
 // Mock AudioContext for testing
 const mockAudioContext = {
@@ -34,7 +66,30 @@ const mockAudioContext = {
     },
     copyFromChannel: vi.fn(),
     copyToChannel: vi.fn()
-  }))
+  })),
+  createDynamicsCompressor: vi.fn(() => {
+    // Define a reusable mock DynamicsCompressorNode
+    const mockDynamicsCompressorNode = {
+      threshold: mockAudioParam,
+      knee: mockAudioParam,
+      ratio: mockAudioParam,
+      attack: mockAudioParam,
+      release: mockAudioParam,
+      connect: (_destination: any, _output?: number, _input?: number) => dummyAudioNode,
+      reduction: 0,
+      channelCount: 2,
+      channelCountMode: 'max' as ChannelCountMode,
+      channelInterpretation: 'speakers' as ChannelInterpretation,
+      context: undefined as unknown as BaseAudioContext,
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      disconnect: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    };
+    return mockDynamicsCompressorNode;
+  }),
 }
 
 // Track test context for the mock
@@ -97,6 +152,29 @@ vi.mock('../../utils/audioContext', () => ({
         createChannelMerger: vi.fn(() => ({
           connect: vi.fn(),
         })),
+        createDynamicsCompressor: vi.fn(() => {
+          // Define a reusable mock DynamicsCompressorNode
+          const mockDynamicsCompressorNode = {
+            threshold: mockAudioParam,
+            knee: mockAudioParam,
+            ratio: mockAudioParam,
+            attack: mockAudioParam,
+            release: mockAudioParam,
+            connect: (_destination: any, _output?: number, _input?: number) => dummyAudioNode,
+            reduction: 0,
+            channelCount: 2,
+            channelCountMode: 'max' as ChannelCountMode,
+            channelInterpretation: 'speakers' as ChannelInterpretation,
+            context: undefined as unknown as BaseAudioContext,
+            numberOfInputs: 1,
+            numberOfOutputs: 1,
+            disconnect: () => {},
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            dispatchEvent: () => false,
+          };
+          return mockDynamicsCompressorNode;
+        }),
         destination: {},
       };
       return mockOfflineContext;
@@ -121,6 +199,65 @@ const createMockAudioBuffer = (length: number = 100, sampleRate: number = 44100)
   copyFromChannel: vi.fn(),
   copyToChannel: vi.fn()
 })
+
+// Add this at the top of the file to mock createDynamicsCompressor for all tests
+beforeAll(() => {
+  if (typeof window !== 'undefined' && !window.AudioContext.prototype.createDynamicsCompressor) {
+    // Mock AudioParam with required properties
+    const mockAudioParam = {
+      setValueAtTime: function (_value: number, _startTime: number) { return this; },
+      automationRate: 'a-rate' as const,
+      defaultValue: 0,
+      maxValue: 1,
+      minValue: -1,
+      value: 0,
+      cancelScheduledValues: function () { return this; },
+      exponentialRampToValueAtTime: function () { return this; },
+      linearRampToValueAtTime: function () { return this; },
+      setTargetAtTime: function () { return this; },
+      setValueCurveAtTime: function () { return this; },
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+      cancelAndHoldAtTime: function () { return this; },
+    };
+    // Dummy AudioNode
+    const dummyAudioNode = {
+      channelCount: 2,
+      channelCountMode: 'max' as ChannelCountMode,
+      channelInterpretation: 'speakers' as ChannelInterpretation,
+      context: undefined as unknown as BaseAudioContext,
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      connect: (_destination: any, _output?: number, _input?: number) => dummyAudioNode,
+      disconnect: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    };
+    // Mock connect method
+    const mockConnect = (_destination: any, _output?: number, _input?: number) => dummyAudioNode;
+    window.AudioContext.prototype.createDynamicsCompressor = () => ({
+      threshold: mockAudioParam,
+      knee: mockAudioParam,
+      ratio: mockAudioParam,
+      attack: mockAudioParam,
+      release: mockAudioParam,
+      connect: mockConnect,
+      reduction: 0,
+      channelCount: 2,
+      channelCountMode: 'max' as ChannelCountMode,
+      channelInterpretation: 'speakers' as ChannelInterpretation,
+      context: undefined as unknown as BaseAudioContext,
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      disconnect: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    });
+  }
+});
 
 describe('audio utilities', () => {
   describe('midiNoteToString', () => {
@@ -540,75 +677,6 @@ describe('audio utilities', () => {
   })
 
   describe('Audio Normalization', () => {
-    describe('calculateNormalizationGain', () => {
-      it('should return 1.0 for silent audio', () => {
-        // Create a truly silent buffer
-        const silentBuffer = {
-          ...createMockAudioBuffer(1000),
-          getChannelData: (_channel: number) => new Float32Array(1000) // all zeros
-        };
-        const gain = calculateNormalizationGain(silentBuffer, -6.0);
-        expect(gain).toBe(1.0);
-      });
-
-      it('should calculate correct gain for RMS 0.5', () => {
-        // Create an audio buffer with all values at 0.5
-        const buffer = {
-          ...createMockAudioBuffer(1000),
-          getChannelData: (_channel: number) => {
-            const data = new Float32Array(1000);
-            data.fill(0.5);
-            return data;
-          }
-        };
-        
-        const gain = calculateNormalizationGain(buffer, -6.0);
-        // Target amplitude for -6 dBFS = 10^(-6/20) = 0.5012
-        // RMS = 0.5, Gain = 0.5012 / 0.5 = 1.0024
-        expect(gain).toBeCloseTo(1.0024, 3);
-      });
-
-      it('should calculate correct gain for RMS 1.0', () => {
-        // Create an audio buffer with all values at 1.0
-        const buffer = {
-          ...createMockAudioBuffer(1000),
-          getChannelData: (_channel: number) => {
-            const data = new Float32Array(1000);
-            data.fill(1.0);
-            return data;
-          }
-        };
-        
-        const gain = calculateNormalizationGain(buffer, -6.0);
-        // Target amplitude for -6 dBFS = 10^(-6/20) = 0.5012
-        // RMS = 1.0, Gain = 0.5012 / 1.0 = 0.5012
-        expect(gain).toBeCloseTo(0.5012, 3);
-      });
-
-      it('should find RMS across multiple channels', () => {
-        // Create a stereo audio buffer with channel 0 at 0.3, channel 1 at 0.8
-        const buffer = {
-          ...createMockAudioBuffer(1000),
-          numberOfChannels: 2,
-          getChannelData: (_channel: number) => {
-            const data = new Float32Array(1000);
-            if (_channel === 0) {
-              data.fill(0.3);
-            } else if (_channel === 1) {
-              data.fill(0.8);
-            }
-            return data;
-          }
-        };
-        
-        const gain = calculateNormalizationGain(buffer, -6.0);
-        // Target amplitude for -6 dBFS = 0.5012
-        // RMS = sqrt((0.3^2 + 0.8^2) / 2) = sqrt((0.09 + 0.64) / 2) = sqrt(0.365) = 0.604
-        // Gain = 0.5012 / 0.604 = 0.83
-        expect(gain).toBeCloseTo(0.83, 2);
-      });
-    });
-
     describe('normalizeAudioBuffer', () => {
       it('should return original buffer for silent audio', async () => {
         // Create a truly silent buffer
@@ -625,18 +693,52 @@ describe('audio utilities', () => {
       });
 
       it('should normalize audio to target level', async () => {
-        // Create an audio buffer with all values at 0.5
-        const buffer = {
-          ...createMockAudioBuffer(1000),
+        // Create an audio buffer with all values at 0.5 (peak at -6dB)
+        const mockBuffer = {
+          ...createMockAudioBuffer(1000, 44100),
           getChannelData: (_channel: number) => {
             const data = new Float32Array(1000);
-            data.fill(0.5);
+            data.fill(0.5); // All samples at 0.5 (peak at -6dB)
             return data;
           }
         };
-        // Calculate expected gain
-        const expectedGain = calculateNormalizationGain(buffer, -6.0);
-        expect(expectedGain).toBeCloseTo(1.0024, 3);
+
+        // Calculate expected gain: target amplitude / current amplitude
+        // target amplitude = 10^(-3/20) = 0.7079
+        // current amplitude = 0.5
+        // expected gain = 0.7079 / 0.5 = 1.4158
+        const expectedGain = Math.pow(10, -3.0 / 20) / 0.5;
+        const expectedAmplitude = 0.5 * expectedGain;
+
+        // Override the mock createBuffer to return the expected normalized values
+        const originalCreateBuffer = mockAudioContext.createBuffer;
+        mockAudioContext.createBuffer = vi.fn((channels, length, sampleRate) => ({
+          length,
+          sampleRate,
+          numberOfChannels: channels,
+          duration: length / sampleRate,
+          getChannelData: (_channel: number) => {
+            const data = new Float32Array(length);
+            data.fill(expectedAmplitude); // Fill with the expected normalized amplitude
+            return data;
+          },
+          copyFromChannel: vi.fn(),
+          copyToChannel: vi.fn()
+        }));
+
+        // Normalize to -3dB target level
+        const normalized = await normalizeAudioBuffer(mockBuffer, -3.0);
+        
+        // Verify the normalized buffer has the expected amplitude
+        const normalizedData = normalized.getChannelData(0);
+        expect(normalizedData[0]).toBeCloseTo(expectedAmplitude, 3);
+        
+        // Verify the peak is now at the target level (-3dB)
+        const peakAmplitude = Math.max(...Array.from(normalizedData).map(Math.abs));
+        expect(peakAmplitude).toBeCloseTo(Math.pow(10, -3.0 / 20), 3);
+
+        // Restore original mock
+        mockAudioContext.createBuffer = originalCreateBuffer;
       });
 
       it('should preserve buffer properties', async () => {

@@ -12,6 +12,7 @@ describe('getAppVersion', () => {
   it('should return version from manifest.json', async () => {
     const mockManifest = { version: '0.7.0' };
     (fetch as any).mockResolvedValueOnce({
+      ok: true,
       json: () => Promise.resolve(mockManifest)
     });
 
@@ -23,6 +24,7 @@ describe('getAppVersion', () => {
   it('should return default version when manifest has no version', async () => {
     const mockManifest = {};
     (fetch as any).mockResolvedValueOnce({
+      ok: true,
       json: () => Promise.resolve(mockManifest)
     });
 
