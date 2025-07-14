@@ -413,6 +413,16 @@ describe('audio utilities', () => {
       expect(generateFilename('Synth', '-', 'multisample', 73, 'c#4.wav')).toBe('Synth-C#4.wav')
     })
 
+    it('should respect MIDI note mapping parameter', () => {
+      // C3 mapping (default) - MIDI 60 = C3
+      expect(generateFilename('Piano', ' ', 'multisample', 60, 'c4.wav', 'C3')).toBe('Piano C3.wav')
+      expect(generateFilename('Piano', ' ', 'multisample', 72, 'c4.wav', 'C3')).toBe('Piano C4.wav')
+      
+      // C4 mapping - MIDI 60 = C4
+      expect(generateFilename('Piano', ' ', 'multisample', 60, 'c4.wav', 'C4')).toBe('Piano C4.wav')
+      expect(generateFilename('Piano', ' ', 'multisample', 72, 'c4.wav', 'C4')).toBe('Piano C5.wav')
+    })
+
     it('should handle different file extensions', () => {
       expect(generateFilename('Test', ' ', 'drum', 0, 'sample.aif')).toBe('Test KD1.aif')
       expect(generateFilename('Test', ' ', 'multisample', 60, 'note.flac')).toBe('Test C3.flac')

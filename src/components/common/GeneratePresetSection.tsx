@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PatchSizeIndicator } from './PatchSizeIndicator';
 import { PresetNameInput } from '../library/PresetNameInput';
+import type { FilenameSeparator } from '../../utils/constants';
 
 interface GeneratePresetSectionProps {
   type: 'drum' | 'multisample';
@@ -18,8 +19,8 @@ interface GeneratePresetSectionProps {
   inputId: string;
   renameFiles: boolean;
   onRenameFilesChange: (enabled: boolean) => void;
-  filenameSeparator: ' ' | '-' | '_';
-  onFilenameSeparatorChange: (separator: ' ' | '-' | '_') => void;
+  filenameSeparator: FilenameSeparator;
+  onFilenameSeparatorChange: (separator: FilenameSeparator) => void;
 }
 
 export function GeneratePresetSection({

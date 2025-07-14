@@ -3,6 +3,7 @@
 
 import { audioContextManager } from './audioContext';
 import { AUDIO_CONSTANTS } from './constants';
+import type { FilenameSeparator } from './constants';
 
 // Constants preserved from legacy for compatibility
 const HEADER_LENGTH = 44;
@@ -780,7 +781,7 @@ export function getPatchSizeWarning(sizeBytes: number): string | null {
 /**
  * Generate a new filename based on preset name and sample type
  * @param presetName - The preset name to use as base
- * @param separator - The separator to use between parts (' ', '-', '_')
+ * @param separator - The separator to use between parts (' ' or '-')
  * @param type - The type of sample ('drum' or 'multisample')
  * @param index - The sample index (for drum) or note (for multisample)
  * @param originalName - The original filename (for extension)
@@ -789,21 +790,26 @@ export function getPatchSizeWarning(sizeBytes: number): string | null {
  */
 export function generateFilename(
   presetName: string, 
-  separator: ' ' | '-' | '_', 
+  separator: FilenameSeparator, 
   type: 'drum' | 'multisample', 
   index: number, 
   originalName: string,
   mapping: 'C3' | 'C4' = 'C3'
 ): string {
-  // Only allow space or hyphen as separator
-  if (separator === '_') separator = '-';
-  // Get file extension from original name
-  const extension = originalName.includes('.') ? originalName.split('.').pop() : 'wav';
-  // Normalize all separators in the preset name only (space, hyphen, underscore)
-  let normalizedPresetName = presetName.replace(/[ _-]+/g, separator).replace(new RegExp(`^${separator}+|${separator}+$`, 'g'), '');
-  // Now sanitize (remove any other invalid characters, but allow the chosen separator)
-  let allowed = separator === ' ' ? ' ' : '\-';
-  let cleanPresetName = normalizedPresetName.replace(new RegExp(`[^a-zA-Z0-9${allowed}]`, 'g'), '');
+  // Get file extension from original name with proper fallback
+  let extension = 'wav';
+  const lastDotIndex = originalName.lastIndexOf('.');
+  if (lastDotIndex > 0 && lastDotIndex < originalName.length - 1) {
+    extension = originalName.substring(lastDotIndex + 1);
+  }
+  
+  // Normalize separators in preset name and trim leading/trailing separators
+  let normalizedPresetName = presetName.replace(/[ _-]+/g, separator).replace(/^[ _-]+|[ _-]+$/g, '');
+  
+  // Sanitize preset name - remove invalid characters but keep the chosen separator
+  const allowedChars = separator === ' ' ? 'a-zA-Z0-9 ' : 'a-zA-Z0-9-';
+  let cleanPresetName = normalizedPresetName.replace(new RegExp(`[^${allowedChars}]`, 'g'), '');
+  
   if (type === 'drum') {
     // Short drum key labels by index (from DrumKeyboard.tsx)
     // Keep original labels to match TE docs, handle duplicate 'LT' in filename generation

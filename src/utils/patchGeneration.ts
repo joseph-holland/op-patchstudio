@@ -274,7 +274,7 @@ export async function generateMultisamplePatch(
     if (!sample.file || !sample.audioBuffer) continue;
 
     const outputName = state.multisampleSettings.renameFiles 
-      ? generateFilename(state.multisampleSettings.presetName, state.multisampleSettings.filenameSeparator, 'multisample', sample.rootNote, sample.file.name)
+      ? generateFilename(state.multisampleSettings.presetName, state.multisampleSettings.filenameSeparator, 'multisample', sample.rootNote, sample.file.name, state.midiNoteMapping)
       : sanitizeName(sample.file.name);
     const originalSampleRate = sample.originalSampleRate || sample.audioBuffer.sampleRate;
     const duration = sample.audioBuffer.duration;

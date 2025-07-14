@@ -16,6 +16,8 @@ vi.mock('../../utils/patchGeneration', () => ({
   downloadBlob: vi.fn()
 }))
 
+
+
 // Get access to mocked functions
 const mockDispatch = vi.fn()
 
@@ -737,4 +739,6 @@ describe('patch export structure', () => {
       expect(exportedKeys).toContain(key);
     }
   });
+
+
 });
