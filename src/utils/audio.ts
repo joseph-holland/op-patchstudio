@@ -261,10 +261,10 @@ export function calculatePeakNormalizationGain(audioBuffer: AudioBuffer, targetL
 
 /**
  * Create a limiter for audio processing
- * @param audioContext - The audio context
+ * @param audioContext - The audio context (can be AudioContext or OfflineAudioContext)
  * @returns A configured DynamicsCompressor node
  */
-export function createLimiter(audioContext: AudioContext): DynamicsCompressorNode {
+export function createLimiter(audioContext: BaseAudioContext): DynamicsCompressorNode {
   const limiter = audioContext.createDynamicsCompressor();
   
   // Professional limiter settings
@@ -283,15 +283,15 @@ export function createLimiter(audioContext: AudioContext): DynamicsCompressorNod
  * @returns The limited audio buffer
  */
 export async function applyLimiter(audioBuffer: AudioBuffer): Promise<AudioBuffer> {
-  const audioContext = await audioContextManager.getAudioContext();
-  const limiter = createLimiter(audioContext);
-  
   // Create offline context for processing
   const offlineContext = audioContextManager.createOfflineContext(
     audioBuffer.numberOfChannels,
     audioBuffer.length,
     audioBuffer.sampleRate
   );
+  
+  // Create limiter from the offline context
+  const limiter = createLimiter(offlineContext);
   
   // Create buffer source
   const source = offlineContext.createBufferSource();
