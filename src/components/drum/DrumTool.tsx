@@ -188,6 +188,10 @@ export function DrumTool() {
         dispatch({ type: 'SET_DRUM_NORMALIZE', payload: false });
         dispatch({ type: 'SET_DRUM_NORMALIZE_LEVEL', payload: 0.0 });
         
+        // Reset file renaming settings to defaults
+        dispatch({ type: 'SET_DRUM_RENAME_FILES', payload: false });
+        dispatch({ type: 'SET_DRUM_FILENAME_SEPARATOR', payload: ' ' });
+        
         // Reset preset settings to defaults
         dispatch({ type: 'SET_DRUM_PRESET_PLAYMODE', payload: 'poly' });
         dispatch({ type: 'SET_DRUM_PRESET_TRANSPOSE', payload: 0 });
@@ -263,6 +267,8 @@ export function DrumTool() {
     state.drumSettings.channels !== 0 ||
     state.drumSettings.normalize !== false || // Normalize settings changed
     state.drumSettings.normalizeLevel !== 0.0 ||
+    state.drumSettings.renameFiles !== false || // File renaming settings changed
+    state.drumSettings.filenameSeparator !== ' ' ||
     state.drumSettings.presetSettings.playmode !== 'poly' || // Preset settings changed
     state.drumSettings.presetSettings.transpose !== 0 ||
     state.drumSettings.presetSettings.velocity !== 20 ||
@@ -473,6 +479,10 @@ export function DrumTool() {
           onSaveToLibrary={handleSaveToLibrary}
           onDownloadPreset={handleDownloadPreset}
           inputId="preset-name"
+          renameFiles={state.drumSettings.renameFiles}
+          onRenameFilesChange={(enabled) => dispatch({ type: 'SET_DRUM_RENAME_FILES', payload: enabled })}
+          filenameSeparator={state.drumSettings.filenameSeparator}
+          onFilenameSeparatorChange={(separator) => dispatch({ type: 'SET_DRUM_FILENAME_SEPARATOR', payload: separator })}
         />
       </div>
 

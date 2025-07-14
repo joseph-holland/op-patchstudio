@@ -27,7 +27,9 @@ vi.mock('../../context/AppContext', () => ({
           velocity: 100,
           volume: 100,
           width: 100
-        }
+        },
+        renameFiles: false,
+        filenameSeparator: ' '
       },
               multisampleSettings: {
           sampleRate: 0,
@@ -39,7 +41,9 @@ vi.mock('../../context/AppContext', () => ({
           cutAtLoopEnd: false,
           gain: 0,
           loopEnabled: true,
-          loopOnRelease: true
+          loopOnRelease: true,
+          renameFiles: false,
+          filenameSeparator: ' '
         },
       notifications: [],
       importedDrumPreset: null,
@@ -104,7 +108,9 @@ describe('useFileUpload', () => {
             velocity: 100,
             volume: 100,
             width: 100
-          }
+          },
+          renameFiles: false,
+          filenameSeparator: ' '
         },
         multisampleSettings: {
           sampleRate: 0,
@@ -116,7 +122,9 @@ describe('useFileUpload', () => {
           cutAtLoopEnd: false,
           gain: 0,
           loopEnabled: true,
-          loopOnRelease: true
+          loopOnRelease: true,
+          renameFiles: false,
+          filenameSeparator: ' '
         },
         notifications: [],
         importedDrumPreset: null,

@@ -56,7 +56,7 @@ export function FeedbackPage() {
               }}
             >
               <i className="fas fa-arrow-left"></i>
-              back to op-patchstudio
+              back to OP-PatchStudio
             </a>
           </div>
         </div>

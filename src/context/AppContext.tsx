@@ -4,6 +4,7 @@ import type { WavMetadata } from '../utils/audio';
 import { midiNoteToString, parseFilename } from '../utils/audio';
 import type { Notification } from '../components/common/NotificationSystem';
 import { cookieUtils, COOKIE_KEYS } from '../utils/cookies';
+import type { FilenameSeparator } from '../utils/constants';
 
 // Define enhanced types for the application state
 export interface DrumSample {
@@ -61,6 +62,8 @@ export interface AppState {
     presetName: string;
     normalize: boolean;
     normalizeLevel: number; // -6.0 to 0.0 dB
+    renameFiles: boolean; // Whether to rename files with preset name
+    filenameSeparator: FilenameSeparator; // Separator for filename parts
     presetSettings: {
       playmode: 'poly' | 'mono' | 'legato';
       transpose: number; // -36 to +36
@@ -82,6 +85,8 @@ export interface AppState {
     gain: number; // -30 to +20 dB
     loopEnabled: boolean;
     loopOnRelease: boolean;
+    renameFiles: boolean; // Whether to rename files with preset name
+    filenameSeparator: FilenameSeparator; // Separator for filename parts
   };
   
   // Drum samples (24 samples for full OP-XY compatibility)
@@ -121,6 +126,8 @@ export type AppAction =
   | { type: 'SET_DRUM_PRESET_NAME'; payload: string }
   | { type: 'SET_DRUM_NORMALIZE'; payload: boolean }
   | { type: 'SET_DRUM_NORMALIZE_LEVEL'; payload: number }
+  | { type: 'SET_DRUM_RENAME_FILES'; payload: boolean }
+  | { type: 'SET_DRUM_FILENAME_SEPARATOR'; payload: FilenameSeparator }
   | { type: 'SET_DRUM_PRESET_PLAYMODE'; payload: 'poly' | 'mono' | 'legato' }
   | { type: 'SET_DRUM_PRESET_TRANSPOSE'; payload: number }
   | { type: 'SET_DRUM_PRESET_VELOCITY'; payload: number }
@@ -132,6 +139,8 @@ export type AppAction =
   | { type: 'SET_MULTISAMPLE_PRESET_NAME'; payload: string }
   | { type: 'SET_MULTISAMPLE_NORMALIZE'; payload: boolean }
   | { type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL'; payload: number }
+  | { type: 'SET_MULTISAMPLE_RENAME_FILES'; payload: boolean }
+  | { type: 'SET_MULTISAMPLE_FILENAME_SEPARATOR'; payload: FilenameSeparator }
   | { type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END'; payload: boolean }
   | { type: 'SET_MULTISAMPLE_GAIN'; payload: number }
   | { type: 'SET_MULTISAMPLE_LOOP_ENABLED'; payload: boolean }
@@ -230,6 +239,8 @@ const initialState: AppState = {
     presetName: '',
     normalize: false,
     normalizeLevel: -1.0,
+    renameFiles: false,
+    filenameSeparator: ' ',
     presetSettings: {
       playmode: 'poly',
       transpose: 0,
@@ -248,7 +259,9 @@ const initialState: AppState = {
     cutAtLoopEnd: false,
     gain: 0,
     loopEnabled: true,
-    loopOnRelease: true
+    loopOnRelease: true,
+    renameFiles: false,
+    filenameSeparator: ' '
   },
   drumSamples: Array.from({ length: 24 }, () => ({ ...initialDrumSample })),
   multisampleFiles: [], // Dynamic array, 1-24 samples max
@@ -311,6 +324,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { 
         ...state, 
         drumSettings: { ...state.drumSettings, normalizeLevel: action.payload }
+      };
+      
+    case 'SET_DRUM_RENAME_FILES':
+      return { 
+        ...state, 
+        drumSettings: { ...state.drumSettings, renameFiles: action.payload }
+      };
+      
+    case 'SET_DRUM_FILENAME_SEPARATOR':
+      return { 
+        ...state, 
+        drumSettings: { ...state.drumSettings, filenameSeparator: action.payload }
       };
       
     case 'SET_DRUM_PRESET_PLAYMODE':
@@ -392,6 +417,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { 
         ...state, 
         multisampleSettings: { ...state.multisampleSettings, normalizeLevel: action.payload }
+      };
+      
+    case 'SET_MULTISAMPLE_RENAME_FILES':
+      return { 
+        ...state, 
+        multisampleSettings: { ...state.multisampleSettings, renameFiles: action.payload }
+      };
+      
+    case 'SET_MULTISAMPLE_FILENAME_SEPARATOR':
+      return { 
+        ...state, 
+        multisampleSettings: { ...state.multisampleSettings, filenameSeparator: action.payload }
       };
       
     case 'SET_MULTISAMPLE_CUT_AT_LOOP_END':

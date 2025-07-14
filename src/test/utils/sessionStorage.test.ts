@@ -153,7 +153,9 @@ describe('SessionStorageManager', () => {
           velocity: 20,
           volume: 69,
           width: 0
-        }
+        },
+        renameFiles: false,
+        filenameSeparator: ' ' as ' '
       },
       multisampleSettings: {
         sampleRate: 44100,
@@ -165,7 +167,9 @@ describe('SessionStorageManager', () => {
         cutAtLoopEnd: false,
         gain: 0,
         loopEnabled: true,
-        loopOnRelease: true
+        loopOnRelease: true,
+        renameFiles: false,
+        filenameSeparator: ' ' as ' '
       },
       drumSamples: [],
       multisampleFiles: [],

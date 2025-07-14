@@ -3,6 +3,7 @@
 
 import { audioContextManager } from './audioContext';
 import { AUDIO_CONSTANTS } from './constants';
+import type { FilenameSeparator } from './constants';
 
 // Constants preserved from legacy for compatibility
 const HEADER_LENGTH = 44;
@@ -775,6 +776,60 @@ export function getPatchSizeWarning(sizeBytes: number): string | null {
   }
   
   return null;
+}
+
+/**
+ * Generate a new filename based on preset name and sample type
+ * @param presetName - The preset name to use as base
+ * @param separator - The separator to use between parts (' ' or '-')
+ * @param type - The type of sample ('drum' or 'multisample')
+ * @param index - The sample index (for drum) or note (for multisample)
+ * @param originalName - The original filename (for extension)
+ * @param mapping - The MIDI note mapping convention ('C3' or 'C4')
+ * @returns The new filename
+ */
+export function generateFilename(
+  presetName: string, 
+  separator: FilenameSeparator, 
+  type: 'drum' | 'multisample', 
+  index: number, 
+  originalName: string,
+  mapping: 'C3' | 'C4' = 'C3'
+): string {
+  // Get file extension from original name with proper fallback
+  let extension = 'wav';
+  const lastDotIndex = originalName.lastIndexOf('.');
+  if (lastDotIndex > 0 && lastDotIndex < originalName.length - 1) {
+    extension = originalName.substring(lastDotIndex + 1);
+  }
+  
+  // Normalize separators in preset name and trim leading/trailing separators
+  let normalizedPresetName = presetName.replace(/[ _-]+/g, separator).replace(/^[ _-]+|[ _-]+$/g, '');
+  
+  // Sanitize preset name - remove invalid characters but keep the chosen separator
+  const allowedChars = separator === ' ' ? 'a-zA-Z0-9 ' : 'a-zA-Z0-9-';
+  let cleanPresetName = normalizedPresetName.replace(new RegExp(`[^${allowedChars}]`, 'g'), '');
+  
+  if (type === 'drum') {
+    // Short drum key labels by index (from DrumKeyboard.tsx)
+    // Keep original labels to match TE docs, handle duplicate 'LT' in filename generation
+    const drumShortLabels = [
+      'KD1', 'KD2', 'SD1', 'SD2', 'RIM', 'CLP', 'TB', 'SH', 'CH', 'CL', 'OH', 'CAB',
+      'RC', 'CC', 'LT', 'COW', 'MT', 'HT', 'LC', 'HC', 'TRI', 'LT', 'WS', 'GUI'
+    ];
+    let drumLabel = drumShortLabels[index] || `DRUM${index + 1}`;
+    
+    // Handle duplicate 'LT' entries - second LT becomes 'LT2' in filename
+    if (drumLabel === 'LT' && index === 21) {
+      drumLabel = 'LT2';
+    }
+    
+    return `${cleanPresetName}${separator}${drumLabel}.${extension}`;
+  } else {
+    // For multisample, use note names with proper MIDI mapping
+    const noteString = midiNoteToString(index, mapping);
+    return `${cleanPresetName}${separator}${noteString}.${extension}`;
+  }
 }
 
 /**

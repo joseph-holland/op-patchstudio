@@ -65,17 +65,28 @@ export function PresetNameInput({
   const errorText = validationError || invalidText;
 
   return (
-    <TextInput
-      id={id}
-      labelText={labelText}
-      value={localValue}
-      onChange={handleInputChange}
-      onKeyDown={handleKeyDown}
-      placeholder={placeholder}
-      disabled={disabled}
-      invalid={isInvalid}
-      invalidText={errorText}
-      className={className}
-    />
+    <>
+      <TextInput
+        id={id}
+        labelText={labelText}
+        value={localValue}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        disabled={disabled}
+        invalid={isInvalid}
+        invalidText={errorText}
+        className={className ? `${className} preset-name-input-leftalign` : 'preset-name-input-leftalign'}
+      />
+      <style>{`
+        .preset-name-input-leftalign .cds--label {
+          text-align: left !important;
+          justify-content: flex-start !important;
+        }
+        .preset-name-input-leftalign input.cds--text-input {
+          text-align: left !important;
+        }
+      `}</style>
+    </>
   );
 } 

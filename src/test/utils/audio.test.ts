@@ -15,7 +15,8 @@ import {
   normalizeAudioBuffer,
   cutAudioAtLoopEnd,
   isValidPresetName,
-  getInvalidPresetNameChars
+  getInvalidPresetNameChars,
+  generateFilename
 } from '../../utils/audio'
 
 // Mock AudioParam with required properties
@@ -396,6 +397,50 @@ describe('audio utilities', () => {
       expect(isValidPresetName('name:test')).toBe(false)
       expect(isValidPresetName('name*test')).toBe(false)
       expect(isValidPresetName('name?test')).toBe(false)
+    })
+  })
+
+  describe('generateFilename', () => {
+    it('should generate drum filenames with correct short labels', () => {
+      expect(generateFilename('My Drum Kit', ' ', 'drum', 0, 'kick.wav')).toBe('My Drum Kit KD1.wav')
+      expect(generateFilename('Bass Kit', '-', 'drum', 1, 'snare.wav')).toBe('Bass-Kit-KD2.wav')
+      expect(generateFilename('Test Kit', '-', 'drum', 23, 'guiro.wav')).toBe('Test-Kit-GUI.wav')
+    })
+
+    it('should generate multisample filenames with correct notes', () => {
+      expect(generateFilename('Piano', ' ', 'multisample', 60, 'c4.wav')).toBe('Piano C3.wav')
+      expect(generateFilename('Bass', '-', 'multisample', 72, 'c4.wav')).toBe('Bass-C4.wav')
+      expect(generateFilename('Synth', '-', 'multisample', 73, 'c#4.wav')).toBe('Synth-C#4.wav')
+    })
+
+    it('should respect MIDI note mapping parameter', () => {
+      // C3 mapping (default) - MIDI 60 = C3
+      expect(generateFilename('Piano', ' ', 'multisample', 60, 'c4.wav', 'C3')).toBe('Piano C3.wav')
+      expect(generateFilename('Piano', ' ', 'multisample', 72, 'c4.wav', 'C3')).toBe('Piano C4.wav')
+      
+      // C4 mapping - MIDI 60 = C4
+      expect(generateFilename('Piano', ' ', 'multisample', 60, 'c4.wav', 'C4')).toBe('Piano C4.wav')
+      expect(generateFilename('Piano', ' ', 'multisample', 72, 'c4.wav', 'C4')).toBe('Piano C5.wav')
+    })
+
+    it('should handle different file extensions', () => {
+      expect(generateFilename('Test', ' ', 'drum', 0, 'sample.aif')).toBe('Test KD1.aif')
+      expect(generateFilename('Test', ' ', 'multisample', 60, 'note.flac')).toBe('Test C3.flac')
+    })
+
+    it('should sanitize preset names', () => {
+      expect(generateFilename('Test@Kit', ' ', 'drum', 0, 'kick.wav')).toBe('TestKit KD1.wav')
+      expect(generateFilename('My/Preset', '-', 'multisample', 60, 'c4.wav')).toBe('MyPreset-C3.wav')
+    })
+
+    it('should normalize all separators in the preset name only', () => {
+      expect(generateFilename('test fname', '-', 'multisample', 60, 'c4.wav')).toBe('test-fname-C3.wav')
+      expect(generateFilename('test-fname', '-', 'multisample', 60, 'c4.wav')).toBe('test-fname-C3.wav')
+      expect(generateFilename('test_fname', '-', 'multisample', 60, 'c4.wav')).toBe('test-fname-C3.wav')
+      expect(generateFilename('test  fname', '-', 'multisample', 60, 'c4.wav')).toBe('test-fname-C3.wav')
+      expect(generateFilename('test--fname', ' ', 'multisample', 60, 'c4.wav')).toBe('test fname C3.wav')
+      expect(generateFilename('test__fname', '-', 'drum', 0, 'kick.wav')).toBe('test-fname-KD1.wav')
+      expect(generateFilename('test - fname', '-', 'drum', 2, 'snare.wav')).toBe('test-fname-SD1.wav')
     })
   })
 

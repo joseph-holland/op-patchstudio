@@ -54,7 +54,9 @@ vi.mock('../../context/AppContext', () => ({
           velocity: 20,
           volume: 69,
           width: 0
-        }
+        },
+        renameFiles: false,
+        filenameSeparator: ' '
       },
       multisampleSettings: {
         sampleRate: 44100,
@@ -66,7 +68,9 @@ vi.mock('../../context/AppContext', () => ({
         cutAtLoopEnd: false,
         gain: 0,
         loopEnabled: true,
-        loopOnRelease: true
+        loopOnRelease: true,
+        renameFiles: false,
+        filenameSeparator: ' '
       },
       drumSamples: [],
       multisampleFiles: [],

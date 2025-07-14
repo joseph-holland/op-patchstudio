@@ -26,4 +26,7 @@ export const MIDI_CONSTANTS = {
   C3_NOTE: 60, // C3 = 60 (Yamaha/OP-1/OP-Z convention)
   MAX_NOTE: 127,
   MIN_NOTE: 0,
-} as const; 
+} as const;
+
+// Filename separator options for generated preset files
+export type FilenameSeparator = ' ' | '-'; 

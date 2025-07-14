@@ -60,7 +60,9 @@ const mockAppState: Partial<AppState> = {
       velocity: 20,
       volume: 69,
       width: 0
-    }
+    },
+    renameFiles: false,
+    filenameSeparator: ' ' as ' '
   },
   multisampleSettings: {
     sampleRate: 44100,
@@ -72,7 +74,9 @@ const mockAppState: Partial<AppState> = {
     cutAtLoopEnd: false,
     gain: 0,
     loopEnabled: true,
-    loopOnRelease: true
+    loopOnRelease: true,
+    renameFiles: false,
+    filenameSeparator: ' ' as ' '
   },
   drumSamples: [
     {
@@ -383,7 +387,9 @@ describe('Drum Sample Index Preservation', () => {
           velocity: 20,
           volume: 69,
           width: 0
-        }
+        },
+        renameFiles: false,
+        filenameSeparator: ' ' as ' '
       },
       multisampleSettings: {
         sampleRate: 44100,
@@ -395,7 +401,9 @@ describe('Drum Sample Index Preservation', () => {
         cutAtLoopEnd: false,
         gain: 0,
         loopEnabled: true,
-        loopOnRelease: true
+        loopOnRelease: true,
+        renameFiles: false,
+        filenameSeparator: ' ' as ' '
       },
       drumSamples: mockDrumSamples,
       multisampleFiles: [],
@@ -512,7 +520,9 @@ describe('Drum Sample Index Preservation', () => {
           velocity: 20,
           volume: 69,
           width: 0
-        }
+        },
+        renameFiles: false,
+        filenameSeparator: ' ' as ' '
       },
       multisampleSettings: {
         sampleRate: 44100,
@@ -524,7 +534,9 @@ describe('Drum Sample Index Preservation', () => {
         cutAtLoopEnd: false,
         gain: 0,
         loopEnabled: true,
-        loopOnRelease: true
+        loopOnRelease: true,
+        renameFiles: false,
+        filenameSeparator: ' ' as ' '
       },
       drumSamples: Array.from({ length: 24 }, () => ({
         file: null,
@@ -649,7 +661,9 @@ describe('Multisample Loop Points Preservation', () => {
            velocity: 20,
            volume: 69,
            width: 0
-         }
+         },
+         renameFiles: false,
+         filenameSeparator: ' ' as ' '
        },
       multisampleSettings: {
         sampleRate: 44100,
@@ -661,7 +675,9 @@ describe('Multisample Loop Points Preservation', () => {
         cutAtLoopEnd: false,
         gain: 0,
         loopEnabled: true,
-        loopOnRelease: true
+        loopOnRelease: true,
+        renameFiles: false,
+        filenameSeparator: ' ' as ' '
       },
       drumSamples: [],
       multisampleFiles: mockMultisampleFiles,
