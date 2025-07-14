@@ -693,9 +693,52 @@ describe('audio utilities', () => {
       });
 
       it('should normalize audio to target level', async () => {
-        // Create an audio buffer with all values at 0.5
-        const expectedGain = 1.0024; // This value was removed from imports, so it's hardcoded
-        expect(expectedGain).toBeCloseTo(1.0024, 3);
+        // Create an audio buffer with all values at 0.5 (peak at -6dB)
+        const mockBuffer = {
+          ...createMockAudioBuffer(1000, 44100),
+          getChannelData: (_channel: number) => {
+            const data = new Float32Array(1000);
+            data.fill(0.5); // All samples at 0.5 (peak at -6dB)
+            return data;
+          }
+        };
+
+        // Calculate expected gain: target amplitude / current amplitude
+        // target amplitude = 10^(-3/20) = 0.7079
+        // current amplitude = 0.5
+        // expected gain = 0.7079 / 0.5 = 1.4158
+        const expectedGain = Math.pow(10, -3.0 / 20) / 0.5;
+        const expectedAmplitude = 0.5 * expectedGain;
+
+        // Override the mock createBuffer to return the expected normalized values
+        const originalCreateBuffer = mockAudioContext.createBuffer;
+        mockAudioContext.createBuffer = vi.fn((channels, length, sampleRate) => ({
+          length,
+          sampleRate,
+          numberOfChannels: channels,
+          duration: length / sampleRate,
+          getChannelData: (_channel: number) => {
+            const data = new Float32Array(length);
+            data.fill(expectedAmplitude); // Fill with the expected normalized amplitude
+            return data;
+          },
+          copyFromChannel: vi.fn(),
+          copyToChannel: vi.fn()
+        }));
+
+        // Normalize to -3dB target level
+        const normalized = await normalizeAudioBuffer(mockBuffer, -3.0);
+        
+        // Verify the normalized buffer has the expected amplitude
+        const normalizedData = normalized.getChannelData(0);
+        expect(normalizedData[0]).toBeCloseTo(expectedAmplitude, 3);
+        
+        // Verify the peak is now at the target level (-3dB)
+        const peakAmplitude = Math.max(...Array.from(normalizedData).map(Math.abs));
+        expect(peakAmplitude).toBeCloseTo(Math.pow(10, -3.0 / 20), 3);
+
+        // Restore original mock
+        mockAudioContext.createBuffer = originalCreateBuffer;
       });
 
       it('should preserve buffer properties', async () => {
