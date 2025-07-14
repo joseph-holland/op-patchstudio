@@ -163,3 +163,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - N/A 
+
+## [0.9.0] - 2025-07-14
+
+### Changed
+- Switched all audio normalization from RMS to peak normalization for more consistent and professional results
+- Limiter is now always applied by default to prevent clipping in all exported audio
+
+### Fixed
+- Prevented all possible output clipping by enforcing limiter in the audio processing pipeline 

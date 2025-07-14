@@ -229,7 +229,7 @@ const initialState: AppState = {
     channels: 0,
     presetName: '',
     normalize: false,
-    normalizeLevel: -6.0,
+    normalizeLevel: -1.0,
     presetSettings: {
       playmode: 'poly',
       transpose: 0,
@@ -244,7 +244,7 @@ const initialState: AppState = {
     channels: 0,
     presetName: '',
     normalize: false,
-    normalizeLevel: -6.0,
+    normalizeLevel: -1.0,
     cutAtLoopEnd: false,
     gain: 0,
     loopEnabled: true,

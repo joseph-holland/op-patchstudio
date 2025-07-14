@@ -119,7 +119,7 @@ describe('MultisampleTool ADSR Integration', () => {
       channels: 0,
       presetName: 'Test Preset',
       normalize: false,
-      normalizeLevel: -6.0,
+              normalizeLevel: -1.0,
       cutAtLoopEnd: false,
       gain: 0,
       loopEnabled: true,
