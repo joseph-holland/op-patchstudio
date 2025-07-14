@@ -13,6 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import semver from 'semver';
 import readline from 'readline';
+import { execSync } from 'child_process';
 
 const args = process.argv.slice(2);
 const updateType = args[0];
@@ -66,6 +67,16 @@ console.log(`Updating version from ${currentVersion} to ${newVersion}...`);
 // Update package.json
 packageJson.version = newVersion;
 fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
+
+// Regenerate package-lock.json to ensure version consistency
+console.log('🔄 Regenerating package-lock.json...');
+try {
+  execSync('npm install --package-lock-only', { stdio: 'inherit' });
+  console.log('✅ package-lock.json regenerated');
+} catch (error) {
+  console.warn('⚠️  Failed to regenerate package-lock.json, but continuing...');
+  console.warn('   You may want to run "npm install" manually to update it');
+}
 
 // Update manifest.json
 const manifestPath = path.join(process.cwd(), 'public', 'manifest.json');
@@ -159,6 +170,8 @@ fs.copyFileSync(changelogPath, publicChangelogPath);
 rl.close();
 
 console.log('\n✅ Version updated successfully!');
+console.log(`📦 package.json updated to version ${newVersion}`);
+console.log(`📋 manifest.json updated to version ${newVersion}`);
 console.log(`📝 CHANGELOG.md updated with version ${newVersion}`);
 console.log('📋 CHANGELOG.md copied to public/CHANGELOG.md');
 console.log('');
