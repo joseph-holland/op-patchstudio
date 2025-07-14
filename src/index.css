@@ -177,6 +177,47 @@ a:hover {
   box-sizing: border-box;
 }
 
+/* Ensure main content doesn't become too wide on very wide screens */
+@media (min-width: 1200px) {
+  .cds--content {
+    max-width: 1000px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* For very wide screens, keep content compact */
+@media (min-width: 1600px) {
+  .cds--content {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* Ensure tables and data displays don't become too wide on very wide screens */
+@media (min-width: 1600px) {
+  /* Table containers */
+  div[style*="borderRadius: '15px'"] {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+  }
+  
+  /* Ensure table content doesn't overflow */
+  table {
+    max-width: 100% !important;
+    table-layout: auto !important;
+  }
+  
+  /* Grid layouts should respect container width */
+  div[style*="display: grid"] {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+}
+
 /* Prevent horizontal overflow on all containers */
 * {
   box-sizing: border-box;

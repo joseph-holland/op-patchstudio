@@ -4,24 +4,35 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.10.0] - 2025-07-15
+## [0.10.1] - 2025-07-14
 
 ### added
-- file renaming feature for generated presets: users can now choose to rename all exported sample files with the preset name.
-- filename separator options: choose between space ' ' or hyphen '-' for generated filenames.
-- drum sample filenames now use short drum key labels (e.g., kd1, clp, tri) for op-xy compatibility.
-- ui controls for file renaming and separator selection, with responsive layout for desktop and mobile.
+- n/a
 
 ### changed
-- all generated filenames are now fully op-xy compliant: only a-z, a-z, 0-9, space, #, -, (, ), and dot are allowed; underscores are no longer supported.
-- all internal separators in preset names are normalized to the selected separator.
-- improved layout and alignment of the "generate preset" section for better usability.
+- n/a
 
 ### fixed
-- type errors and test coverage for new file renaming logic and state.
-- ensured all test mocks and state objects include new file renaming properties.
+- improved desktop layout: reduced max-width from 1400px to 1000px to keep content more compact and proportional to drum tool keyboard size
 
-## [0.9.0] - 2025-07-14
+## [0.10.0] - 2025-07-14
+
+### added
+- file renaming feature for generated presets: users can now choose to rename all exported sample files with the preset name
+- filename separator options: choose between space ' ' or hyphen '-' for generated filenames
+- drum sample filenames now use short drum key labels (e.g., kd1, clp, tri) for op-xy compatibility
+- ui controls for file renaming and separator selection, with responsive layout for desktop and mobile
+
+### changed
+- all generated filenames are now fully op-xy compliant: only a-z, 0-9, space, #, -, (, ), and dot are allowed; underscores are no longer supported
+- all internal separators in preset names are normalized to the selected separator
+- improved layout and alignment of the "generate preset" section for better usability
+
+### fixed
+- type errors and test coverage for new file renaming logic and state
+- ensured all test mocks and state objects include new file renaming properties
+
+## [0.9.0] - 2025-07-13
 
 ### changed
 - switched all audio normalization from rms to peak normalization for more consistent results
@@ -172,17 +183,6 @@ the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 - drag-and-drop sample loading
 - op-xy preset generation (.opxydrum and .opxymulti files)
 - advanced preset settings and configuration
-
-### changed
-- n/a
-
-### fixed
-- n/a
-
-## [unreleased]
-
-### added
-- n/a
 
 ### changed
 - n/a
