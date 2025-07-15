@@ -309,8 +309,12 @@ export function MultisampleTool() {
 
   const handleSaveRecording = async (audioBuffer: AudioBuffer, filename: string) => {
     try {
-      // Convert AudioBuffer to WAV blob
-      const wavBlob = await audioBufferToWav(audioBuffer);
+      // Convert AudioBuffer to WAV blob with metadata
+      const wavBlob = await audioBufferToWav(audioBuffer, 16, {
+        rootNote: targetMidiNote ?? 60,
+        loopStart: 0,
+        loopEnd: audioBuffer.length - 1
+      });
       
       // Create a File object with the provided filename
       const file = new File([wavBlob], `${filename}.wav`, { type: 'audio/wav' });

@@ -302,7 +302,7 @@ export function WaveformEditor({
     };
   }, [height, drawWaveform]);
 
-  const handleCanvasClick = (_e: React.MouseEvent) => {
+  const handleCanvasClick = () => {
     // If onZoomEdit is provided, the entire waveform is clickable for zooming
     if (onZoomEdit) {
       // Check if we're on mobile in portrait mode

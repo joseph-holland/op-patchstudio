@@ -26,105 +26,59 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
               }
             }
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'gstatic-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-              }
-            }
           }
         ]
       },
-      includeAssets: ['favicon.ico', 'favicon.png', 'favicon.svg'],
       manifest: {
-        name: 'OP-PatchStudio [unofficial]',
+        name: 'OP-PatchStudio',
         short_name: 'OP-PatchStudio',
-        description: 'Free & open source preset creator for OP synthesizers. Upload samples, edit waveforms, adjust settingsand generate patches instantly.',
+        description: 'Free & open source preset creator for OP synthesizers',
         theme_color: '#000000',
-        background_color: '#000000',
+        background_color: '#ffffff',
         display: 'standalone',
-        orientation: 'any',
+        orientation: 'portrait',
         scope: '/',
         start_url: '/',
         icons: [
           {
-            src: '/assets/icon-72x72.png',
+            src: 'assets/icon-72x72.png',
             sizes: '72x72',
-            type: 'image/png',
-            purpose: 'maskable any'
+            type: 'image/png'
           },
           {
-            src: '/assets/icon-96x96.png',
+            src: 'assets/icon-96x96.png',
             sizes: '96x96',
-            type: 'image/png',
-            purpose: 'maskable any'
+            type: 'image/png'
           },
           {
-            src: '/assets/icon-128x128.png',
+            src: 'assets/icon-128x128.png',
             sizes: '128x128',
-            type: 'image/png',
-            purpose: 'maskable any'
+            type: 'image/png'
           },
           {
-            src: '/assets/icon-144x144.png',
+            src: 'assets/icon-144x144.png',
             sizes: '144x144',
-            type: 'image/png',
-            purpose: 'maskable any'
+            type: 'image/png'
           },
           {
-            src: '/assets/icon-152x152.png',
+            src: 'assets/icon-152x152.png',
             sizes: '152x152',
-            type: 'image/png',
-            purpose: 'maskable any'
+            type: 'image/png'
           },
           {
-            src: '/assets/icon-192x192.png',
+            src: 'assets/icon-192x192.png',
             sizes: '192x192',
-            type: 'image/png',
-            purpose: 'maskable any'
+            type: 'image/png'
           },
           {
-            src: '/assets/icon-384x384.png',
+            src: 'assets/icon-384x384.png',
             sizes: '384x384',
-            type: 'image/png',
-            purpose: 'maskable any'
+            type: 'image/png'
           },
           {
-            src: '/assets/icon-512x512.png',
+            src: 'assets/icon-512x512.png',
             sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable any'
-          }
-        ],
-        shortcuts: [
-          {
-            name: 'Drum Tool',
-            short_name: 'Drum',
-            description: 'Create drum presets',
-            url: '/?tool=drum',
-            icons: [
-              {
-                src: '/assets/icon-96x96.png',
-                sizes: '96x96'
-              }
-            ]
-          },
-          {
-            name: 'Multisample Tool',
-            short_name: 'Multisample',
-            description: 'Create multisample presets',
-            url: '/?tool=multisample',
-            icons: [
-              {
-                src: '/assets/icon-96x96.png',
-                sizes: '96x96'
-              }
-            ]
+            type: 'image/png'
           }
         ]
       }
@@ -133,7 +87,7 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
-  // @ts-ignore - Vitest extends Vite config with test options
+  // @ts-expect-error - Vitest extends Vite config with test options
   test: {
     globals: true,
     environment: 'jsdom',

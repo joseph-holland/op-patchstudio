@@ -489,7 +489,6 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
     const width = isLarge ? baseSize * 1.5 + (keyChar === 'W' || keyChar === 'U' ? 1 : 0) : baseSize;
     const height = baseSize;
     const circleSize = baseSize * (35/56);
-    const fontSize = baseSize * (21/56);
     const outerRingSize = baseSize * (52/56); // Scale outer ring too
     
     let circleStyle: React.CSSProperties = {
@@ -508,11 +507,14 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
       marginLeft: `-${circleSize / 2}px` // Half of width to center
     };
 
-    let letterStyle: React.CSSProperties = {
-      color: '#fff',
-      fontSize: `${fontSize}px`,
-      fontWeight: 'normal',
-      pointerEvents: 'none'
+    const letterStyle = {
+      fontSize: '0.7rem',
+      fontWeight: 'bold',
+      color: 'var(--color-text-secondary)',
+      textAlign: 'center' as const,
+      lineHeight: '1',
+      userSelect: 'none' as const,
+      pointerEvents: 'none' as const,
     };
 
     // Apply offsets for large keys

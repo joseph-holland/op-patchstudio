@@ -427,7 +427,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         multisampleSettings: { ...state.multisampleSettings, loopOnRelease: action.payload }
       };
       
-    case 'LOAD_DRUM_SAMPLE':
+    case 'LOAD_DRUM_SAMPLE': {
       // Validate that audioBuffer exists and has required properties
       if (!action.payload.audioBuffer || typeof action.payload.audioBuffer.duration !== 'number') {
         console.error('Invalid audioBuffer provided to LOAD_DRUM_SAMPLE:', action.payload.audioBuffer);
@@ -437,6 +437,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
       // Validate that metadata exists and has required properties
       if (!action.payload.metadata || typeof action.payload.metadata.duration !== 'number') {
         console.error('Invalid metadata provided to LOAD_DRUM_SAMPLE:', action.payload.metadata);
+        return state; // Return current state without changes
+      }
+      
+      // Check max limit of 24 samples - count only loaded samples
+      const loadedSamplesCount = state.drumSamples.filter(sample => sample.isLoaded).length;
+      if (loadedSamplesCount >= 24) {
         return state; // Return current state without changes
       }
       
@@ -456,22 +462,26 @@ function appReducer(state: AppState, action: AppAction): AppState {
         duration: action.payload.audioBuffer.duration,
         hasBeenEdited: false
       };
-      return { ...state, drumSamples: newDrumSamples };
       
-    case 'CLEAR_DRUM_SAMPLE':
+      return { ...state, drumSamples: newDrumSamples };
+    }
+      
+    case 'CLEAR_DRUM_SAMPLE': {
       const clearedDrumSamples = [...state.drumSamples];
       clearedDrumSamples[action.payload] = { ...initialDrumSample };
       return { ...state, drumSamples: clearedDrumSamples };
+    }
       
-    case 'UPDATE_DRUM_SAMPLE':
+    case 'UPDATE_DRUM_SAMPLE': {
       const updatedDrumSamples = [...state.drumSamples];
       updatedDrumSamples[action.payload.index] = {
         ...updatedDrumSamples[action.payload.index],
         ...action.payload.updates
       };
       return { ...state, drumSamples: updatedDrumSamples };
+    }
       
-    case 'LOAD_MULTISAMPLE_FILE':
+    case 'LOAD_MULTISAMPLE_FILE': {
       // Validate that audioBuffer exists and has required properties
       if (!action.payload.audioBuffer || typeof action.payload.audioBuffer.duration !== 'number') {
         console.error('Invalid audioBuffer provided to LOAD_MULTISAMPLE_FILE:', action.payload.audioBuffer);
@@ -546,12 +556,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state, 
         multisampleFiles: updatedFiles
       };
+    }
       
-    case 'CLEAR_MULTISAMPLE_FILE':
+    case 'CLEAR_MULTISAMPLE_FILE': {
       const filteredMultisampleFiles = state.multisampleFiles.filter((_, index) => index !== action.payload);
       return { ...state, multisampleFiles: filteredMultisampleFiles };
+    }
       
-    case 'UPDATE_MULTISAMPLE_FILE':
+    case 'UPDATE_MULTISAMPLE_FILE': {
       const updatedMultisampleFiles = [...state.multisampleFiles];
       updatedMultisampleFiles[action.payload.index] = {
         ...updatedMultisampleFiles[action.payload.index],
@@ -564,12 +576,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
       }
       
       return { ...state, multisampleFiles: updatedMultisampleFiles };
+    }
       
-    case 'REORDER_MULTISAMPLE_FILES':
+    case 'REORDER_MULTISAMPLE_FILES': {
       const reorderedFiles = [...state.multisampleFiles];
       const [movedFile] = reorderedFiles.splice(action.payload.fromIndex, 1);
       reorderedFiles.splice(action.payload.toIndex, 0, movedFile);
       return { ...state, multisampleFiles: reorderedFiles };
+    }
       
     case 'SET_SELECTED_MULTISAMPLE':
       return { ...state, selectedMultisample: action.payload };
@@ -604,7 +618,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'TOGGLE_MULTISAMPLE_KEYBOARD_PIN':
       return { ...state, isMultisampleKeyboardPinned: !state.isMultisampleKeyboardPinned };
       
-    case 'RESTORE_SESSION':
+    case 'RESTORE_SESSION': {
       // Create a properly sized drum samples array (24 slots)
       const restoredDrumSamples = Array.from({ length: 24 }, (_, index) => {
         // If there's a restored sample at this index, use it; otherwise use initial state
@@ -625,6 +639,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
       
       return newState;
+    }
       
     case 'SET_SESSION_RESTORATION_MODAL_OPEN':
       return { ...state, isSessionRestorationModalOpen: action.payload };
@@ -632,28 +647,19 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_SESSION_INFO':
       return { ...state, sessionInfo: action.payload };
       
-    case 'SET_MIDI_NOTE_MAPPING':
+    case 'SET_MIDI_NOTE_MAPPING': {
       // Save to cookie for persistence
       try {
         cookieUtils.setCookie(COOKIE_KEYS.MIDI_NOTE_MAPPING, action.payload, 30);
       } catch (error) {
-        console.warn('Failed to save MIDI note mapping to cookie:', error);
+        console.error('Failed to save MIDI note mapping to cookie:', error);
       }
+      return { ...state, midiNoteMapping: action.payload };
+    }
       
-      // Update note strings for all existing multisample files to reflect the new mapping
-      const mappingUpdatedFiles = state.multisampleFiles.map(file => ({
-        ...file,
-        note: file.isLoaded ? midiNoteToString(file.rootNote, action.payload) : file.note
-      }));
-      
-      return { 
-        ...state, 
-        midiNoteMapping: action.payload,
-        multisampleFiles: mappingUpdatedFiles
-      };
-      
-    default:
+    default: {
       return state;
+    }
   }
 }
 

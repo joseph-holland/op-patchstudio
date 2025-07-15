@@ -192,9 +192,13 @@ export async function generateDrumPatch(
             const expectedFramecount = Math.floor(duration * effectiveSampleRate);
             validateFrameCount(sample.name, expectedFramecount, convertedBuffer.length, region);
             
-            // Convert to WAV blob
+            // Convert to WAV blob with metadata
             const { audioBufferToWav } = await import('./audio');
-            const wavBlob = audioBufferToWav(convertedBuffer, targetBitDepth || 16);
+            const wavBlob = audioBufferToWav(convertedBuffer, targetBitDepth || 16, {
+              rootNote: midiNote,
+              loopStart: 0,
+              loopEnd: framecount - 1
+            });
             zip.file(outputName, wavBlob);
             patchJson.regions.push(region);
           } catch (error) {
@@ -362,9 +366,13 @@ export async function generateMultisamplePatch(
               : Math.floor(duration * effectiveSampleRate);
             validateFrameCount(sample.name, expectedFramecount, convertedBuffer.length, region);
             
-            // Convert to WAV blob
+            // Convert to WAV blob with metadata
             const { audioBufferToWav } = await import('./audio');
-            const wavBlob = audioBufferToWav(convertedBuffer, targetBitDepth || 16);
+            const wavBlob = audioBufferToWav(convertedBuffer, targetBitDepth || 16, {
+              rootNote: sampleNote,
+              loopStart: scaledLoopStart,
+              loopEnd: scaledLoopEnd
+            });
             zip.file(outputName, wavBlob);
             patchJson.regions.push(region);
           } catch (error) {
@@ -394,20 +402,36 @@ export async function generateMultisamplePatch(
         })()
       );
     } else {
-      // No conversion needed, use original file
+      // No conversion needed, but still create WAV with SMPL metadata
       fileReadPromises.push(
-        new Promise<void>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            if (e.target?.result) {
-              zip.file(outputName, e.target.result);
-              patchJson.regions.push(region);
-            }
-            resolve();
-          };
-          reader.onerror = () => reject(new Error(`Failed to read ${sample.name}`));
-          reader.readAsArrayBuffer(sample.file!);
-        })
+        (async () => {
+          try {
+            // Convert to WAV blob with metadata even when no conversion is needed
+            const { audioBufferToWav } = await import('./audio');
+            const wavBlob = audioBufferToWav(sample.audioBuffer!, targetBitDepth || sample.originalBitDepth || 16, {
+              rootNote: sampleNote,
+              loopStart: scaledLoopStart,
+              loopEnd: scaledLoopEnd
+            });
+            zip.file(outputName, wavBlob);
+            patchJson.regions.push(region);
+          } catch (error) {
+            console.error(`Failed to create WAV with metadata for ${sample.name}:`, error);
+            // Fall back to using the original file if WAV creation fails
+            return new Promise<void>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                if (e.target?.result) {
+                  zip.file(outputName, e.target.result);
+                  patchJson.regions.push(region);
+                }
+                resolve();
+              };
+              reader.onerror = () => reject(new Error(`Failed to read ${sample.name}`));
+              reader.readAsArrayBuffer(sample.file!);
+            });
+          }
+        })()
       );
     }
   }

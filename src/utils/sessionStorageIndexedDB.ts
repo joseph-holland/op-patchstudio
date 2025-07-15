@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { AppState } from '../context/AppContext';
 import { indexedDB, type SessionData, type SampleData } from './indexedDB';
-import { readWavMetadata } from './audio';
 
 // Constants
 const CURRENT_SESSION_KEY = 'op-patchstudio-current-session';
@@ -40,15 +39,15 @@ export class SessionStorageManagerIndexedDB {
         const sampleId = uuidv4();
         drumSampleIds[i] = sampleId;
         
-        // Convert File to ArrayBuffer
-        const arrayBuffer = await this.fileToArrayBuffer(sample.file);
+        // Convert File to Blob to avoid detached ArrayBuffer issues
+        const blob = new Blob([sample.file], { type: sample.file.type });
         
         const sampleData: SampleData = {
           id: sampleId,
           name: sample.file.name,
           type: sample.file.type,
           size: sample.file.size,
-          data: arrayBuffer,
+          data: blob,
           metadata: {
             sampleRate: sample.audioBuffer.sampleRate,
             bitDepth: sample.originalBitDepth || 16,
@@ -70,15 +69,15 @@ export class SessionStorageManagerIndexedDB {
         const sampleId = uuidv4();
         multisampleSampleIds[i] = sampleId;
         
-        // Convert File to ArrayBuffer
-        const arrayBuffer = await this.fileToArrayBuffer(file.file);
+        // Convert File to Blob to avoid detached ArrayBuffer issues
+        const blob = new Blob([file.file], { type: file.file.type });
         
         const sampleData: SampleData = {
           id: sampleId,
           name: file.file.name,
           type: file.file.type,
           size: file.file.size,
-          data: arrayBuffer,
+          data: blob,
           metadata: {
             sampleRate: file.audioBuffer.sampleRate,
             bitDepth: file.originalBitDepth || 16,
@@ -252,18 +251,7 @@ export class SessionStorageManagerIndexedDB {
     }
   }
 
-  // Convert File to ArrayBuffer
-  private async fileToArrayBuffer(file: File): Promise<ArrayBuffer> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as ArrayBuffer;
-        resolve(result);
-      };
-      reader.onerror = reject;
-      reader.readAsArrayBuffer(file);
-    });
-  }
+
 
   // Convert ArrayBuffer to File
   async arrayBufferToFile(arrayBuffer: ArrayBuffer, filename: string, type: string): Promise<File> {
@@ -278,17 +266,33 @@ export class SessionStorageManagerIndexedDB {
   }
 
   // Load sample from IndexedDB
-  async loadSampleFromSession(sampleId: string, mapping: 'C3' | 'C4' = 'C3'): Promise<{ file: File; audioBuffer: AudioBuffer; metadata: any } | null> {
+  async loadSampleFromSession(sampleId: string): Promise<{ file: File; audioBuffer: AudioBuffer; metadata: any } | null> {
     try {
       const sampleData = await indexedDB.getSample(sampleId);
       if (!sampleData) return null;
 
+      // Convert Blob to ArrayBuffer for processing
+      const arrayBuffer = await sampleData.data.arrayBuffer();
+
       // Convert ArrayBuffer back to File and AudioBuffer
-      const file = await this.arrayBufferToFile(sampleData.data, sampleData.name, sampleData.type);
-      const audioBuffer = await this.arrayBufferToAudioBuffer(sampleData.data);
+      const file = await this.arrayBufferToFile(arrayBuffer, sampleData.name, sampleData.type);
+      const audioBuffer = await this.arrayBufferToAudioBuffer(arrayBuffer);
       
-      // Parse WAV metadata
-      const metadata = await readWavMetadata(file, mapping);
+      // Use the stored metadata instead of parsing from ArrayBuffer
+      const metadata = {
+        format: 'PCM',
+        sampleRate: sampleData.metadata.sampleRate,
+        bitDepth: sampleData.metadata.bitDepth,
+        channels: sampleData.metadata.channels,
+        dataLength: 0, // Not critical for restoration
+        duration: sampleData.metadata.duration,
+        audioBuffer,
+        midiNote: sampleData.metadata.midiNote || -1,
+        loopStart: sampleData.metadata.duration * 0.1, // Default 10% into sample
+        loopEnd: sampleData.metadata.duration * 0.9,   // Default 90% into sample
+        hasLoopData: false, // Default to false for session restoration
+        fileSize: sampleData.size
+      };
       
       return { file, audioBuffer, metadata };
     } catch (error) {

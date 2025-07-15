@@ -51,6 +51,11 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
   const [selectedSample, setSelectedSample] = useState<{ index: number; audioBuffer: AudioBuffer; inPoint: number; outPoint: number } | null>(null);
 
+  // Debug: Log state changes
+  useEffect(() => {
+    // State change tracking removed for production
+  }, [state.drumSamples]);
+
   // Detect mobile screen size
   useEffect(() => {
     const checkMobile = () => {
@@ -63,7 +68,11 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
   }, []);
 
   const handleFileSelect = (index: number, file: File) => {
-    onFileUpload(index, file);
+    try {
+      onFileUpload(index, file);
+    } catch (error) {
+      console.error('Error in handleFileSelect:', error);
+    }
   };
 
   const openFileDialog = (index: number) => {
@@ -194,8 +203,13 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                   ref={(el) => { fileInputRefs.current[index] = el; }}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
+                    
                     if (file) {
-                      handleFileSelect(index, file);
+                      try {
+                        handleFileSelect(index, file);
+                      } catch (error) {
+                        console.error('Error in file input handler:', error);
+                      }
                     }
                     e.target.value = '';
                   }}
