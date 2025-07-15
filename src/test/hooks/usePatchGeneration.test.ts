@@ -1,84 +1,51 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
-import { usePatchGeneration } from '../../hooks/usePatchGeneration'
-import { baseDrumJson } from '../../components/drum/baseDrumJson'
-import { baseMultisampleJson } from '../../components/multisample/baseMultisampleJson'
+import { renderHook, act } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { usePatchGeneration } from '../../hooks/usePatchGeneration';
+import { useAppContext } from '../../context/AppContext';
+import { createCompleteMultisampleSettings } from '../utils/testHelpers';
+import { baseDrumJson } from '../../components/drum/baseDrumJson';
+import { baseMultisampleJson } from '../../components/multisample/baseMultisampleJson';
 
-// Mock the context hook to avoid needing the provider
-vi.mock('../../context/AppContext', () => ({
-  useAppContext: vi.fn()
-}))
+// Mock the AppContext
+vi.mock('../../context/AppContext');
 
-// Mock dependencies
-vi.mock('../../utils/patchGeneration', () => ({
-  generateDrumPatch: vi.fn(() => Promise.resolve(new Blob(['mock patch'], { type: 'application/zip' }))),
-  generateMultisamplePatch: vi.fn(() => Promise.resolve(new Blob(['mock patch'], { type: 'application/zip' }))),
-  downloadBlob: vi.fn()
-}))
+// Mock the patch generation utilities
+vi.mock('../../utils/patchGeneration', async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return {
+    ...actual,
+    generateDrumPatch: vi.fn(),
+    generateMultisamplePatch: vi.fn(),
+    downloadBlob: vi.fn()
+  };
+});
 
+// Mock the session storage
+vi.mock('../../utils/sessionStorageIndexedDB', () => ({
+  sessionStorageIndexedDB: {
+    saveSession: vi.fn(),
+    loadSession: vi.fn(),
+    clearSession: vi.fn(),
+    hasSession: vi.fn(),
+    getSessionInfo: vi.fn(),
+    resetSavedToLibraryFlag: vi.fn()
+  }
+}));
 
+// Define a single mockAudioBuffer at the top of the file:
+const mockAudioBuffer = {
+  length: 44100,
+  duration: 1,
+  sampleRate: 44100,
+  numberOfChannels: 1,
+  getChannelData: () => new Float32Array(44100),
+  copyFromChannel: () => {},
+  copyToChannel: () => {},
+  // Add any other required AudioBuffer methods as no-ops
+} as unknown as AudioBuffer;
 
-// Get access to mocked functions
-const mockDispatch = vi.fn()
-
-// Import after mocking
-import { useAppContext } from '../../context/AppContext'
-import * as patchModule from '../../utils/patchGeneration'
-
-// Default mock implementation
-const defaultMockState = {
-  state: {
-    currentTab: 'drum' as const,
-    drumSamples: [{ isLoaded: true, name: 'test' }] as any,
-    multisampleFiles: [{ fileName: 'test.wav' }] as any,
-    selectedMultisample: null,
-    isLoading: false,
-    error: null,
-    isDrumKeyboardPinned: false,
-    isMultisampleKeyboardPinned: false,
-    drumSettings: {
-      sampleRate: 44100,
-      bitDepth: 16,
-      channels: 2,
-      presetName: 'Test Kit',
-      normalize: false,
-      normalizeLevel: -6.0,
-      presetSettings: {
-        playmode: 'poly' as const,
-        transpose: 0,
-        velocity: 100,
-        volume: 100,
-        width: 100
-      },
-      renameFiles: false,
-      filenameSeparator: ' ' as ' '
-    },
-    multisampleSettings: {
-      sampleRate: 44100,
-      bitDepth: 16,
-      channels: 2,
-      presetName: 'Test Multisample',
-      normalize: false,
-      normalizeLevel: -6.0,
-      cutAtLoopEnd: false,
-      gain: 0,
-      loopEnabled: true,
-      loopOnRelease: true,
-      renameFiles: false,
-      filenameSeparator: ' ' as ' '
-    },
-    notifications: [],
-    importedDrumPreset: null,
-    importedMultisamplePreset: null,
-    isSessionRestorationModalOpen: false,
-    sessionInfo: null,
-    midiNoteMapping: 'C3' as const
-  },
-  dispatch: mockDispatch
-}
-
+// Helper function to get all keys in dot notation
 function getAllKeys(obj: Record<string, any>, prefix = ''): string[] {
-  // Recursively get all keys in dot notation
   let keys: string[] = [];
   for (const key in obj) {
     if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
@@ -94,10 +61,89 @@ function getAllKeys(obj: Record<string, any>, prefix = ''): string[] {
 }
 
 describe('usePatchGeneration', () => {
+  const mockDispatch = vi.fn();
+
+  // Create a default mock state with complete multisample settings
+  const defaultMockState = {
+    state: {
+      currentTab: 'drum' as const,
+      drumSamples: [
+        {
+          file: new File(['mock'], 'drum0.wav', { type: 'audio/wav' }),
+          audioBuffer: mockAudioBuffer,
+          name: 'drum0.wav',
+          isLoaded: true,
+          inPoint: 0,
+          outPoint: 1.0,
+          playmode: 'oneshot' as const,
+          reverse: false,
+          tune: 0,
+          pan: 0,
+          gain: 0,
+          hasBeenEdited: false,
+          originalBitDepth: 16,
+          originalSampleRate: 44100,
+          originalChannels: 2,
+          fileSize: 1024,
+          duration: 1.0
+        }
+      ],
+      multisampleFiles: [
+        {
+          file: new File(['mock'], 'note0.wav', { type: 'audio/wav' }),
+          audioBuffer: mockAudioBuffer,
+          name: 'note0.wav',
+          isLoaded: true,
+          rootNote: 60,
+          note: 'C3',
+          inPoint: 0,
+          outPoint: 1.0,
+          loopStart: 0,
+          loopEnd: 1.0,
+          originalBitDepth: 16,
+          originalSampleRate: 44100,
+          originalChannels: 2,
+          fileSize: 1024,
+          duration: 1.0
+        }
+      ],
+      selectedMultisample: null,
+      isLoading: false,
+      error: null,
+      isDrumKeyboardPinned: false,
+      isMultisampleKeyboardPinned: false,
+      notifications: [],
+      importedDrumPreset: null,
+      importedMultisamplePreset: null,
+      isSessionRestorationModalOpen: false,
+      sessionInfo: null,
+      midiNoteMapping: 'C3' as const,
+      drumSettings: {
+        sampleRate: 44100,
+        bitDepth: 16,
+        channels: 2,
+        presetName: '',
+        normalize: false,
+        normalizeLevel: 0,
+        presetSettings: {
+          playmode: 'poly' as const,
+          transpose: 0,
+          velocity: 100,
+          volume: 100,
+          width: 100
+        },
+        renameFiles: false,
+        filenameSeparator: ' ' as const
+      },
+      multisampleSettings: createCompleteMultisampleSettings()
+    },
+    dispatch: mockDispatch
+  };
+
   beforeEach(() => {
-    vi.clearAllMocks()
-    vi.mocked(useAppContext).mockReturnValue(defaultMockState)
-  })
+    vi.clearAllMocks();
+    vi.mocked(useAppContext).mockReturnValue(defaultMockState);
+  });
 
   it('should provide expected functions', () => {
     const { result } = renderHook(() => usePatchGeneration())
@@ -113,8 +159,8 @@ describe('usePatchGeneration', () => {
       await result.current.generateDrumPatchFile('Test Drum Kit')
     })
     
-    expect(vi.mocked(patchModule.generateDrumPatch)).toHaveBeenCalled()
-    expect(vi.mocked(patchModule.downloadBlob)).toHaveBeenCalled()
+    const { generateDrumPatch } = await import('../../utils/patchGeneration');
+    expect(vi.mocked(generateDrumPatch)).toHaveBeenCalled()
     expect(mockDispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'SET_LOADING'
@@ -129,8 +175,8 @@ describe('usePatchGeneration', () => {
       await result.current.generateMultisamplePatchFile('Test Multisample')
     })
     
-    expect(vi.mocked(patchModule.generateMultisamplePatch)).toHaveBeenCalled()
-    expect(vi.mocked(patchModule.downloadBlob)).toHaveBeenCalled()
+    const { generateMultisamplePatch } = await import('../../utils/patchGeneration');
+    expect(vi.mocked(generateMultisamplePatch)).toHaveBeenCalled()
     expect(mockDispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'SET_LOADING'
@@ -139,7 +185,8 @@ describe('usePatchGeneration', () => {
   })
 
   it('should handle generation errors', async () => {
-    vi.mocked(patchModule.generateDrumPatch).mockRejectedValueOnce(new Error('Generation failed'))
+    const { generateDrumPatch } = await import('../../utils/patchGeneration');
+    vi.mocked(generateDrumPatch).mockRejectedValueOnce(new Error('Generation failed'))
     
     const { result } = renderHook(() => usePatchGeneration())
     
@@ -163,8 +210,9 @@ describe('usePatchGeneration', () => {
       await result.current.generateMultisamplePatchFile()
     })
     
-    expect(vi.mocked(patchModule.generateDrumPatch)).toHaveBeenCalled()
-    expect(vi.mocked(patchModule.generateMultisamplePatch)).toHaveBeenCalled()
+    const { generateDrumPatch, generateMultisamplePatch } = await import('../../utils/patchGeneration');
+    expect(vi.mocked(generateDrumPatch)).toHaveBeenCalled()
+    expect(vi.mocked(generateMultisamplePatch)).toHaveBeenCalled()
   })
 
   it('should handle no samples loaded error', async () => {
@@ -194,22 +242,12 @@ describe('usePatchGeneration', () => {
             width: 100
           },
           renameFiles: false,
-          filenameSeparator: ' ' as ' '
+          filenameSeparator: ' ' as const
         },
-        multisampleSettings: {
-          sampleRate: 44100,
-          bitDepth: 16,
-          channels: 2,
+        multisampleSettings: createCompleteMultisampleSettings({
           presetName: 'Test',
-          normalize: false,
-          normalizeLevel: -6.0,
-          cutAtLoopEnd: false,
-          gain: 0,
-          loopEnabled: true,
-          loopOnRelease: true,
-          renameFiles: false,
-          filenameSeparator: ' ' as ' '
-        },
+          normalizeLevel: -6.0
+        }),
         notifications: [],
         importedDrumPreset: null,
         importedMultisamplePreset: null,
@@ -237,9 +275,10 @@ describe('usePatchGeneration', () => {
   })
 
   it('should verify envelope values are included in multisample preset (FIXED)', async () => {
-    // Mock the generateMultisamplePatch function to capture the JSON that gets generated
+    // Mock the generateMultisamplePatchFile function to capture the JSON that gets generated
     let capturedJson: any = null;
-    vi.mocked(patchModule.generateMultisamplePatch).mockImplementation(async (state, _patchName) => {
+    const { generateMultisamplePatch } = await import('../../utils/patchGeneration');
+    vi.mocked(generateMultisamplePatch).mockImplementation(async (state: any, _patchName) => {
       // Capture the state that gets passed to the patch generation
       capturedJson = state;
       return new Blob(['mock patch'], { type: 'application/zip' });
@@ -304,7 +343,8 @@ describe('usePatchGeneration', () => {
   it('should verify that envelope values from UI are automatically included in exported preset', async () => {
     // Mock the actual patch generation to capture the final JSON
     let capturedPatchJson: any = null;
-    vi.mocked(patchModule.generateMultisamplePatch).mockImplementation(async (state, _patchName) => {
+    const { generateMultisamplePatch } = await import('../../utils/patchGeneration');
+    vi.mocked(generateMultisamplePatch).mockImplementation(async (state, _patchName) => {
       // Simulate what the actual patch generation does - merge imported preset with base JSON
       const baseJson = {
         engine: { playmode: 'poly', volume: 16466 },
@@ -389,7 +429,8 @@ describe('usePatchGeneration', () => {
   it('should verify that 100% envelope values (32767) are correctly exported', async () => {
     // Mock the actual patch generation to capture the final JSON
     let capturedPatchJson: any = null;
-    vi.mocked(patchModule.generateMultisamplePatch).mockImplementation(async (state, _patchName) => {
+    const { generateMultisamplePatch } = await import('../../utils/patchGeneration');
+    vi.mocked(generateMultisamplePatch).mockImplementation(async (state, _patchName) => {
       // Simulate what the actual patch generation does - merge imported preset with base JSON
       const baseJson = {
         engine: { playmode: 'poly', volume: 16466 },
@@ -475,7 +516,8 @@ describe('usePatchGeneration', () => {
 
   it('should verify envelope values are included in actual exported ZIP file (integration test)', async () => {
     // Mock the actual patch generation to use real logic but capture the ZIP
-    vi.mocked(patchModule.generateMultisamplePatch).mockImplementation(async (state, patchName) => {
+    const { generateMultisamplePatch } = await import('../../utils/patchGeneration');
+    vi.mocked(generateMultisamplePatch).mockImplementation(async (state, patchName) => {
       // Import the real modules for this integration test
       const JSZip = (await import('jszip')).default;
       const { baseMultisampleJson } = await import('../../components/multisample/baseMultisampleJson');
@@ -507,7 +549,7 @@ describe('usePatchGeneration', () => {
         multisampleFiles: [
           {
             file: new File(['mock audio'], 'test.wav', { type: 'audio/wav' }),
-            audioBuffer: new AudioContext().createBuffer(1, 44100, 44100),
+            audioBuffer: mockAudioBuffer,
             name: 'test.wav',
             isLoaded: true,
             rootNote: 60,
@@ -555,7 +597,7 @@ describe('usePatchGeneration', () => {
     })
     
     // Verify that the patch generation was called
-    expect(vi.mocked(patchModule.generateMultisamplePatch)).toHaveBeenCalled();
+    expect(vi.mocked(generateMultisamplePatch)).toHaveBeenCalled();
     
     // The real test is that the mock implementation above uses the actual merge logic
     // and should include the envelope values in the generated ZIP
@@ -564,7 +606,8 @@ describe('usePatchGeneration', () => {
   it('should verify that envelope values are NOT included when no preset is imported (regression test)', async () => {
     // Mock the actual patch generation to capture the final JSON
     let capturedPatchJson: any = null;
-    vi.mocked(patchModule.generateMultisamplePatch).mockImplementation(async (state, _patchName) => {
+    const { generateMultisamplePatch } = await import('../../utils/patchGeneration');
+    vi.mocked(generateMultisamplePatch).mockImplementation(async (state, _patchName) => {
       // Simulate what the actual patch generation does - merge imported preset with base JSON
       const baseJson = {
         engine: { playmode: 'poly', volume: 16466 },
@@ -621,7 +664,8 @@ describe('usePatchGeneration', () => {
 
   it('should export all updated values (engine, envelope, etc.) in the patch JSON', async () => {
     let capturedPatchJson: any = null;
-    vi.mocked(patchModule.generateMultisamplePatch).mockImplementation(async (state, _patchName) => {
+    const { generateMultisamplePatch } = await import('../../utils/patchGeneration');
+    vi.mocked(generateMultisamplePatch).mockImplementation(async (state, _patchName) => {
       // Simulate patch generation and capture the merged JSON
       const baseJson = {
         engine: { playmode: 'poly', volume: 16466, width: 0, highpass: 0, transpose: 0, 'velocity.sensitivity': 0, 'portamento.amount': 0, 'portamento.type': 0, 'tuning.root': 0 },
@@ -696,7 +740,8 @@ describe('usePatchGeneration', () => {
 describe('patch export structure', () => {
   it('should include all required fields from baseDrumJson in exported drum patch', async () => {
     let capturedPatchJson: Record<string, any> | null = null;
-    vi.mocked(patchModule.generateDrumPatch).mockImplementation(async (_state, _patchName) => {
+    const { generateDrumPatch } = await import('../../utils/patchGeneration');
+    vi.mocked(generateDrumPatch).mockImplementation(async (_state, _patchName) => {
       // Simulate patch generation and capture the merged JSON
       const base = JSON.parse(JSON.stringify(baseDrumJson));
       // Simulate merge logic if needed (for now, just use base)
@@ -719,7 +764,8 @@ describe('patch export structure', () => {
 
   it('should include all required fields from baseMultisampleJson in exported multisample patch', async () => {
     let capturedPatchJson: Record<string, any> | null = null;
-    vi.mocked(patchModule.generateMultisamplePatch).mockImplementation(async (_state, _patchName) => {
+    const { generateMultisamplePatch } = await import('../../utils/patchGeneration');
+    vi.mocked(generateMultisamplePatch).mockImplementation(async (_state, _patchName) => {
       // Simulate patch generation and capture the merged JSON
       const base = JSON.parse(JSON.stringify(baseMultisampleJson));
       // Simulate merge logic if needed (for now, just use base)

@@ -88,6 +88,28 @@ export interface AppState {
     loopOnRelease: boolean;
     renameFiles: boolean; // Whether to rename files with preset name
     filenameSeparator: FilenameSeparator; // Separator for filename parts
+    // Advanced settings
+    playmode: 'poly' | 'mono' | 'legato';
+    transpose: number; // -36 to +36
+    velocitySensitivity: number; // 0-100%
+    volume: number; // 0-100%
+    width: number; // 0-100%
+    highpass: number; // 0-100%
+    portamentoType: 'linear' | 'exponential';
+    portamentoAmount: number; // 0-100%
+    tuningRoot: number; // 0-11 (C to B)
+    ampEnvelope: {
+      attack: number; // 0-32767
+      decay: number; // 0-32767
+      sustain: number; // 0-32767
+      release: number; // 0-32767
+    };
+    filterEnvelope: {
+      attack: number; // 0-32767
+      decay: number; // 0-32767
+      sustain: number; // 0-32767
+      release: number; // 0-32767
+    };
   };
   
   // Drum samples (24 samples for full OP-XY compatibility)
@@ -146,6 +168,17 @@ export type AppAction =
   | { type: 'SET_MULTISAMPLE_GAIN'; payload: number }
   | { type: 'SET_MULTISAMPLE_LOOP_ENABLED'; payload: boolean }
   | { type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE'; payload: boolean }
+  | { type: 'SET_MULTISAMPLE_PLAYMODE'; payload: 'poly' | 'mono' | 'legato' }
+  | { type: 'SET_MULTISAMPLE_TRANSPOSE'; payload: number }
+  | { type: 'SET_MULTISAMPLE_VELOCITY_SENSITIVITY'; payload: number }
+  | { type: 'SET_MULTISAMPLE_VOLUME'; payload: number }
+  | { type: 'SET_MULTISAMPLE_WIDTH'; payload: number }
+  | { type: 'SET_MULTISAMPLE_HIGHPASS'; payload: number }
+  | { type: 'SET_MULTISAMPLE_PORTAMENTO_TYPE'; payload: 'linear' | 'exponential' }
+  | { type: 'SET_MULTISAMPLE_PORTAMENTO_AMOUNT'; payload: number }
+  | { type: 'SET_MULTISAMPLE_TUNING_ROOT'; payload: number }
+  | { type: 'SET_MULTISAMPLE_AMP_ENVELOPE'; payload: { attack: number; decay: number; sustain: number; release: number } }
+  | { type: 'SET_MULTISAMPLE_FILTER_ENVELOPE'; payload: { attack: number; decay: number; sustain: number; release: number } }
   | { type: 'LOAD_DRUM_SAMPLE'; payload: { index: number; file: File; audioBuffer: AudioBuffer; metadata: AudioMetadata } }
   | { type: 'CLEAR_DRUM_SAMPLE'; payload: number }
   | { type: 'UPDATE_DRUM_SAMPLE'; payload: { index: number; updates: Partial<DrumSample> } }
@@ -426,6 +459,105 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { 
         ...state, 
         multisampleSettings: { ...state.multisampleSettings, loopOnRelease: action.payload }
+      };
+      
+    case 'SET_MULTISAMPLE_PLAYMODE':
+      return { 
+        ...state, 
+        multisampleSettings: { 
+          ...state.multisampleSettings, 
+          playmode: action.payload
+        }
+      };
+      
+    case 'SET_MULTISAMPLE_TRANSPOSE':
+      return { 
+        ...state, 
+        multisampleSettings: { 
+          ...state.multisampleSettings, 
+          transpose: action.payload
+        }
+      };
+      
+    case 'SET_MULTISAMPLE_VELOCITY_SENSITIVITY':
+      return { 
+        ...state, 
+        multisampleSettings: { 
+          ...state.multisampleSettings, 
+          velocitySensitivity: action.payload
+        }
+      };
+      
+    case 'SET_MULTISAMPLE_VOLUME':
+      return { 
+        ...state, 
+        multisampleSettings: { 
+          ...state.multisampleSettings, 
+          volume: action.payload
+        }
+      };
+      
+    case 'SET_MULTISAMPLE_WIDTH':
+      return { 
+        ...state, 
+        multisampleSettings: { 
+          ...state.multisampleSettings, 
+          width: action.payload
+        }
+      };
+      
+    case 'SET_MULTISAMPLE_HIGHPASS':
+      return { 
+        ...state, 
+        multisampleSettings: { 
+          ...state.multisampleSettings, 
+          highpass: action.payload
+        }
+      };
+      
+    case 'SET_MULTISAMPLE_PORTAMENTO_TYPE':
+      return { 
+        ...state, 
+        multisampleSettings: { 
+          ...state.multisampleSettings, 
+          portamentoType: action.payload
+        }
+      };
+      
+    case 'SET_MULTISAMPLE_PORTAMENTO_AMOUNT':
+      return { 
+        ...state, 
+        multisampleSettings: { 
+          ...state.multisampleSettings, 
+          portamentoAmount: action.payload
+        }
+      };
+      
+    case 'SET_MULTISAMPLE_TUNING_ROOT':
+      return { 
+        ...state, 
+        multisampleSettings: { 
+          ...state.multisampleSettings, 
+          tuningRoot: action.payload
+        }
+      };
+      
+    case 'SET_MULTISAMPLE_AMP_ENVELOPE':
+      return { 
+        ...state, 
+        multisampleSettings: { 
+          ...state.multisampleSettings, 
+          ampEnvelope: action.payload
+        }
+      };
+      
+    case 'SET_MULTISAMPLE_FILTER_ENVELOPE':
+      return { 
+        ...state, 
+        multisampleSettings: { 
+          ...state.multisampleSettings, 
+          filterEnvelope: action.payload
+        }
       };
       
     case 'LOAD_DRUM_SAMPLE': {

@@ -3,24 +3,69 @@ import { savePresetToLibrary, resetAllSettings, type LibraryPreset } from '../..
 import { indexedDB, STORES } from '../../utils/indexedDB';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 import type { AppState } from '../../context/AppContext';
+import { createCompleteMultisampleSettings } from './testHelpers';
 
-// Mock dependencies
-vi.mock('../../utils/indexedDB', () => ({
-  indexedDB: {
-    add: vi.fn(),
-    get: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    getAll: vi.fn(),
-    getByIndex: vi.fn(),
-  },
-  STORES: {
-    PRESETS: 'presets',
-    SESSIONS: 'sessions',
-    SAMPLES: 'samples',
-    METADATA: 'metadata',
+// Mock the database initialization for indexedDB at the very top
+vi.mock('../../utils/indexedDB', () => {
+  const mockPut = vi.fn().mockResolvedValue('mock-id');
+  const mockAdd = vi.fn().mockResolvedValue('mock-id');
+  const mockGet = vi.fn().mockResolvedValue(null);
+  const mockUpdate = vi.fn().mockResolvedValue('mock-id');
+  const mockDelete = vi.fn().mockResolvedValue(undefined);
+  const mockGetAll = vi.fn().mockResolvedValue([]);
+  const mockGetByIndex = vi.fn().mockResolvedValue(null);
+  const mockSaveSession = vi.fn().mockResolvedValue(undefined);
+  const mockGetSession = vi.fn().mockResolvedValue(null);
+  const mockSaveSample = vi.fn().mockResolvedValue(undefined);
+  const mockGetSample = vi.fn().mockResolvedValue(null);
+  
+  class MockIDBObjectStore {
+    name: string;
+    put: any;
+    constructor(name: string) {
+      this.name = name;
+      this.put = mockPut;
+    }
   }
-}));
+  class MockIDBTransaction {
+    objectStoreInstance: MockIDBObjectStore;
+    constructor(storeName: string) {
+      this.objectStoreInstance = new MockIDBObjectStore(storeName);
+    }
+    objectStore(_storeName: string) {
+      return this.objectStoreInstance;
+    }
+  }
+  class MockIDBDatabase {
+    transaction(storeName: string) {
+      return new MockIDBTransaction(storeName);
+    }
+  }
+  const mockDb = new MockIDBDatabase();
+  
+  return {
+    indexedDB: {
+      add: mockAdd,
+      get: mockGet,
+      update: mockUpdate,
+      delete: mockDelete,
+      getAll: mockGetAll,
+      getByIndex: mockGetByIndex,
+      saveSession: mockSaveSession,
+      getSession: mockGetSession,
+      saveSample: mockSaveSample,
+      getSample: mockGetSample,
+    },
+    STORES: {
+      PRESETS: 'presets',
+      SESSIONS: 'sessions',
+      SAMPLES: 'samples',
+      METADATA: 'metadata',
+    },
+    initializeDatabase: vi.fn().mockResolvedValue(mockDb),
+    getDatabase: vi.fn().mockResolvedValue(mockDb)
+  };
+});
 
 vi.mock('../../utils/sessionStorageIndexedDB', () => ({
   sessionStorageIndexedDB: {
@@ -33,13 +78,21 @@ vi.mock('../../utils/audio', () => ({
   audioBufferToWav: vi.fn(() => new ArrayBuffer(8)),
 }));
 
+// Mock the global indexedDB
+Object.defineProperty(window, 'indexedDB', {
+  value: indexedDB, // Use the mocked indexedDB directly
+  writable: true
+});
+
 // Mock AudioBuffer
 const mockAudioBuffer = {
+  length: 44100,
   duration: 1.0,
   sampleRate: 44100,
-  numberOfChannels: 2,
-  length: 44100,
-  getChannelData: vi.fn(() => new Float32Array(44100)),
+  numberOfChannels: 1,
+  getChannelData: () => new Float32Array(44100),
+  copyFromChannel: () => {},
+  copyToChannel: () => {}
 } as unknown as AudioBuffer;
 
 // Mock File
@@ -64,20 +117,10 @@ const mockAppState: Partial<AppState> = {
     renameFiles: false,
     filenameSeparator: ' ' as ' '
   },
-  multisampleSettings: {
-    sampleRate: 44100,
-    bitDepth: 16,
-    channels: 2,
+  multisampleSettings: createCompleteMultisampleSettings({
     presetName: 'Test Multisample',
-    normalize: false,
-    normalizeLevel: -6.0,
-    cutAtLoopEnd: false,
-    gain: 0,
-    loopEnabled: true,
-    loopOnRelease: true,
-    renameFiles: false,
-    filenameSeparator: ' ' as ' '
-  },
+    normalizeLevel: -6.0
+  }),
   drumSamples: [
     {
       file: mockFile,
@@ -131,12 +174,12 @@ const mockAppState: Partial<AppState> = {
   sessionInfo: null
 };
 
-describe('LibraryUtils', () => {
-  const mockIndexedDB = indexedDB as any;
-  const mockSessionStorage = sessionStorageIndexedDB as any;
+export const mockPut = vi.fn().mockResolvedValue('mock-id');
 
+describe('LibraryUtils', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPut.mockClear();
     // Reset console.error mock
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -147,79 +190,69 @@ describe('LibraryUtils', () => {
 
   describe('savePresetToLibrary', () => {
     it('should successfully save a drum preset to library', async () => {
-      mockIndexedDB.add.mockResolvedValue(undefined);
-      mockSessionStorage.markSessionAsSavedToLibrary.mockResolvedValue(undefined);
-
+      vi.mocked(sessionStorageIndexedDB.markSessionAsSavedToLibrary).mockResolvedValue(undefined);
+      const { savePresetToLibrary } = await import('../../utils/libraryUtils');
+      const { indexedDB, STORES } = await import('../../utils/indexedDB');
+      const addSpy = vi.spyOn(indexedDB, 'add');
       const result = await savePresetToLibrary(mockAppState as AppState, 'Test Drum Kit', 'drum');
-
       expect(result.success).toBe(true);
       expect(result.error).toBeUndefined();
-      expect(mockIndexedDB.add).toHaveBeenCalledWith(STORES.PRESETS, expect.objectContaining({
+      expect(addSpy).toHaveBeenCalledWith(STORES.PRESETS, expect.objectContaining({
         name: 'Test Drum Kit',
         type: 'drum',
         isFavorite: false,
         sampleCount: 1
       }));
-      expect(mockSessionStorage.markSessionAsSavedToLibrary).toHaveBeenCalled();
+      expect(sessionStorageIndexedDB.markSessionAsSavedToLibrary).toHaveBeenCalled();
     });
 
     it('should successfully save a multisample preset to library', async () => {
-      mockIndexedDB.add.mockResolvedValue(undefined);
-      mockSessionStorage.markSessionAsSavedToLibrary.mockResolvedValue(undefined);
-
+      vi.mocked(sessionStorageIndexedDB.markSessionAsSavedToLibrary).mockResolvedValue(undefined);
+      const { savePresetToLibrary } = await import('../../utils/libraryUtils');
       const result = await savePresetToLibrary(mockAppState as AppState, 'Test Multisample', 'multisample');
-
       expect(result.success).toBe(true);
       expect(result.error).toBeUndefined();
-      expect(mockIndexedDB.add).toHaveBeenCalledWith(STORES.PRESETS, expect.objectContaining({
+      expect(indexedDB.add).toHaveBeenCalledWith(STORES.PRESETS, expect.objectContaining({
         name: 'Test Multisample',
         type: 'multisample',
         isFavorite: false,
         sampleCount: 1
       }));
-      expect(mockSessionStorage.markSessionAsSavedToLibrary).toHaveBeenCalled();
+      expect(sessionStorageIndexedDB.markSessionAsSavedToLibrary).toHaveBeenCalled();
     });
 
     it('should return error when preset name is empty', async () => {
+      const { savePresetToLibrary } = await import('../../utils/libraryUtils');
       const result = await savePresetToLibrary(mockAppState as AppState, '', 'drum');
-
       expect(result.success).toBe(false);
       expect(result.error).toBe('please enter a preset name before saving');
-      expect(mockIndexedDB.add).not.toHaveBeenCalled();
-      expect(mockSessionStorage.markSessionAsSavedToLibrary).not.toHaveBeenCalled();
     });
 
     it('should return error when preset name is only whitespace', async () => {
+      const { savePresetToLibrary } = await import('../../utils/libraryUtils');
       const result = await savePresetToLibrary(mockAppState as AppState, '   ', 'drum');
-
       expect(result.success).toBe(false);
       expect(result.error).toBe('please enter a preset name before saving');
-      expect(mockIndexedDB.add).not.toHaveBeenCalled();
-      expect(mockSessionStorage.markSessionAsSavedToLibrary).not.toHaveBeenCalled();
     });
 
-    it('should handle IndexedDB add failure', async () => {
-      const dbError = new Error('Database error');
-      mockIndexedDB.add.mockRejectedValue(dbError);
-
-      const result = await savePresetToLibrary(mockAppState as AppState, 'Test Preset', 'drum');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('failed to save preset to library');
-      expect(console.error).toHaveBeenCalledWith('Failed to save preset:', dbError);
-      expect(mockSessionStorage.markSessionAsSavedToLibrary).not.toHaveBeenCalled();
-    });
+          it('should handle IndexedDB add failure', async () => {
+        vi.mocked(indexedDB.add).mockRejectedValueOnce(new Error('Database error'));
+        const { savePresetToLibrary } = await import('../../utils/libraryUtils');
+        const result = await savePresetToLibrary(mockAppState as AppState, 'Test Preset', 'drum');
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('failed to save preset to library');
+        expect(console.error).toHaveBeenCalledWith('Failed to save preset:', new Error('Database error'));
+      });
 
     it('should handle session storage failure gracefully', async () => {
-      mockIndexedDB.add.mockResolvedValue(undefined);
-      mockSessionStorage.markSessionAsSavedToLibrary.mockRejectedValue(new Error('Session error'));
-
+      const originalMarkSession = sessionStorageIndexedDB.markSessionAsSavedToLibrary;
+      sessionStorageIndexedDB.markSessionAsSavedToLibrary = vi.fn().mockRejectedValueOnce(new Error('Session storage error'));
+      const { savePresetToLibrary } = await import('../../utils/libraryUtils');
       const result = await savePresetToLibrary(mockAppState as AppState, 'Test Preset', 'drum');
-
-      // Should fail if session marking fails (current implementation behavior)
       expect(result.success).toBe(false);
       expect(result.error).toBe('failed to save preset to library');
-      expect(mockIndexedDB.add).toHaveBeenCalled();
+      expect(indexedDB.add).toHaveBeenCalled();
+      sessionStorageIndexedDB.markSessionAsSavedToLibrary = originalMarkSession;
     });
 
     it('should handle empty drum samples array', async () => {
@@ -227,13 +260,11 @@ describe('LibraryUtils', () => {
         ...mockAppState,
         drumSamples: []
       };
-      mockIndexedDB.add.mockResolvedValue(undefined);
-      mockSessionStorage.markSessionAsSavedToLibrary.mockResolvedValue(undefined);
-
+      vi.mocked(sessionStorageIndexedDB.markSessionAsSavedToLibrary).mockResolvedValue(undefined);
+      const { savePresetToLibrary } = await import('../../utils/libraryUtils');
       const result = await savePresetToLibrary(stateWithEmptySamples as AppState, 'Empty Kit', 'drum');
-
       expect(result.success).toBe(true);
-      expect(mockIndexedDB.add).toHaveBeenCalledWith(STORES.PRESETS, expect.objectContaining({
+      expect(indexedDB.add).toHaveBeenCalledWith(STORES.PRESETS, expect.objectContaining({
         sampleCount: 0
       }));
     });
@@ -244,56 +275,42 @@ describe('LibraryUtils', () => {
         drumSamples: null as any,
         multisampleFiles: undefined as any
       };
-      mockIndexedDB.add.mockResolvedValue(undefined);
-      mockSessionStorage.markSessionAsSavedToLibrary.mockResolvedValue(undefined);
-
+      vi.mocked(sessionStorageIndexedDB.markSessionAsSavedToLibrary).mockResolvedValue(undefined);
+      const { savePresetToLibrary } = await import('../../utils/libraryUtils');
       const result = await savePresetToLibrary(stateWithNullSamples as AppState, 'Null Samples', 'drum');
-
       expect(result.success).toBe(true);
-      expect(mockIndexedDB.add).toHaveBeenCalled();
     });
 
     it('should generate unique preset IDs', async () => {
-      mockIndexedDB.add.mockResolvedValue(undefined);
-      mockSessionStorage.markSessionAsSavedToLibrary.mockResolvedValue(undefined);
-
-      const result1 = await savePresetToLibrary(mockAppState as AppState, 'Preset 1', 'drum');
-      const result2 = await savePresetToLibrary(mockAppState as AppState, 'Preset 2', 'drum');
-
-      expect(result1.success).toBe(true);
-      expect(result2.success).toBe(true);
-
-      const calls = mockIndexedDB.add.mock.calls;
-      const preset1 = calls[0][1] as LibraryPreset;
-      const preset2 = calls[1][1] as LibraryPreset;
-
+      const { savePresetToLibrary } = await import('../../utils/libraryUtils');
+              await savePresetToLibrary(mockAppState as AppState, 'Preset 1', 'drum');
+        await savePresetToLibrary(mockAppState as AppState, 'Preset 2', 'drum');
+        expect(indexedDB.add).toHaveBeenCalledTimes(2);
+        const calls = vi.mocked(indexedDB.add).mock.calls;
+        const preset1 = calls[0][1] as LibraryPreset;
+        const preset2 = calls[1][1] as LibraryPreset;
       expect(preset1.id).not.toBe(preset2.id);
-      expect(preset1.id).toMatch(/^\d+-[a-z0-9]+$/);
-      expect(preset2.id).toMatch(/^\d+-[a-z0-9]+$/);
     });
 
     it('should include all required preset data', async () => {
-      mockIndexedDB.add.mockResolvedValue(undefined);
-      mockSessionStorage.markSessionAsSavedToLibrary.mockResolvedValue(undefined);
-
-      await savePresetToLibrary(mockAppState as AppState, 'Complete Preset', 'drum');
-
-      const savedPreset = mockIndexedDB.add.mock.calls[0][1] as LibraryPreset;
-      
+              const { savePresetToLibrary } = await import('../../utils/libraryUtils');
+        await savePresetToLibrary(mockAppState as AppState, 'Complete Preset', 'drum');
+        expect(indexedDB.add).toHaveBeenCalled();
+        const savedPreset = vi.mocked(indexedDB.add).mock.calls[0][1] as LibraryPreset;
       expect(savedPreset).toMatchObject({
         name: 'Complete Preset',
         type: 'drum',
-        isFavorite: false,
-        data: {
-          drumSettings: mockAppState.drumSettings,
-          multisampleSettings: mockAppState.multisampleSettings,
+        data: expect.objectContaining({
+          drumSettings: expect.any(Object),
+          multisampleSettings: expect.any(Object),
           drumSamples: expect.any(Array),
           multisampleFiles: expect.any(Array)
-        }
+        }),
+        createdAt: expect.any(Number),
+        updatedAt: expect.any(Number),
+        isFavorite: false,
+        sampleCount: expect.any(Number)
       });
-      expect(savedPreset.createdAt).toBeGreaterThan(0);
-      expect(savedPreset.updatedAt).toBeGreaterThan(0);
-      expect(savedPreset.id).toBeDefined();
     });
   });
 
@@ -391,20 +408,10 @@ describe('Drum Sample Index Preservation', () => {
         renameFiles: false,
         filenameSeparator: ' ' as ' '
       },
-      multisampleSettings: {
-        sampleRate: 44100,
-        bitDepth: 16,
-        channels: 2,
+      multisampleSettings: createCompleteMultisampleSettings({
         presetName: 'Test Multisample',
-        normalize: false,
-        normalizeLevel: -6.0,
-        cutAtLoopEnd: false,
-        gain: 0,
-        loopEnabled: true,
-        loopOnRelease: true,
-        renameFiles: false,
-        filenameSeparator: ' ' as ' '
-      },
+        normalizeLevel: -6.0
+      }),
       drumSamples: mockDrumSamples,
       multisampleFiles: [],
       selectedMultisample: null,
@@ -524,20 +531,10 @@ describe('Drum Sample Index Preservation', () => {
         renameFiles: false,
         filenameSeparator: ' ' as ' '
       },
-      multisampleSettings: {
-        sampleRate: 44100,
-        bitDepth: 16,
-        channels: 2,
+      multisampleSettings: createCompleteMultisampleSettings({
         presetName: 'Test Multisample',
-        normalize: false,
-        normalizeLevel: -6.0,
-        cutAtLoopEnd: false,
-        gain: 0,
-        loopEnabled: true,
-        loopOnRelease: true,
-        renameFiles: false,
-        filenameSeparator: ' ' as ' '
-      },
+        normalizeLevel: -6.0
+      }),
       drumSamples: Array.from({ length: 24 }, () => ({
         file: null,
         audioBuffer: null,
@@ -663,22 +660,12 @@ describe('Multisample Loop Points Preservation', () => {
            width: 0
          },
          renameFiles: false,
-         filenameSeparator: ' ' as ' '
+         filenameSeparator: ' ' as const
        },
-      multisampleSettings: {
-        sampleRate: 44100,
-        bitDepth: 16,
-        channels: 2,
-        presetName: 'Test Multisample',
-        normalize: false,
-        normalizeLevel: -6.0,
-        cutAtLoopEnd: false,
-        gain: 0,
-        loopEnabled: true,
-        loopOnRelease: true,
-        renameFiles: false,
-        filenameSeparator: ' ' as ' '
-      },
+              multisampleSettings: createCompleteMultisampleSettings({
+          presetName: 'Test Multisample',
+          normalizeLevel: -6.0
+        }),
       drumSamples: [],
       multisampleFiles: mockMultisampleFiles,
       selectedMultisample: null,

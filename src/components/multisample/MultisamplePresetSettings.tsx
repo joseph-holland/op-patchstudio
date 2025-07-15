@@ -1,9 +1,9 @@
-import { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { Select, SelectItem, Slider, Toggle } from '@carbon/react';
-import { importPresetFromFile, type MultisamplePresetJson } from '../../utils/presetImport';
+import { Select, SelectItem, Toggle, Slider } from '@carbon/react';
 import { ADSREnvelope } from '../common/ADSREnvelope';
-import { percentToInternal } from '../../utils/valueConversions';
+import { importPresetFromFile } from '../../utils/presetImport';
+import type { MultisamplePresetJson } from '../../utils/presetImport';
 
 // ADSR Presets for different instrument types (copied from ADSREnvelope component)
 const ADSR_PRESETS = {
@@ -55,52 +55,10 @@ interface MultisampleAdvancedSettings {
   };
 }
 
-// Function to create true default settings (non-random, consistent values)
-const createTrueDefaultSettings = (): MultisampleAdvancedSettings => {
-  return {
-    playmode: 'poly',
-    loopEnabled: true,
-    loopOnRelease: true,
-    transpose: 0,
-    velocitySensitivity: 20,
-    volume: 69,
-    width: 0,
-    highpass: 0,
-    portamentoType: 'linear',
-    portamentoAmount: 0,
-    tuningRoot: 0, // C
-    ampEnvelope: ADSR_PRESETS.keys.amp, // Use consistent 'keys' preset as default
-    filterEnvelope: ADSR_PRESETS.keys.filter,
-  };
-};
-
 export function MultisamplePresetSettings() {
   const { state, dispatch } = useAppContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
-  
-  // Initialize settings from global state instead of random defaults
-  const [settings, setSettings] = useState<MultisampleAdvancedSettings>(() => {
-    // Use global state if available, otherwise use true defaults
-    if (state.multisampleSettings) {
-      return {
-        playmode: 'poly', // This is not stored in global state, use default
-        loopEnabled: state.multisampleSettings.loopEnabled,
-        loopOnRelease: state.multisampleSettings.loopOnRelease,
-        transpose: 0, // Not stored in global state
-        velocitySensitivity: 20, // Not stored in global state
-        volume: 69, // Not stored in global state
-        width: 0, // Not stored in global state
-        highpass: 0, // Not stored in global state
-        portamentoType: 'linear', // Not stored in global state
-        portamentoAmount: 0, // Not stored in global state
-        tuningRoot: 0, // Not stored in global state
-        ampEnvelope: ADSR_PRESETS.keys.amp, // Use consistent default
-        filterEnvelope: ADSR_PRESETS.keys.filter, // Use consistent default
-      };
-    }
-    return createTrueDefaultSettings();
-  });
   
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
@@ -117,20 +75,6 @@ export function MultisamplePresetSettings() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Update local settings when global state changes (e.g., during session restoration)
-  useEffect(() => {
-    setSettings(prevSettings => ({
-      ...prevSettings,
-      loopEnabled: state.multisampleSettings.loopEnabled,
-      loopOnRelease: state.multisampleSettings.loopOnRelease,
-    }));
-  }, [state.multisampleSettings.loopEnabled, state.multisampleSettings.loopOnRelease]);
-
-  // Dispatch settings to app context whenever settings change
-  useEffect(() => {
-    dispatchSettingsToContext(settings);
-  }, [settings, dispatch]); // Run whenever settings change
 
   const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -191,686 +135,281 @@ export function MultisamplePresetSettings() {
   };
 
   const handleReset = () => {
-    const resetSettings = createTrueDefaultSettings();
-    setSettings(resetSettings);
+    // Reset all advanced settings to defaults
+    dispatch({ type: 'SET_MULTISAMPLE_PLAYMODE', payload: 'poly' });
+    dispatch({ type: 'SET_MULTISAMPLE_TRANSPOSE', payload: 0 });
+    dispatch({ type: 'SET_MULTISAMPLE_VELOCITY_SENSITIVITY', payload: 20 });
+    dispatch({ type: 'SET_MULTISAMPLE_VOLUME', payload: 69 });
+    dispatch({ type: 'SET_MULTISAMPLE_WIDTH', payload: 0 });
+    dispatch({ type: 'SET_MULTISAMPLE_HIGHPASS', payload: 0 });
+    dispatch({ type: 'SET_MULTISAMPLE_PORTAMENTO_TYPE', payload: 'linear' });
+    dispatch({ type: 'SET_MULTISAMPLE_PORTAMENTO_AMOUNT', payload: 0 });
+    dispatch({ type: 'SET_MULTISAMPLE_TUNING_ROOT', payload: 0 });
+    dispatch({ type: 'SET_MULTISAMPLE_AMP_ENVELOPE', payload: ADSR_PRESETS.keys.amp });
+    dispatch({ type: 'SET_MULTISAMPLE_FILTER_ENVELOPE', payload: ADSR_PRESETS.keys.filter });
   };
 
   const updateSetting = <K extends keyof MultisampleAdvancedSettings>(
     key: K,
     value: MultisampleAdvancedSettings[K]
   ) => {
-    setSettings(prev => {
-      const newSettings = { ...prev, [key]: value };
-      return newSettings;
-    });
-  };
-
-  // Function to dispatch current settings to app context
-  const dispatchSettingsToContext = (currentSettings: MultisampleAdvancedSettings) => {
-    // Dispatch loop settings to global context
-    dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: currentSettings.loopEnabled });
-    dispatch({ type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE', payload: currentSettings.loopOnRelease });
-    
-    const payload = {
-      engine: {
-        playmode: currentSettings.playmode,
-        transpose: currentSettings.transpose,
-        'velocity.sensitivity': percentToInternal(currentSettings.velocitySensitivity),
-        volume: percentToInternal(currentSettings.volume),
-        width: percentToInternal(currentSettings.width),
-        highpass: percentToInternal(currentSettings.highpass),
-        'portamento.amount': percentToInternal(currentSettings.portamentoAmount),
-        'portamento.type': currentSettings.portamentoType === 'linear' ? 32767 : 0,
-        'tuning.root': currentSettings.tuningRoot,
-      },
-      envelope: {
-        amp: {
-          attack: currentSettings.ampEnvelope.attack,
-          decay: currentSettings.ampEnvelope.decay,
-          sustain: currentSettings.ampEnvelope.sustain,
-          release: currentSettings.ampEnvelope.release,
-        },
-        filter: {
-          attack: currentSettings.filterEnvelope.attack,
-          decay: currentSettings.filterEnvelope.decay,
-          sustain: currentSettings.filterEnvelope.sustain,
-          release: currentSettings.filterEnvelope.release,
-        },
-      },
-      regions: [] // Will be populated during patch generation
-    };
-
-    dispatch({
-      type: 'SET_IMPORTED_MULTISAMPLE_PRESET',
-      payload
-    });
+    // Update the corresponding global state
+    switch (key) {
+      case 'playmode':
+        dispatch({ type: 'SET_MULTISAMPLE_PLAYMODE', payload: value as 'poly' | 'mono' | 'legato' });
+        break;
+      case 'transpose':
+        dispatch({ type: 'SET_MULTISAMPLE_TRANSPOSE', payload: value as number });
+        break;
+      case 'velocitySensitivity':
+        dispatch({ type: 'SET_MULTISAMPLE_VELOCITY_SENSITIVITY', payload: value as number });
+        break;
+      case 'volume':
+        dispatch({ type: 'SET_MULTISAMPLE_VOLUME', payload: value as number });
+        break;
+      case 'width':
+        dispatch({ type: 'SET_MULTISAMPLE_WIDTH', payload: value as number });
+        break;
+      case 'highpass':
+        dispatch({ type: 'SET_MULTISAMPLE_HIGHPASS', payload: value as number });
+        break;
+      case 'portamentoType':
+        dispatch({ type: 'SET_MULTISAMPLE_PORTAMENTO_TYPE', payload: value as 'linear' | 'exponential' });
+        break;
+      case 'portamentoAmount':
+        dispatch({ type: 'SET_MULTISAMPLE_PORTAMENTO_AMOUNT', payload: value as number });
+        break;
+      case 'tuningRoot':
+        dispatch({ type: 'SET_MULTISAMPLE_TUNING_ROOT', payload: value as number });
+        break;
+    }
   };
 
   const updateAmpEnvelope = (envelope: MultisampleAdvancedSettings['ampEnvelope']) => {
-    setSettings(prev => {
-      const newSettings = { ...prev, ampEnvelope: envelope };
-      return newSettings;
-    });
+    dispatch({ type: 'SET_MULTISAMPLE_AMP_ENVELOPE', payload: envelope });
   };
 
   const updateFilterEnvelope = (envelope: MultisampleAdvancedSettings['filterEnvelope']) => {
-    setSettings(prev => {
-      const newSettings = { ...prev, filterEnvelope: envelope };
-      return newSettings;
-    });
+    dispatch({ type: 'SET_MULTISAMPLE_FILTER_ENVELOPE', payload: envelope });
   };
 
   const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
-  // Get true default settings for comparison
-  const trueDefaults = createTrueDefaultSettings();
-
-  // Check if any settings have changed from their true default values
-  const hasPresetChanges = (
-    // Check non-envelope settings against true defaults
-    settings.playmode !== trueDefaults.playmode ||
-    settings.loopEnabled !== trueDefaults.loopEnabled ||
-    settings.loopOnRelease !== trueDefaults.loopOnRelease ||
-    settings.transpose !== trueDefaults.transpose ||
-    settings.velocitySensitivity !== trueDefaults.velocitySensitivity ||
-    settings.volume !== trueDefaults.volume ||
-    settings.width !== trueDefaults.width ||
-    settings.highpass !== trueDefaults.highpass ||
-    settings.portamentoType !== trueDefaults.portamentoType ||
-    settings.portamentoAmount !== trueDefaults.portamentoAmount ||
-    settings.tuningRoot !== trueDefaults.tuningRoot ||
-    // Check envelope settings against true defaults
-    settings.ampEnvelope.attack !== trueDefaults.ampEnvelope.attack ||
-    settings.ampEnvelope.decay !== trueDefaults.ampEnvelope.decay ||
-    settings.ampEnvelope.sustain !== trueDefaults.ampEnvelope.sustain ||
-    settings.ampEnvelope.release !== trueDefaults.ampEnvelope.release ||
-    settings.filterEnvelope.attack !== trueDefaults.filterEnvelope.attack ||
-    settings.filterEnvelope.decay !== trueDefaults.filterEnvelope.decay ||
-    settings.filterEnvelope.sustain !== trueDefaults.filterEnvelope.sustain ||
-    settings.filterEnvelope.release !== trueDefaults.filterEnvelope.release
-  );
-
   return (
-    <div style={{
-      background: 'var(--color-bg-primary)',
-      borderRadius: '15px',
-      boxShadow: '0 2px 8px var(--color-shadow-primary)',
-      border: '1px solid var(--color-border-subtle)',
-      overflow: 'hidden',
-      marginBottom: '1rem',
-    }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: isMobile ? '0.5rem 1rem 0.5rem 1rem' : '0.7rem 1rem 0.5rem 1rem',
-        borderBottom: '1px solid var(--color-border-medium)',
-        backgroundColor: 'var(--color-bg-secondary)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-          <h3 style={{
-            margin: 0,
-            color: '#222',
-            fontSize: '1.25rem',
-            fontWeight: 300,
-          }}>
-            preset settings
-          </h3>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+      {/* Basic Settings Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => toggleSection('basic')}>
+          <span style={{ transform: expandedSections.basic ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>▶</span>
+          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '500', color: 'var(--color-text-primary)' }}>basic settings</h3>
         </div>
+        
+        {expandedSections.basic && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0 0 1rem' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Select
+                  id="playmode"
+                  labelText=""
+                  value={state.multisampleSettings.playmode}
+                  onChange={(e) => updateSetting('playmode', e.target.value as any)}
+                  size="sm"
+                >
+                  <SelectItem value="poly" text="poly" />
+                  <SelectItem value="mono" text="mono" />
+                  <SelectItem value="legato" text="legato" />
+                </Select>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Toggle
+                  id="loop-enabled"
+                  labelA="off"
+                  labelB="on"
+                  toggled={state.multisampleSettings.loopEnabled}
+                  onToggle={(checked: boolean) => updateSetting('loopEnabled', checked)}
+                  size="sm"
+                  labelText="loop enabled"
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Toggle
+                  id="loop-on-release"
+                  labelA="off"
+                  labelB="on"
+                  toggled={state.multisampleSettings.loopOnRelease}
+                  onToggle={(checked: boolean) => updateSetting('loopOnRelease', checked)}
+                  size="sm"
+                  labelText="loop on release"
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Select
+                  id="tuning-root"
+                  labelText=""
+                  value={state.multisampleSettings.tuningRoot.toString()}
+                  onChange={(e) => updateSetting('tuningRoot', parseInt(e.target.value))}
+                  size="sm"
+                >
+                  {noteNames.map((note, index) => (
+                    <SelectItem key={index} value={index.toString()} text={note} />
+                  ))}
+                </Select>
+              </div>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>transpose: {state.multisampleSettings.transpose}</label>
+                <Slider
+                  id="multisample-transpose"
+                  min={-36}
+                  max={36}
+                  step={1}
+                  value={state.multisampleSettings.transpose}
+                  onChange={({ value }) => updateSetting('transpose', value)}
+                  hideTextInput
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Content */}
-      <div style={{ 
-        padding: isMobile ? '1rem' : '2rem',
-      }}>
-        {/* Settings Grid */}
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          
-          {/* Essential Settings */}
-          <section style={{
-            border: '1px solid var(--color-border-light)',
-            borderRadius: '6px',
-            marginBottom: '0.75rem',
-            overflow: 'hidden',
-            background: 'var(--color-bg-primary)'
-          }}>
-            {/* Header */}
-            <div
-              onClick={() => toggleSection('basic')}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '1rem 1.25rem',
-                background: 'var(--color-bg-secondary)',
-                cursor: 'pointer',
-                userSelect: 'none',
-                borderBottom: expandedSections.basic ? '1px solid var(--color-border-light)' : 'none',
-                transition: 'background 0.2s',
-                borderRadius: '6px 6px 0 0',
-                overflow: 'hidden',
-              }}
-            >
-              <h4 style={{
-                margin: 0,
-                color: 'var(--color-text-primary)',
-                fontWeight: '500',
-                fontSize: '1rem',
-                letterSpacing: '0.01em',
-              }}>basic</h4>
-              <i
-                className="fas fa-chevron-right"
-                style={{
-                  color: 'var(--color-text-secondary)',
-                  fontSize: '1rem',
-                  transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1)',
-                  transform: expandedSections.basic ? 'rotate(90deg)' : 'rotate(0deg)'
-                }}
-              />
-            </div>
-            {/* Content */}
-            {expandedSections.basic && (
-              <div style={{ padding: '1.25rem' }}>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', 
-                  gap: isMobile ? '1.5rem' : '2rem',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'flex-start',
-                    textAlign: 'left'
-                  }}>
-                    <label style={{ 
-                      display: 'block',
-                      marginBottom: '0.5rem',
-                      fontWeight: '500',
-                      fontSize: '0.875rem',
-                      color: 'var(--color-text-primary)'
-                    }}>
-                      playmode
-                    </label>
-                    <div style={{ width: '100%', maxWidth: '150px' }}>
-                      <Select
-                        id="playmode"
-                        labelText=""
-                        value={settings.playmode}
-                        onChange={(e) => updateSetting('playmode', e.target.value as any)}
-                        size="sm"
-                      >
-                        <SelectItem value="poly" text="poly" />
-                        <SelectItem value="mono" text="mono" />
-                        <SelectItem value="legato" text="legato" />
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'flex-start',
-                    textAlign: 'left'
-                  }}>
-                    <label style={{ 
-                      display: 'block',
-                      marginBottom: '0.5rem',
-                      fontWeight: '500',
-                      fontSize: '0.875rem',
-                      color: 'var(--color-text-primary)'
-                    }}>
-                      loop enabled
-                    </label>
-                    <Toggle
-                      id="multisample-loop-enabled"
-                      labelA="off"
-                      labelB="on"
-                      toggled={settings.loopEnabled}
-                      onToggle={(checked) => updateSetting('loopEnabled', checked)}
-                      size="sm"
-                    />
-                  </div>
-
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'flex-start',
-                    textAlign: 'left'
-                  }}>
-                    <label style={{ 
-                      display: 'block',
-                      marginBottom: '0.5rem',
-                      fontWeight: '500',
-                      fontSize: '0.875rem',
-                      color: 'var(--color-text-primary)'
-                    }}>
-                      loop on release
-                    </label>
-                    <Toggle
-                      id="multisample-loop-onrelease"
-                      labelA="off"
-                      labelB="on"
-                      toggled={settings.loopOnRelease}
-                      onToggle={(checked) => updateSetting('loopOnRelease', checked)}
-                      size="sm"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Advanced Settings */}
-          <section style={{
-            border: '1px solid var(--color-border-light)',
-            borderRadius: '6px',
-            marginBottom: '0.75rem',
-            overflow: 'hidden',
-            background: 'var(--color-bg-primary)'
-          }}>
-            {/* Header */}
-            <div
-              onClick={() => toggleSection('sound')}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '1rem 1.25rem',
-                background: 'var(--color-bg-secondary)',
-                cursor: 'pointer',
-                userSelect: 'none',
-                borderBottom: expandedSections.sound ? '1px solid var(--color-border-light)' : 'none',
-                transition: 'background 0.2s',
-                borderRadius: '6px 6px 0 0',
-                overflow: 'hidden',
-              }}
-            >
-              <h4 style={{
-                margin: 0,
-                color: 'var(--color-text-primary)',
-                fontWeight: '500',
-                fontSize: '1rem',
-                letterSpacing: '0.01em',
-              }}>advanced</h4>
-              <i
-                className="fas fa-chevron-right"
-                style={{
-                  color: 'var(--color-text-secondary)',
-                  fontSize: '1rem',
-                  transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1)',
-                  transform: expandedSections.sound ? 'rotate(90deg)' : 'rotate(0deg)'
-                }}
-              />
-            </div>
-            {/* Content */}
-            {expandedSections.sound && (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr',
-                  gap: isMobile ? '1.5rem' : '2rem',
-                  padding: '1rem',
-                  backgroundColor: 'var(--color-bg-primary)',
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  overflowX: 'auto',
-                }}
-              >
-                {/* Row 1: Tuning root + Transpose */}
-                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>tuning root</label>
-                    <div style={{ maxWidth: '150px' }}>
-                      <Select
-                        id="tuning-root"
-                        labelText=""
-                        value={settings.tuningRoot.toString()}
-                        onChange={(e) => updateSetting('tuningRoot', parseInt(e.target.value))}
-                        size="sm"
-                      >
-                        {noteNames.map((note, index) => (
-                          <SelectItem key={index} value={index.toString()} text={note} />
-                        ))}
-                      </Select>
-                    </div>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>transpose: {settings.transpose}</label>
-                    <Slider
-                      id="multisample-transpose"
-                      min={-36}
-                      max={36}
-                      step={1}
-                      value={settings.transpose}
-                      onChange={({ value }) => updateSetting('transpose', value)}
-                      hideTextInput
-                    />
-                  </div>
-                </div>
-
-                {/* Row 2: Width + Highpass */}
-                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>width: {settings.width}%</label>
-                    <Slider
-                      id="multisample-width"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={settings.width}
-                      onChange={({ value }) => updateSetting('width', value)}
-                      hideTextInput
-                    />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>highpass: {settings.highpass}%</label>
-                    <Slider
-                      id="multisample-highpass"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={settings.highpass}
-                      onChange={({ value }) => updateSetting('highpass', value)}
-                      hideTextInput
-                    />
-                  </div>
-                </div>
-
-                {/* Row 3: Velocity Sensitivity + Volume */}
-                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>velocity sensitivity: {settings.velocitySensitivity}%</label>
-                    <Slider
-                      id="multisample-velocity-sensitivity"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={settings.velocitySensitivity}
-                      onChange={({ value }) => updateSetting('velocitySensitivity', value)}
-                      hideTextInput
-                    />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>volume: {settings.volume}%</label>
-                    <Slider
-                      id="multisample-volume"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={settings.volume}
-                      onChange={({ value }) => updateSetting('volume', value)}
-                      hideTextInput
-                    />
-                  </div>
-                </div>
-
-                {/* Row 4: Portamento Type + Amount */}
-                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>portamento type</label>
-                    <div style={{ maxWidth: '150px' }}>
-                      <Select
-                        id="portamento-type"
-                        labelText=""
-                        value={settings.portamentoType}
-                        onChange={(e) => updateSetting('portamentoType', e.target.value as any)}
-                        size="sm"
-                      >
-                        <SelectItem value="linear" text="linear" />
-                        <SelectItem value="exponential" text="exponential" />
-                      </Select>
-                    </div>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>portamento amount: {settings.portamentoAmount}%</label>
-                    <Slider
-                      id="multisample-portamento-amount"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={settings.portamentoAmount}
-                      onChange={({ value }) => updateSetting('portamentoAmount', value)}
-                      hideTextInput
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Envelopes and Filters */}
-          <section style={{
-            border: '1px solid var(--color-border-light)',
-            borderRadius: '6px',
-            marginBottom: '0.75rem',
-            overflow: 'hidden',
-            background: 'var(--color-bg-primary)'
-          }}>
-            {/* Header */}
-            <div
-              onClick={() => toggleSection('envelopes')}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '1rem 1.25rem',
-                background: 'var(--color-bg-secondary)',
-                cursor: 'pointer',
-                userSelect: 'none',
-                borderBottom: expandedSections.envelopes ? '1px solid var(--color-border-light)' : 'none',
-                transition: 'background 0.2s',
-                borderRadius: '6px 6px 0 0',
-                overflow: 'hidden',
-              }}
-            >
-              <h4 style={{
-                margin: 0,
-                color: 'var(--color-text-primary)',
-                fontWeight: '500',
-                fontSize: '1rem',
-                letterSpacing: '0.01em',
-              }}>envelopes and filters</h4>
-              <i
-                className="fas fa-chevron-right"
-                style={{
-                  color: 'var(--color-text-secondary)',
-                  fontSize: '1rem',
-                  transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1)',
-                  transform: expandedSections.envelopes ? 'rotate(90deg)' : 'rotate(0deg)'
-                }}
-              />
-            </div>
-            {/* Content */}
-            {expandedSections.envelopes && (
-              <div style={{ 
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: isMobile ? '1.5rem' : '3rem',
-                padding: '1rem',
-                border: '1px solid var(--color-border-light)'
-              }}>
-                {/* Envelopes */}
-                <div style={{ 
-                  flex: isMobile ? '1' : '1 1 50%',
-                  minWidth: 0
-                }}>
-                  <ADSREnvelope
-                    ampEnvelope={settings.ampEnvelope}
-                    filterEnvelope={settings.filterEnvelope}
-                    onAmpEnvelopeChange={updateAmpEnvelope}
-                    onFilterEnvelopeChange={updateFilterEnvelope}
-                  />
-                </div>
-                
-                {/* Filters (Coming Soon) */}
-                <div style={{
-                  flex: isMobile ? '1' : '1 1 50%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  minHeight: isMobile ? '200px' : '300px',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--color-bg-panel)',
-                  color: 'var(--color-text-secondary)'
-                }}>
-                  <div style={{
-                    fontSize: '1.1rem',
-                    fontWeight: '500',
-                    marginBottom: '0.5rem',
-                    textAlign: 'center'
-                  }}>
-                    filters
-                  </div>
-                  <div style={{
-                    fontSize: '0.9rem',
-                    opacity: 0.7,
-                    textAlign: 'center'
-                  }}>
-                    coming soon
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
+      {/* Sound Settings Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => toggleSection('sound')}>
+          <span style={{ transform: expandedSections.sound ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>▶</span>
+          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '500', color: 'var(--color-text-primary)' }}>sound settings</h3>
         </div>
-
-        {/* Action Buttons at Bottom */}
-        <div style={{
-          display: 'flex',
-          gap: '1rem',
-          justifyContent: isMobile ? 'center' : 'flex-end',
-          flexDirection: isMobile ? 'column' : 'row',
-          marginTop: '1.5rem',
-          paddingTop: '1.5rem',
-          borderTop: '1px solid var(--color-border-light)',
-        }}>
-          <button
-            onClick={handleReset}
-            disabled={!hasPresetChanges}
-            style={{
-              minHeight: '44px',
-              minWidth: '44px',
-              padding: '0.75rem 1.5rem',
-              border: '1px solid var(--color-interactive-focus-ring)',
-              borderRadius: '6px',
-              backgroundColor: 'var(--color-bg-primary)',
-              color: hasPresetChanges ? 'var(--color-interactive-secondary)' : 'var(--color-border-medium)',
-              fontSize: '0.9rem',
-              fontWeight: '500',
-              cursor: hasPresetChanges ? 'pointer' : 'not-allowed',
-              transition: 'all 0.2s ease',
-              fontFamily: 'inherit',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem',
-              opacity: hasPresetChanges ? 1 : 0.6,
-              width: isMobile ? '100%' : 'auto',
-            }}
-            onMouseEnter={(e) => {
-              if (hasPresetChanges) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-                e.currentTarget.style.borderColor = 'var(--color-border-medium)';
-                e.currentTarget.style.color = 'var(--color-interactive-dark)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (hasPresetChanges) {
-                e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
-                e.currentTarget.style.borderColor = 'var(--color-interactive-focus-ring)';
-                e.currentTarget.style.color = 'var(--color-interactive-secondary)';
-              }
-            }}
-          >
-            <i className="fas fa-undo" style={{ fontSize: '1rem' }}></i>
-            reset settings
-          </button>
-          <button
-            onClick={handleImportClick}
-            style={{
-              minHeight: '44px',
-              minWidth: '44px',
-              padding: '0.75rem 1.5rem',
-              border: 'none',
-              borderRadius: '6px',
-              backgroundColor: 'var(--color-interactive-focus)',
-              color: 'var(--color-white)',
-              fontSize: '0.9rem',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              fontFamily: 'inherit',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem',
-              width: isMobile ? '100%' : 'auto',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
-            }}
-          >
-            <i className="fas fa-upload" style={{ fontSize: '1rem' }}></i>
-            import settings
-          </button>
-        </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          onChange={handleFileImport}
-          style={{ display: 'none' }}
-        />
+        
+        {expandedSections.sound && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0 0 1rem' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>width: {state.multisampleSettings.width}%</label>
+                <Slider
+                  id="multisample-width"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={state.multisampleSettings.width}
+                  onChange={({ value }) => updateSetting('width', value)}
+                  hideTextInput
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>highpass: {state.multisampleSettings.highpass}%</label>
+                <Slider
+                  id="multisample-highpass"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={state.multisampleSettings.highpass}
+                  onChange={({ value }) => updateSetting('highpass', value)}
+                  hideTextInput
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>velocity sensitivity: {state.multisampleSettings.velocitySensitivity}%</label>
+                <Slider
+                  id="multisample-velocity-sensitivity"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={state.multisampleSettings.velocitySensitivity}
+                  onChange={({ value }) => updateSetting('velocitySensitivity', value)}
+                  hideTextInput
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>volume: {state.multisampleSettings.volume}%</label>
+                <Slider
+                  id="multisample-volume"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={state.multisampleSettings.volume}
+                  onChange={({ value }) => updateSetting('volume', value)}
+                  hideTextInput
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Select
+                  id="portamento-type"
+                  labelText=""
+                  value={state.multisampleSettings.portamentoType}
+                  onChange={(e) => updateSetting('portamentoType', e.target.value as any)}
+                  size="sm"
+                >
+                  <SelectItem value="linear" text="linear" />
+                  <SelectItem value="exponential" text="exponential" />
+                </Select>
+              </div>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>portamento amount: {state.multisampleSettings.portamentoAmount}%</label>
+                <Slider
+                  id="multisample-portamento-amount"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={state.multisampleSettings.portamentoAmount}
+                  onChange={({ value }) => updateSetting('portamentoAmount', value)}
+                  hideTextInput
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Slider Styling */}
-      <style>{`
-        #multisample-transpose .cds--slider__track,
-        #multisample-velocity-sensitivity .cds--slider__track,
-        #multisample-volume .cds--slider__track,
-        #multisample-width .cds--slider__track,
-        #multisample-highpass .cds--slider__track,
-        #multisample-portamento-amount .cds--slider__track {
-          background: linear-gradient(to right, var(--color-bg-slider-track) 0%, var(--color-interactive-secondary) 100%) !important;
-        }
-        #multisample-transpose .cds--slider__filled-track,
-        #multisample-velocity-sensitivity .cds--slider__filled-track,
-        #multisample-volume .cds--slider__filled-track,
-        #multisample-width .cds--slider__filled-track,
-        #multisample-highpass .cds--slider__filled-track,
-        #multisample-portamento-amount .cds--slider__filled-track {
-          background: var(--color-interactive-dark) !important;
-        }
-        #multisample-transpose .cds--slider__thumb,
-        #multisample-velocity-sensitivity .cds--slider__thumb,
-        #multisample-volume .cds--slider__thumb,
-        #multisample-width .cds--slider__thumb,
-        #multisample-highpass .cds--slider__thumb,
-        #multisample-portamento-amount .cds--slider__thumb {
-          background: var(--color-interactive-dark) !important;
-          border: 2px solid var(--color-interactive-dark) !important;
-        }
-        #multisample-transpose .cds--slider__thumb:hover,
-        #multisample-velocity-sensitivity .cds--slider__thumb:hover,
-        #multisample-volume .cds--slider__thumb:hover,
-        #multisample-width .cds--slider__thumb:hover,
-        #multisample-highpass .cds--slider__thumb:hover,
-        #multisample-portamento-amount .cds--slider__thumb:hover {
-          background: var(--color-text-primary) !important;
-          border-color: var(--color-text-primary) !important;
-        }
-      `}</style>
+      {/* Envelope Settings Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => toggleSection('envelopes')}>
+          <span style={{ transform: expandedSections.envelopes ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>▶</span>
+          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '500', color: 'var(--color-text-primary)' }}>envelope settings</h3>
+        </div>
+        
+        {expandedSections.envelopes && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0 0 1rem' }}>
+            <ADSREnvelope
+              ampEnvelope={state.multisampleSettings.ampEnvelope}
+              filterEnvelope={state.multisampleSettings.filterEnvelope}
+              onAmpEnvelopeChange={updateAmpEnvelope}
+              onFilterEnvelopeChange={updateFilterEnvelope}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Import/Reset Buttons */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+        <button onClick={handleImportClick} style={{ padding: '0.5rem 1rem', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)', cursor: 'pointer' }}>
+          import settings
+        </button>
+        <button onClick={handleReset} style={{ padding: '0.5rem 1rem', borderRadius: '4px', border: '1px solid var(--color-border-light)', background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)', cursor: 'pointer' }}>
+          reset to defaults
+        </button>
+      </div>
+      
+      {/* Hidden file input for importing settings */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        accept=".json"
+        onChange={handleFileImport}
+      />
     </div>
   );
 } 

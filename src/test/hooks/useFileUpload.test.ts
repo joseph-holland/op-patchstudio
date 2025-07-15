@@ -1,92 +1,44 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
-import { useFileUpload } from '../../hooks/useFileUpload'
+import { renderHook, act } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { useFileUpload } from '../../hooks/useFileUpload';
+import { useAppContext } from '../../context/AppContext';
+import { createCompleteMultisampleSettings } from '../utils/testHelpers';
 
-// Mock the context hook to avoid needing the provider
-vi.mock('../../context/AppContext', () => ({
-  useAppContext: vi.fn(() => ({
-    state: {
-      currentTab: 'drum',
-      drumSamples: [],
-      multisampleFiles: [],
-      selectedMultisample: null,
-      isLoading: false,
-      error: null,
-      isDrumKeyboardPinned: false,
-      isMultisampleKeyboardPinned: false,
-      drumSettings: {
-        sampleRate: 44100,
-        bitDepth: 16,
-        channels: 2,
-        presetName: '',
-        normalize: false,
-        normalizeLevel: 0,
-        presetSettings: {
-          playmode: 'poly',
-          transpose: 0,
-          velocity: 100,
-          volume: 100,
-          width: 100
-        },
-        renameFiles: false,
-        filenameSeparator: ' '
-      },
-              multisampleSettings: {
-          sampleRate: 0,
-          bitDepth: 0,
-          channels: 0,
-          presetName: '',
-          normalize: false,
-          normalizeLevel: -6.0,
-          cutAtLoopEnd: false,
-          gain: 0,
-          loopEnabled: true,
-          loopOnRelease: true,
-          renameFiles: false,
-          filenameSeparator: ' '
-        },
-      notifications: [],
-      importedDrumPreset: null,
-      importedMultisamplePreset: null,
-      isSessionRestorationModalOpen: false,
-      sessionInfo: null
-    },
-    dispatch: vi.fn()
-  }))
-}))
+// Mock the AppContext
+vi.mock('../../context/AppContext');
 
 // Mock the audio utilities
 vi.mock('../../utils/audio', () => ({
-  readWavMetadata: vi.fn(() => Promise.resolve({
-    sampleRate: 44100,
-    numberOfChannels: 1,
-    length: 44100,
-    duration: 1.0,
-    fileSize: 1024,
-    audioBuffer: {
-      sampleRate: 44100,
-      numberOfChannels: 1,
-      length: 44100,
-      duration: 1.0,
-      getChannelData: vi.fn(() => new Float32Array(44100))
-    }
-  }))
-}))
+  parseFilename: vi.fn(),
+  midiNoteToString: vi.fn(),
+  audioBufferToWav: vi.fn(),
+  createAudioBuffer: vi.fn(),
+  extractAudioMetadata: vi.fn(),
+  readWavMetadata: vi.fn()
+}));
 
-// Get access to the mocked functions
-const mockDispatch = vi.fn()
-
-// Import after mocking
-import { useAppContext } from '../../context/AppContext'
-import * as audioModule from '../../utils/audio'
+// Mock the session storage
+vi.mock('../../utils/sessionStorageIndexedDB', () => ({
+  sessionStorageIndexedDB: {
+    saveSession: vi.fn(),
+    loadSession: vi.fn(),
+    clearSession: vi.fn(),
+    hasSession: vi.fn(),
+    getSessionInfo: vi.fn(),
+    resetSavedToLibraryFlag: vi.fn()
+  }
+}));
 
 describe('useFileUpload', () => {
+  const mockDispatch = vi.fn();
+
   beforeEach(() => {
-    vi.clearAllMocks()
-    // Reset mocks to default implementations
-    vi.mocked(useAppContext).mockReturnValue({ 
+    vi.clearAllMocks();
+    
+    // Mock the AppContext with complete multisample settings
+    (useAppContext as any).mockReturnValue({
       state: {
-        currentTab: 'drum',
+        currentTab: 'multisample',
         drumSamples: [],
         multisampleFiles: [],
         selectedMultisample: null,
@@ -94,7 +46,12 @@ describe('useFileUpload', () => {
         error: null,
         isDrumKeyboardPinned: false,
         isMultisampleKeyboardPinned: false,
-        midiNoteMapping: 'C3',
+        notifications: [],
+        importedDrumPreset: null,
+        importedMultisamplePreset: null,
+        isSessionRestorationModalOpen: false,
+        sessionInfo: null,
+        midiNoteMapping: 'C3' as const,
         drumSettings: {
           sampleRate: 44100,
           bitDepth: 16,
@@ -103,52 +60,20 @@ describe('useFileUpload', () => {
           normalize: false,
           normalizeLevel: 0,
           presetSettings: {
-            playmode: 'poly',
+            playmode: 'poly' as const,
             transpose: 0,
             velocity: 100,
             volume: 100,
             width: 100
           },
           renameFiles: false,
-          filenameSeparator: ' '
+          filenameSeparator: ' ' as const
         },
-        multisampleSettings: {
-          sampleRate: 0,
-          bitDepth: 0,
-          channels: 0,
-          presetName: '',
-          normalize: false,
-          normalizeLevel: -6.0,
-          cutAtLoopEnd: false,
-          gain: 0,
-          loopEnabled: true,
-          loopOnRelease: true,
-          renameFiles: false,
-          filenameSeparator: ' '
-        },
-        notifications: [],
-        importedDrumPreset: null,
-        importedMultisamplePreset: null,
-        isSessionRestorationModalOpen: false,
-        sessionInfo: null
+        multisampleSettings: createCompleteMultisampleSettings()
       },
-      dispatch: mockDispatch 
-    })
-    vi.mocked(audioModule.readWavMetadata).mockResolvedValue({
-      sampleRate: 44100,
-      numberOfChannels: 1,
-      length: 44100,
-      duration: 1.0,
-      fileSize: 1024,
-      audioBuffer: {
-        sampleRate: 44100,
-        numberOfChannels: 1,
-        length: 44100,
-        duration: 1.0,
-        getChannelData: vi.fn(() => new Float32Array(44100))
-      } as any
-    } as any)
-  })
+      dispatch: mockDispatch
+    });
+  });
 
   it('should provide expected functions', () => {
     const { result } = renderHook(() => useFileUpload())
@@ -185,7 +110,8 @@ describe('useFileUpload', () => {
 
   it('should handle errors during upload', async () => {
     // Mock readWavMetadata to throw an error
-    vi.mocked(audioModule.readWavMetadata).mockRejectedValueOnce(new Error('Invalid audio file'))
+    const { readWavMetadata } = await import('../../utils/audio');
+    vi.mocked(readWavMetadata).mockRejectedValueOnce(new Error('Invalid audio file'))
 
     const { result } = renderHook(() => useFileUpload())
     const mockFile = new File(['invalid data'], 'test.txt', { type: 'text/plain' })
