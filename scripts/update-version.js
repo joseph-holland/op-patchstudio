@@ -82,12 +82,6 @@ const today = new Date().toISOString().split('T')[0];
 const changelogPath = path.join(process.cwd(), 'CHANGELOG.md');
 let changelogContent = fs.readFileSync(changelogPath, 'utf8');
 
-// Check if [Unreleased] section exists
-if (!changelogContent.includes('## [Unreleased]')) {
-  console.error('❌ CHANGELOG.md must have an [Unreleased] section');
-  process.exit(1);
-}
-
 // Create a simple new version entry with placeholder content
 const newVersionEntry = `## [${newVersion}] - ${today}
 
@@ -102,10 +96,10 @@ const newVersionEntry = `## [${newVersion}] - ${today}
 
 `;
 
-// Replace [Unreleased] with the new version entry
+// Add the new version entry at the top of the changelog (after the header)
 changelogContent = changelogContent.replace(
-  '## [Unreleased]',
-  `## [Unreleased]\n\n### Added\n- N/A\n\n### Changed\n- N/A\n\n### Fixed\n- N/A\n\n${newVersionEntry}`
+  'the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).\n\n',
+  `the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).\n\n${newVersionEntry}`
 );
 
 // Write updated CHANGELOG.md
