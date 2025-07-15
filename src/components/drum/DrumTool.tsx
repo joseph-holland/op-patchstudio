@@ -260,7 +260,7 @@ export function DrumTool() {
     setRecordingModal({ isOpen: false, targetIndex: null });
   };
 
-  const handleSaveRecording = async (audioBuffer: AudioBuffer) => {
+  const handleSaveRecording = async (audioBuffer: AudioBuffer, filename: string) => {
     try {
       // Convert AudioBuffer to File-like object for processing
       const numberOfChannels = audioBuffer.numberOfChannels;
@@ -282,7 +282,10 @@ export function DrumTool() {
         loopStart: 0,
         loopEnd: renderedBuffer.length - 1
       });
-      const recordedFile = new File([wavData], 'recorded_sample.wav', { type: 'audio/wav' });
+      
+      // Use the provided filename or fallback to default
+      const finalFilename = filename.trim() || 'recorded_sample';
+      const recordedFile = new File([wavData], `${finalFilename}.wav`, { type: 'audio/wav' });
       
       // If a specific target index was set, upload to that slot
       if (recordingModal.targetIndex !== null) {

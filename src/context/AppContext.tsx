@@ -440,9 +440,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
         return state; // Return current state without changes
       }
       
-      // Check max limit of 24 samples - count only loaded samples
-      const loadedSamplesCount = state.drumSamples.filter(sample => sample.isLoaded).length;
-      if (loadedSamplesCount >= 24) {
+      // Validate index is within bounds (0-23 for 24 slots)
+      if (action.payload.index < 0 || action.payload.index >= 24) {
+        console.error('Invalid drum sample index:', action.payload.index);
         return state; // Return current state without changes
       }
       
@@ -654,7 +654,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
       } catch (error) {
         console.error('Failed to save MIDI note mapping to cookie:', error);
       }
-      return { ...state, midiNoteMapping: action.payload };
+      
+      // Update note strings for all existing multisample files to reflect the new mapping
+      const updatedMultisampleFiles = state.multisampleFiles.map(file => ({
+        ...file,
+        note: midiNoteToString(file.rootNote, action.payload)
+      }));
+      
+      return { 
+        ...state, 
+        midiNoteMapping: action.payload,
+        multisampleFiles: updatedMultisampleFiles
+      };
     }
       
     default: {

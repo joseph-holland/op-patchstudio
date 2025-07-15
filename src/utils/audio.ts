@@ -53,21 +53,23 @@ export async function readWavMetadataFromArrayBuffer(
   mapping: 'C3' | 'C4' = 'C3'
 ): Promise<WavMetadata> {
   try {
-    // Create a copy of the ArrayBuffer to avoid detached buffer issues
-    const arrayBufferCopy = arrayBuffer.slice(0);
-    const dataView = new DataView(arrayBufferCopy);
+    // Create separate copies for parsing and decoding to avoid detached buffer issues
+    const parseBuffer = arrayBuffer.slice(0);
+    const decodeBuffer = arrayBuffer.slice(0);
+    
+    const dataView = new DataView(parseBuffer);
     
     // Parse WAV header
     const header = parseWavHeader(dataView);
     
-    // Decode audio data first to get duration
+    // Decode audio data using separate buffer
     const audioContext = await audioContextManager.getAudioContext();
-    const audioBuffer = await audioContext.decodeAudioData(arrayBufferCopy);
+    const audioBuffer = await audioContext.decodeAudioData(decodeBuffer);
     
     // Calculate duration from decoded audio buffer
     const duration = audioBuffer.duration;
     
-    // Parse SMPL chunk for loop points and MIDI note
+    // Parse SMPL chunk for loop points and MIDI note using the parse buffer
     const smplData = parseSmplChunk(dataView, header.sampleRate, duration, filename, mapping);
     
     return {
