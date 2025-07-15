@@ -221,8 +221,20 @@ export function useSessionManagement() {
   }, [dispatch]);
 
   // Decline session restoration
-  const declineSessionRestoration = useCallback(() => {
+  const declineSessionRestoration = useCallback(async () => {
     hasUserDeclinedSessionRef.current = true;
+    
+    // Clear the stored session data from IndexedDB
+    try {
+      await sessionStorageIndexedDB.clearCurrentSession();
+    } catch (error) {
+      console.error('Failed to clear session data when declining restoration:', error);
+    }
+    
+    // Reset sessionInfo in the application state
+    dispatch({ type: 'SET_SESSION_INFO', payload: null });
+    
+    // Close the restoration modal
     dispatch({ type: 'SET_SESSION_RESTORATION_MODAL_OPEN', payload: false });
   }, [dispatch]);
 

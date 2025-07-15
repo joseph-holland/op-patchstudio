@@ -4,7 +4,12 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.12.0] - 2025-07-15
+## [0.12.1] - 2025-07-15
+
+### fixed
+- fixed bug in the declineSessionRestoration function
+
+## [0.12.1] - 2025-07-15
 
 ### added
 - multisample and drum patch export now supports importing audio in multiple formats (mp3, ogg, flac, aif, wav, etc.)
@@ -16,7 +21,7 @@ the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 ### changed
 - improved test coverage for patch export logic to guarantee only wav files are included in exported patches
 
-## [0.12.0] - 2025-07-15
+## [0.12.1] - 2025-07-15
 
 ### fixed
 - fixed: root note and loop points are now properly saved in output wav files for both drum and multisample tools
