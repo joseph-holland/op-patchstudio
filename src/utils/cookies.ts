@@ -41,5 +41,7 @@ export const COOKIE_KEYS = {
   DRUM_KEYBOARD_PINNED: 'opxy_drum_keyboard_pinned',
   MULTISAMPLE_KEYBOARD_PINNED: 'opxy_multisample_keyboard_pinned',
   MIDI_NOTE_MAPPING: 'opxy_midi_note_mapping',
+  DRUM_DEFAULT_SETTINGS: 'opxy_drum_default_settings',
+  MULTISAMPLE_DEFAULT_SETTINGS: 'opxy_multisample_default_settings',
   // Add other cookie keys here as needed
 } as const; 

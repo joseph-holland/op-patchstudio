@@ -14,6 +14,7 @@ import { audioBufferToWav } from '../../utils/audio';
 import { DrumKeyboardContainer } from './DrumKeyboardContainer';
 import { savePresetToLibrary } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
+import { saveDrumSettingsAsDefault } from '../../utils/defaultSettings';
 
 export function DrumTool() {
   const { state, dispatch } = useAppContext();
@@ -148,6 +149,32 @@ export function DrumTool() {
       await generateDrumPatchFile(patchName);
     } catch (error) {
       console.error('Error downloading preset:', error);
+    }
+  };
+
+  const handleSaveSettingsAsDefault = () => {
+    try {
+      saveDrumSettingsAsDefault(state.drumSettings, state.importedDrumPreset);
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'success',
+          title: 'settings saved',
+          message: 'drum settings saved as default'
+        }
+      });
+    } catch (error) {
+      console.error('Error saving settings as default:', error);
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'error',
+          title: 'save failed',
+          message: 'failed to save settings as default'
+        }
+      });
     }
   };
 
@@ -478,6 +505,7 @@ export function DrumTool() {
           onResetAll={handleResetAll}
           onSaveToLibrary={handleSaveToLibrary}
           onDownloadPreset={handleDownloadPreset}
+          onSaveSettingsAsDefault={handleSaveSettingsAsDefault}
           inputId="preset-name"
           renameFiles={state.drumSettings.renameFiles}
           onRenameFilesChange={(enabled) => dispatch({ type: 'SET_DRUM_RENAME_FILES', payload: enabled })}

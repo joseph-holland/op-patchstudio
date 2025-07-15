@@ -42,9 +42,12 @@ vi.mock('../../components/common/AudioProcessingSection', () => ({
 }));
 
 vi.mock('../../components/common/GeneratePresetSection', () => ({
-  GeneratePresetSection: ({ hasChangesFromDefaults }: { hasChangesFromDefaults: boolean }) => (
+  GeneratePresetSection: ({ hasChangesFromDefaults, onSaveSettingsAsDefault }: { hasChangesFromDefaults: boolean; onSaveSettingsAsDefault?: () => void }) => (
     <div data-testid="generate-preset-section">
       <span data-testid="has-changes-from-defaults">{hasChangesFromDefaults.toString()}</span>
+      {onSaveSettingsAsDefault && (
+        <button onClick={onSaveSettingsAsDefault}>save as default</button>
+      )}
     </div>
   ),
 }));

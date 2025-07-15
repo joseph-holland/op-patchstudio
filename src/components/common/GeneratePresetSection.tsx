@@ -16,6 +16,7 @@ interface GeneratePresetSectionProps {
   onResetAll: () => void;
   onSaveToLibrary: () => void;
   onDownloadPreset: () => void;
+  onSaveSettingsAsDefault: () => void;
   inputId: string;
   renameFiles: boolean;
   onRenameFilesChange: (enabled: boolean) => void;
@@ -36,6 +37,7 @@ export function GeneratePresetSection({
   onResetAll,
   onSaveToLibrary,
   onDownloadPreset,
+  onSaveSettingsAsDefault,
   inputId,
   renameFiles,
   onRenameFilesChange,
@@ -392,6 +394,41 @@ export function GeneratePresetSection({
           >
             <i className="fas fa-undo" style={{ fontSize: '1rem' }}></i>
             reset all
+          </button>
+          <button
+            onClick={onSaveSettingsAsDefault}
+            style={{
+              minHeight: '44px',
+              minWidth: '44px',
+              padding: '0.75rem 1.5rem',
+              border: '1px solid var(--color-border-light)',
+              borderRadius: '6px',
+              backgroundColor: 'var(--color-bg-primary)',
+              color: 'var(--color-text-secondary)',
+              fontSize: '0.9rem',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              fontFamily: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.75rem',
+              width: isMobile ? '100%' : 'auto',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+              e.currentTarget.style.color = 'var(--color-text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
+              e.currentTarget.style.borderColor = 'var(--color-border-light)';
+              e.currentTarget.style.color = 'var(--color-text-secondary)';
+            }}
+          >
+            <i className="fas fa-cog" style={{ fontSize: '1rem' }}></i>
+            save as default
           </button>
           <button
             onClick={onSaveToLibrary}

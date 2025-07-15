@@ -5,6 +5,7 @@ import { midiNoteToString, parseFilename } from '../utils/audio';
 import type { Notification } from '../components/common/NotificationSystem';
 import { cookieUtils, COOKIE_KEYS } from '../utils/cookies';
 import type { FilenameSeparator } from '../utils/constants';
+import { loadDrumDefaultSettings, loadMultisampleDefaultSettings, loadDrumImportedPreset, loadMultisampleImportedPreset } from '../utils/defaultSettings';
 
 // Define enhanced types for the application state
 export interface DrumSample {
@@ -232,37 +233,8 @@ const getInitialMidiMapping = (): 'C3' | 'C4' => {
 
 const initialState: AppState = {
   currentTab: getInitialTab(),
-  drumSettings: {
-    sampleRate: 0,
-    bitDepth: 0,
-    channels: 0,
-    presetName: '',
-    normalize: false,
-    normalizeLevel: -1.0,
-    renameFiles: false,
-    filenameSeparator: ' ',
-    presetSettings: {
-      playmode: 'poly',
-      transpose: 0,
-      velocity: 20,
-      volume: 69,
-      width: 0
-    }
-  },
-  multisampleSettings: {
-    sampleRate: 0,
-    bitDepth: 0,
-    channels: 0,
-    presetName: '',
-    normalize: false,
-    normalizeLevel: -1.0,
-    cutAtLoopEnd: false,
-    gain: 0,
-    loopEnabled: true,
-    loopOnRelease: true,
-    renameFiles: false,
-    filenameSeparator: ' '
-  },
+  drumSettings: loadDrumDefaultSettings(),
+  multisampleSettings: loadMultisampleDefaultSettings(),
   drumSamples: Array.from({ length: 24 }, () => ({ ...initialDrumSample })),
   multisampleFiles: [], // Dynamic array, 1-24 samples max
   selectedMultisample: null,
@@ -271,8 +243,8 @@ const initialState: AppState = {
   isDrumKeyboardPinned: getInitialPinState(COOKIE_KEYS.DRUM_KEYBOARD_PINNED),
   isMultisampleKeyboardPinned: getInitialPinState(COOKIE_KEYS.MULTISAMPLE_KEYBOARD_PINNED),
   notifications: [],
-  importedDrumPreset: null,
-  importedMultisamplePreset: null,
+  importedDrumPreset: loadDrumImportedPreset(),
+  importedMultisamplePreset: loadMultisampleImportedPreset(),
   isSessionRestorationModalOpen: false,
   sessionInfo: null,
   midiNoteMapping: getInitialMidiMapping()

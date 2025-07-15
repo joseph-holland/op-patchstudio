@@ -16,6 +16,7 @@ import { cookieUtils, COOKIE_KEYS } from '../../utils/cookies';
 import { savePresetToLibrary } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 import { ToggleSwitch } from '../common/ToggleSwitch';
+import { saveMultisampleSettingsAsDefault } from '../../utils/defaultSettings';
 
 
 export function MultisampleTool() {
@@ -216,6 +217,32 @@ export function MultisampleTool() {
       await generateMultisamplePatchFile(patchName);
     } catch (error) {
       console.error('Error downloading preset:', error);
+    }
+  };
+
+  const handleSaveSettingsAsDefault = () => {
+    try {
+      saveMultisampleSettingsAsDefault(state.multisampleSettings, state.importedMultisamplePreset);
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'success',
+          title: 'settings saved',
+          message: 'multisample settings saved as default'
+        }
+      });
+    } catch (error) {
+      console.error('Error saving settings as default:', error);
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'error',
+          title: 'save failed',
+          message: 'failed to save settings as default'
+        }
+      });
     }
   };
 
@@ -708,6 +735,7 @@ export function MultisampleTool() {
           onResetAll={handleResetAll}
           onSaveToLibrary={handleSaveToLibrary}
           onDownloadPreset={handleDownloadPreset}
+          onSaveSettingsAsDefault={handleSaveSettingsAsDefault}
           inputId="preset-name-multi"
           renameFiles={state.multisampleSettings.renameFiles}
           onRenameFilesChange={(enabled) => dispatch({ type: 'SET_MULTISAMPLE_RENAME_FILES', payload: enabled })}
