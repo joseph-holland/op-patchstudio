@@ -4,6 +4,24 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.11.0] - 2024-07-15
+
+### added
+- users can now save all patch settings (including adsr envelope, filter, and hidden/imported settings) as their personal defaults for both drum and multisample tools
+- default settings are now stored in cookies with a new structure that preserves both ui and imported preset data
+- new utility functions for saving/loading/clearing default settings, including support for advanced and hidden parameters
+- new test coverage for default settings logic and backward compatibility
+- version update script is now fully non-interactive and can be run in ci/cd
+
+### changed
+- default settings system now loads all saved parameters, including those not visible in the ui, on app startup
+- app context and tool components updated to support new default settings structure
+- changelog and version update workflow improved for automation
+
+### fixed
+- fixed: default settings now persist all advanced and imported parameters, not just visible ui fields
+- fixed: type errors and test coverage for new default settings logic
+
 ## [0.10.1] - 2025-07-14
 
 ### added

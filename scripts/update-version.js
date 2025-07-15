@@ -12,7 +12,6 @@
 import fs from 'fs';
 import path from 'path';
 import semver from 'semver';
-import readline from 'readline';
 import { execSync } from 'child_process';
 
 const args = process.argv.slice(2);
@@ -22,14 +21,6 @@ if (!updateType || !['patch', 'minor', 'major'].includes(updateType)) {
   console.error('Usage: npm run update-version -- [patch|minor|major]');
   process.exit(1);
 }
-
-// Create readline interface for user input
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
-const question = (query) => new Promise((resolve) => rl.question(query, resolve));
 
 // Read current version from package.json
 const packageJsonPath = path.join(process.cwd(), 'package.json');
@@ -97,61 +88,19 @@ if (!changelogContent.includes('## [Unreleased]')) {
   process.exit(1);
 }
 
-// Collect changes from user
-console.log('\n📝 Please describe your changes for the new version:');
-console.log('(Press Enter twice to finish each section, or just Enter to skip)');
+// Create a simple new version entry with placeholder content
+const newVersionEntry = `## [${newVersion}] - ${today}
 
-const added = [];
-const changed = [];
-const fixed = [];
+### Added
+- N/A
 
-console.log('\n### Added (new features):');
-while (true) {
-  const line = await question('  - ');
-  if (line.trim() === '') break;
-  added.push(line.trim());
-}
+### Changed
+- N/A
 
-console.log('\n### Changed (existing functionality):');
-while (true) {
-  const line = await question('  - ');
-  if (line.trim() === '') break;
-  changed.push(line.trim());
-}
+### Fixed
+- N/A
 
-console.log('\n### Fixed (bug fixes):');
-while (true) {
-  const line = await question('  - ');
-  if (line.trim() === '') break;
-  fixed.push(line.trim());
-}
-
-// Build the new version entry
-let newVersionEntry = `## [${newVersion}] - ${today}\n\n`;
-
-if (added.length > 0) {
-  newVersionEntry += '### Added\n';
-  added.forEach(item => {
-    newVersionEntry += `- ${item}\n`;
-  });
-  newVersionEntry += '\n';
-}
-
-if (changed.length > 0) {
-  newVersionEntry += '### Changed\n';
-  changed.forEach(item => {
-    newVersionEntry += `- ${item}\n`;
-  });
-  newVersionEntry += '\n';
-}
-
-if (fixed.length > 0) {
-  newVersionEntry += '### Fixed\n';
-  fixed.forEach(item => {
-    newVersionEntry += `- ${item}\n`;
-  });
-  newVersionEntry += '\n';
-}
+`;
 
 // Replace [Unreleased] with the new version entry
 changelogContent = changelogContent.replace(
@@ -166,9 +115,6 @@ fs.writeFileSync(changelogPath, changelogContent);
 const publicChangelogPath = path.join(process.cwd(), 'public', 'CHANGELOG.md');
 fs.copyFileSync(changelogPath, publicChangelogPath);
 
-// Close readline interface
-rl.close();
-
 console.log('\n✅ Version updated successfully!');
 console.log(`📦 package.json updated to version ${newVersion}`);
 console.log(`📋 manifest.json updated to version ${newVersion}`);
@@ -176,6 +122,6 @@ console.log(`📝 CHANGELOG.md updated with version ${newVersion}`);
 console.log('📋 CHANGELOG.md copied to public/CHANGELOG.md');
 console.log('');
 console.log('🚀 Next steps:');
-console.log('1. Review the changes in CHANGELOG.md');
+console.log('1. Review and update the changes in CHANGELOG.md');
 console.log('2. Commit your changes');
 console.log('3. Tag the release if needed'); 
