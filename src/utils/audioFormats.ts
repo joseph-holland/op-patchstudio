@@ -125,9 +125,11 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
       throw new Error('Invalid AIF file: missing FORM header');
     }
 
-    // Check AIFF/AIFC format identifier
-    
-
+    // Check AIFF/AIFC format identifier (bytes 8-11)
+    const formatId = textDecoder.decode(new Uint8Array(bufferCopy, 8, 4));
+    if (formatId !== 'AIFF' && formatId !== 'AIFC') {
+      throw new Error(`Invalid AIF file: expected AIFF or AIFC format identifier, got "${formatId}"`);
+    }
 
     // Parse chunks in the file to extract metadata
     let offset = 12;
