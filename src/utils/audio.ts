@@ -585,7 +585,7 @@ export function audioBufferToWav(
   const totalSize = 4 + (8 + fmtChunkSize) + (hasSmplChunk ? (8 + smplChunkSize) : 0) + (8 + audioDataSize);
   
   // Create buffer
-  const arrayBuffer = new ArrayBuffer(12 + totalSize);
+  const arrayBuffer = new ArrayBuffer(8 + totalSize);
   const uint8 = new Uint8Array(arrayBuffer);
   const dataView = new DataView(arrayBuffer);
   
