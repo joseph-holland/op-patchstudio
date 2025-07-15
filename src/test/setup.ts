@@ -81,13 +81,7 @@ Object.defineProperty(navigator, 'mediaDevices', {
   }
 })
 
-// Mock JSZip
-vi.mock('jszip', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    file: vi.fn(),
-    generateAsync: vi.fn(() => Promise.resolve(new Blob()))
-  }))
-}))
+// JSZip mock removed to allow real implementation for testing
 
 // Mock File API methods
 global.URL.createObjectURL = vi.fn(() => 'mock-url')
