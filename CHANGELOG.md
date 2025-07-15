@@ -4,12 +4,24 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.13.0] - 2025-07-15
+
+### added
+- import op-1 and op-1 field drum presets (.preset.zip files) with automatic parsing and sample extraction
+- new op1DrumPresetParser utility for reading and parsing op-1/op-1 field preset files
+- support for importing existing drum presets to use as starting points for new patches
+
+### fixed
+- fixed advanced preset settings not saving to defaults in multisample tool
+- restored proper component styling and structure for multisample preset settings
+- fixed synchronization between local component state and global app state for preset settings
+
 ## [0.12.1] - 2025-07-15
 
 ### fixed
 - fixed bug in the declineSessionRestoration function
 
-## [0.12.1] - 2025-07-15
+## [0.12.0] - 2025-07-15
 
 ### added
 - multisample and drum patch export now supports importing audio in multiple formats (mp3, ogg, flac, aif, wav, etc.)
@@ -21,7 +33,7 @@ the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 ### changed
 - improved test coverage for patch export logic to guarantee only wav files are included in exported patches
 
-## [0.12.1] - 2025-07-15
+## [0.11.1] - 2025-07-15
 
 ### fixed
 - fixed: root note and loop points are now properly saved in output wav files for both drum and multisample tools
