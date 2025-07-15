@@ -309,10 +309,6 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
     const loopStartSeconds = loopStart !== undefined ? loopStart / sampleRate : 0;
     const loopEndSeconds = loopEnd !== undefined ? loopEnd / sampleRate : duration;
     
-    // DEBUG: Log raw loop point extraction
-    console.log(`[AIF PARSER] ${filename}: loopStart=${loopStart}, loopEnd=${loopEnd}, numSampleFrames=${numSampleFrames}, sampleRate=${sampleRate}, foundLoopPoints=${foundLoopPoints}`);
-    console.log(`[AIF PARSER] ${filename}: loopStartSeconds=${loopStartSeconds}, loopEndSeconds=${loopEndSeconds}, duration=${duration}`);
-    
     // Return extracted metadata with audioBuffer (may be null if decoding failed)
     return {
       format: 'aiff',

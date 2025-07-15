@@ -305,19 +305,6 @@ export async function generateMultisamplePatch(
     const loopStart = getClamped(Math.floor(originalFramecount * (prop(sample.loopStart, originalDuration * 0.1) / originalDuration)), 0, originalFramecount - 1);
     const loopEnd = getClamped(Math.floor(originalFramecount * (prop(sample.loopEnd, originalDuration * 0.9) / originalDuration)), loopStart + 1, originalFramecount);
     
-    // DEBUG: Log loop point information
-    console.log(`[PATCH GEN] Sample ${sample.name}:`, {
-      originalLoopStart: sample.loopStart,
-      originalLoopEnd: sample.loopEnd,
-      originalDuration,
-      originalFramecount,
-      calculatedLoopStart: loopStart,
-      calculatedLoopEnd: loopEnd,
-      fallbackUsed: !sample.loopEnd,
-      scaleFactor: effectiveSampleRate / originalSampleRate,
-      scaledLoopEnd: Math.floor(loopEnd * (effectiveSampleRate / originalSampleRate))
-    });
-    
     // Scale loop points to target sample rate if resampling
     const scaleFactor = effectiveSampleRate / originalSampleRate;
     const scaledLoopStart = Math.floor(loopStart * scaleFactor);
