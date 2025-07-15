@@ -78,10 +78,12 @@ vi.mock('../../components/common/GeneratePresetSection', () => ({
     onResetAll,
     onSaveToLibrary,
     onDownloadPreset,
+    onSaveSettingsAsDefault,
   }: any) => (
     <div data-testid="generate-preset-section">
       <span data-testid="has-changes-from-defaults">{hasChangesFromDefaults.toString()}</span>
       <button onClick={onResetAll}>reset all</button>
+      <button onClick={onSaveSettingsAsDefault}>save as default</button>
       <button onClick={onSaveToLibrary}>save to library</button>
       <button onClick={onDownloadPreset}>download preset</button>
       <input
