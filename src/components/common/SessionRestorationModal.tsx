@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 interface SessionRestorationModalProps {
   isOpen: boolean;
   onLoadSession: () => void;
-  onStartNew: () => void;
+  onStartNew: () => Promise<void>;
   sessionInfo?: {
     timestamp: number;
     drumSamplesCount: number;
@@ -43,7 +43,9 @@ export function SessionRestorationModal({
 
       switch (event.key) {
         case 'Escape':
-          onStartNew();
+          onStartNew().catch(error => {
+            console.error('Failed to start new session:', error);
+          });
           break;
         case 'Tab':
           // Trap focus within the modal
@@ -228,7 +230,13 @@ export function SessionRestorationModal({
           }}>
             <button
               ref={firstButtonRef}
-              onClick={onStartNew}
+              onClick={async () => {
+                try {
+                  await onStartNew();
+                } catch (error) {
+                  console.error('Failed to start new session:', error);
+                }
+              }}
               style={{
                 padding: '0.625rem 1.25rem',
                 border: '1px solid var(--color-border-light)',

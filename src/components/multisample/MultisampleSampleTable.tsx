@@ -139,16 +139,23 @@ export function MultisampleSampleTable({
       files.push(...Array.from(e.dataTransfer.files));
     }
     
-    const wavFiles = files.filter(file => 
-      file.type === 'audio/wav' || file.name.toLowerCase().endsWith('.wav')
+    const audioFiles = files.filter(file => 
+      file.type.startsWith('audio/') || 
+      file.name.toLowerCase().endsWith('.wav') ||
+      file.name.toLowerCase().endsWith('.aif') ||
+      file.name.toLowerCase().endsWith('.aiff') ||
+      file.name.toLowerCase().endsWith('.mp3') ||
+      file.name.toLowerCase().endsWith('.m4a') ||
+      file.name.toLowerCase().endsWith('.ogg') ||
+      file.name.toLowerCase().endsWith('.flac')
     );
     
     const remainingSlots = 24 - state.multisampleFiles.length;
-    const filesToProcess = wavFiles.slice(0, remainingSlots);
+    const filesToProcess = audioFiles.slice(0, remainingSlots);
     
     if (filesToProcess.length > 0) {
       // Show user feedback about file limit
-      if (wavFiles.length > remainingSlots) {
+      if (audioFiles.length > remainingSlots) {
         // Show notification about file limit
         dispatch({
           type: 'ADD_NOTIFICATION',
@@ -156,14 +163,14 @@ export function MultisampleSampleTable({
             id: Date.now().toString(),
             type: 'info',
             title: 'file limit reached',
-            message: `loaded ${filesToProcess.length} files (${wavFiles.length - remainingSlots} additional files skipped)`
+            message: `loaded ${filesToProcess.length} files (${audioFiles.length - remainingSlots} additional files skipped)`
           }
         });
       }
       
       onFilesSelected(filesToProcess);
     } else if (files.length > 0) {
-      // No WAV files found in dropped items - can provide user feedback if desired
+      // No audio files found in dropped items - can provide user feedback if desired
     } else {
       // No files found in drop event
     }
@@ -235,13 +242,13 @@ export function MultisampleSampleTable({
   const handleBrowseFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
-      const wavFiles = await extractWavFiles(files);
+      const audioFiles = await extractAudioFiles(files);
       const remainingSlots = 24 - state.multisampleFiles.length;
-      const filesToProcess = wavFiles.slice(0, remainingSlots);
+      const filesToProcess = audioFiles.slice(0, remainingSlots);
       
       if (filesToProcess.length > 0) {
         // Show user feedback about file limit
-        if (wavFiles.length > remainingSlots) {
+        if (audioFiles.length > remainingSlots) {
           // Show notification about file limit
           dispatch({
             type: 'ADD_NOTIFICATION',
@@ -249,29 +256,36 @@ export function MultisampleSampleTable({
               id: Date.now().toString(),
               type: 'info',
               title: 'file limit reached',
-              message: `loaded ${filesToProcess.length} files (${wavFiles.length - remainingSlots} additional files skipped)`
+              message: `loaded ${filesToProcess.length} files (${audioFiles.length - remainingSlots} additional files skipped)`
             }
           });
         }
         
         onFilesSelected(filesToProcess);
       } else {
-        console.log('No WAV files found in selected files');
+        console.log('No audio files found in selected files');
       }
     }
     e.target.value = '';
   };
 
-  const extractWavFiles = async (files: File[]): Promise<File[]> => {
-    const wavFiles: File[] = [];
+  const extractAudioFiles = async (files: File[]): Promise<File[]> => {
+    const audioFiles: File[] = [];
     
     for (const file of files) {
-      if (file.type === 'audio/wav' || file.name.toLowerCase().endsWith('.wav')) {
-        wavFiles.push(file);
+      if (file.type.startsWith('audio/') || 
+          file.name.toLowerCase().endsWith('.wav') ||
+          file.name.toLowerCase().endsWith('.aif') ||
+          file.name.toLowerCase().endsWith('.aiff') ||
+          file.name.toLowerCase().endsWith('.mp3') ||
+          file.name.toLowerCase().endsWith('.m4a') ||
+          file.name.toLowerCase().endsWith('.ogg') ||
+          file.name.toLowerCase().endsWith('.flac')) {
+        audioFiles.push(file);
       }
     }
     
-    return wavFiles;
+    return audioFiles;
   };
 
   const handleEmptyAreaClick = () => {
@@ -396,7 +410,14 @@ export function MultisampleSampleTable({
     
     const files = Array.from(e.dataTransfer.files);
     const audioFile = files.find(file => 
-      file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
+      file.type.startsWith('audio/') || 
+      file.name.toLowerCase().endsWith('.wav') ||
+      file.name.toLowerCase().endsWith('.aif') ||
+      file.name.toLowerCase().endsWith('.aiff') ||
+      file.name.toLowerCase().endsWith('.mp3') ||
+      file.name.toLowerCase().endsWith('.m4a') ||
+      file.name.toLowerCase().endsWith('.ogg') ||
+      file.name.toLowerCase().endsWith('.flac')
     );
     
     if (audioFile) {

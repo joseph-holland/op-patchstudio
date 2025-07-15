@@ -70,7 +70,6 @@ export function VirtualMidiKeyboard({
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && midiState.isInitialized) {
-        console.log('[MIDI] Tab became visible, refreshing devices...');
         refreshDevices();
       }
     };
@@ -256,7 +255,6 @@ export function VirtualMidiKeyboard({
   const handleMidiEvent = useCallback((event: MidiEvent) => {
     if (event.type === 'noteon' || event.type === 'noteoff') {
       const midiNote = event.note;
-      console.log(`[MIDI] Virtual keyboard received note: ${midiNote} (velocity: ${event.velocity}, channel: ${event.channel})`);
       
       if (event.type === 'noteon' && event.velocity > 0) {
         // Note on - only trigger playback for assigned notes, not file browser for unassigned
@@ -354,9 +352,9 @@ export function VirtualMidiKeyboard({
         cleanup();
       };
     } else if (!isMidiConnected) {
-      console.log(`[MIDI] Virtual keyboard: No MIDI devices connected`);
+      // console.log(`[MIDI] Virtual keyboard: No MIDI devices connected`);
     } else if (!localSelectedMidiChannel) {
-      console.log(`[MIDI] Virtual keyboard: No MIDI channel selected`);
+      // console.log(`[MIDI] Virtual keyboard: No MIDI channel selected`);
     }
   }, [isMidiConnected, localSelectedMidiChannel, onMidiEvent, handleMidiEvent, isActive]);
 

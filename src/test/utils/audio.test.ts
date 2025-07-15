@@ -423,9 +423,9 @@ describe('audio utilities', () => {
       expect(generateFilename('Piano', ' ', 'multisample', 72, 'c4.wav', 'C4')).toBe('Piano C5.wav')
     })
 
-    it('should handle different file extensions', () => {
-      expect(generateFilename('Test', ' ', 'drum', 0, 'sample.aif')).toBe('Test KD1.aif')
-      expect(generateFilename('Test', ' ', 'multisample', 60, 'note.flac')).toBe('Test C3.flac')
+    it('should always use .wav extension for exported presets', () => {
+      expect(generateFilename('Test', ' ', 'drum', 0, 'sample.aif')).toBe('Test KD1.wav')
+      expect(generateFilename('Test', ' ', 'multisample', 60, 'note.flac')).toBe('Test C3.wav')
     })
 
     it('should sanitize preset names', () => {

@@ -46,7 +46,8 @@ function AppContent() {
   });
 
   // Session management
-  const { loadSession, startNewSession, isSessionRestorationModalOpen, sessionInfo } = useSessionManagement();
+  const { loadSession, declineSessionRestoration } = useSessionManagement();
+  const { isSessionRestorationModalOpen, sessionInfo } = state;
 
   // Set up global control
   useEffect(() => {
@@ -151,7 +152,7 @@ function AppContent() {
       <SessionRestorationModal
         isOpen={isSessionRestorationModalOpen}
         onLoadSession={loadSession}
-        onStartNew={startNewSession}
+        onStartNew={declineSessionRestoration}
         sessionInfo={sessionInfo}
       />
       <div 

@@ -861,15 +861,11 @@ export function generateFilename(
   separator: FilenameSeparator, 
   type: 'drum' | 'multisample', 
   index: number, 
-  originalName: string,
+  _originalName: string,
   mapping: 'C3' | 'C4' = 'C3'
 ): string {
-  // Get file extension from original name with proper fallback
-  let extension = 'wav';
-  const lastDotIndex = originalName.lastIndexOf('.');
-  if (lastDotIndex > 0 && lastDotIndex < originalName.length - 1) {
-    extension = originalName.substring(lastDotIndex + 1);
-  }
+  // Always use .wav extension for exported presets since all files are converted to WAV
+  const extension = 'wav';
   
   // Normalize separators in preset name and trim leading/trailing separators
   const normalizedPresetName = presetName.replace(/[ _-]+/g, separator).replace(/^[ _-]+|[ _-]+$/g, '');

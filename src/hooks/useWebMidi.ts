@@ -45,13 +45,11 @@ export function useWebMidi(): WebMidiHookReturn {
 
   // Initialize WebMIDI
   const initialize = useCallback(async (): Promise<boolean> => {
-    console.log('[MIDI] Starting WebMIDI initialization...');
     setState(prev => ({ ...prev, isConnecting: true, error: null }));
 
     try {
       // If WebMidi is already enabled, just update the state
       if (WebMidi.enabled) {
-        console.log('[MIDI] WebMIDI already enabled, updating device list...');
         const devices = getDevicesFromWebMidi();
         
         setState(prev => ({
@@ -65,9 +63,7 @@ export function useWebMidi(): WebMidiHookReturn {
         return true;
       }
 
-      console.log('[MIDI] Enabling WebMIDI...');
       await WebMidi.enable();
-      console.log('[MIDI] WebMIDI enabled successfully');
       
       const devices = getDevicesFromWebMidi();
       
@@ -81,7 +77,6 @@ export function useWebMidi(): WebMidiHookReturn {
 
       return true;
     } catch (error) {
-      console.error('[MIDI] Initialization failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setState(prev => ({
         ...prev,
@@ -119,7 +114,6 @@ export function useWebMidi(): WebMidiHookReturn {
             );
           
           if (hasChanged) {
-            console.log('[MIDI] Fallback device state check detected changes, updating...');
             return { ...prev, devices: currentDevices };
           }
           return prev;
@@ -184,13 +178,6 @@ export function useWebMidi(): WebMidiHookReturn {
       });
     });
 
-    console.log(`[MIDI] Found ${WebMidi.inputs.length} input(s) and ${WebMidi.outputs.length} output(s)`);
-    if (devices.length > 0) {
-      devices.forEach(device => {
-        console.log(`[MIDI] ${device.type.toUpperCase()}: ${device.name} (${device.state})`);
-      });
-    }
-
     return devices;
   };
 
@@ -198,7 +185,6 @@ export function useWebMidi(): WebMidiHookReturn {
   // This is more efficient than polling and should catch most device changes
   useEffect(() => {
     const handlePortsChanged = () => {
-      console.log('[MIDI] Event-driven device list change detected, updating...');
       setState(prev => ({ 
         ...prev, 
         devices: getDevicesFromWebMidi(),
@@ -213,7 +199,6 @@ export function useWebMidi(): WebMidiHookReturn {
 
     // Also set up a listener for when WebMidi becomes enabled
     const handleEnabled = () => {
-      console.log('[MIDI] WebMidi enabled, setting up event-driven device listener...');
       WebMidi.addListener('portschanged', handlePortsChanged);
       // Immediately update device list when enabled
       setState(prev => ({ 
@@ -327,7 +312,6 @@ export function useWebMidi(): WebMidiHookReturn {
 
   // Force refresh devices - useful for manual device detection
   const refreshDevices = useCallback(() => {
-    console.log('[MIDI] Manual device refresh requested...');
     if (WebMidi.enabled) {
       const devices = getDevicesFromWebMidi();
       setState(prev => ({ ...prev, devices }));

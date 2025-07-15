@@ -14,7 +14,7 @@ interface FileDropZoneProps {
 
 export function FileDropZone({
   onFilesSelected,
-  accept = "audio/*,.wav",
+  accept = "audio/*,.wav,.aif,.aiff,.mp3,.m4a,.ogg,.flac",
   multiple = false,
   disabled = false,
   children,
@@ -36,7 +36,14 @@ export function FileDropZone({
     
     const files = Array.from(e.dataTransfer.files);
     const audioFiles = files.filter(file => 
-      file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
+      file.type.startsWith('audio/') || 
+      file.name.toLowerCase().endsWith('.wav') ||
+      file.name.toLowerCase().endsWith('.aif') ||
+      file.name.toLowerCase().endsWith('.aiff') ||
+      file.name.toLowerCase().endsWith('.mp3') ||
+      file.name.toLowerCase().endsWith('.m4a') ||
+      file.name.toLowerCase().endsWith('.ogg') ||
+      file.name.toLowerCase().endsWith('.flac')
     );
     
     if (audioFiles.length > 0) {
