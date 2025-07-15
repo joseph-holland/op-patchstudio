@@ -294,7 +294,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                     border: 'none',
                     cursor: 'pointer',
                     padding: '0.25rem 0.5rem',
-                    borderRadius: '6px',
+                    borderRadius: '3px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.25rem',
