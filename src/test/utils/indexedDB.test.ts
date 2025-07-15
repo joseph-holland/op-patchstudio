@@ -408,7 +408,7 @@ describe('IndexedDB Operations', () => {
         name: 'Test Sample',
         type: 'drum',
         size: 1024,
-        data: new ArrayBuffer(1024),
+        data: new Blob([new ArrayBuffer(1024)]),
         metadata: {
           sampleRate: 44100,
           bitDepth: 16,
@@ -431,7 +431,7 @@ describe('IndexedDB Operations', () => {
         name: 'Test Sample',
         type: 'drum',
         size: 1024,
-        data: new ArrayBuffer(1024),
+        data: new Blob([new ArrayBuffer(1024)]),
         metadata: {
           sampleRate: 44100,
           bitDepth: 16,
@@ -609,7 +609,7 @@ describe('IndexedDB Operations', () => {
       const sessions = [{ id: '1' }, { id: '2' }];
       const samples = [{ 
         id: '1', 
-        data: new ArrayBuffer(1024),
+        data: new Blob(['test data'], { type: 'audio/wav' }),
         metadata: { sampleRate: 44100, bitDepth: 16, channels: 2, duration: 1.0 }
       }];
       const presets = [{ id: '1' }, { id: '2' }, { id: '3' }];

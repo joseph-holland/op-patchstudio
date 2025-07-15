@@ -403,30 +403,34 @@ export function WaveformZoomModal({
 
       // Apply constraints when moving markers
       switch (closest) {
-        case 'in':
+        case 'in': {
           const newInFrame = Math.max(0, Math.min(targetFrame, data.length - 1));
           setInFrame(newInFrame);
           if (hasLoopPoints && newInFrame >= loopStartFrame) {
             setLoopStartFrame(Math.min(newInFrame + 1, loopEndFrame - 1));
           }
           break;
-        case 'loopStart':
+        }
+        case 'loopStart': {
           if (hasLoopPoints) {
             setLoopStartFrame(Math.max(inFrame, Math.min(targetFrame, loopEndFrame - 1)));
           }
           break;
-        case 'loopEnd':
+        }
+        case 'loopEnd': {
           if (hasLoopPoints) {
             setLoopEndFrame(Math.max(loopStartFrame + 1, Math.min(targetFrame, outFrame)));
           }
           break;
-        case 'out':
+        }
+        case 'out': {
           const newOutFrame = Math.max(hasLoopPoints ? loopStartFrame + 2 : inFrame + 1, Math.min(targetFrame, data.length));
           setOutFrame(newOutFrame);
           if (hasLoopPoints && newOutFrame <= loopEndFrame) {
             setLoopEndFrame(Math.max(newOutFrame - 1, loopStartFrame + 1));
           }
           break;
+        }
       }
     }
   };
@@ -449,14 +453,15 @@ export function WaveformZoomModal({
     }
 
     switch (dragging) {
-      case 'in':
+      case 'in': {
         const newInFrame = Math.max(0, Math.min(targetFrame, hasLoopPoints ? loopEndFrame - 2 : outFrame - 1, data.length - 1));
         setInFrame(newInFrame);
         if (hasLoopPoints && newInFrame >= loopStartFrame) {
           setLoopStartFrame(Math.min(newInFrame + 1, loopEndFrame - 1));
         }
         break;
-      case 'loopStart':
+      }
+      case 'loopStart': {
         if (hasLoopPoints) {
           if (targetFrame < inFrame) {
             setInFrame(Math.max(0, targetFrame));
@@ -466,18 +471,21 @@ export function WaveformZoomModal({
           }
         }
         break;
-      case 'loopEnd':
+      }
+      case 'loopEnd': {
         if (hasLoopPoints) {
           setLoopEndFrame(Math.max(loopStartFrame + 1, Math.min(targetFrame, outFrame)));
         }
         break;
-      case 'out':
+      }
+      case 'out': {
         const newOutFrame = Math.max(hasLoopPoints ? loopStartFrame + 2 : inFrame + 1, Math.min(targetFrame, data.length));
         setOutFrame(newOutFrame);
         if (hasLoopPoints && newOutFrame <= loopEndFrame) {
           setLoopEndFrame(Math.max(newOutFrame - 1, loopStartFrame + 1));
         }
         break;
+      }
     }
   };
 

@@ -84,9 +84,26 @@ export function DrumTool() {
 
   const handleFileUpload = async (index: number, file: File) => {
     try {
+      // Validate file before processing
+      if (!file || file.size === 0) {
+        throw new Error('Invalid file: file is empty or null');
+      }
+      
+      // Check file type
+      const isValidAudioFile = file.type.startsWith('audio/') || 
+                              file.name.toLowerCase().endsWith('.wav') ||
+                              file.name.toLowerCase().endsWith('.aif') ||
+                              file.name.toLowerCase().endsWith('.aiff');
+      
+      if (!isValidAudioFile) {
+        throw new Error(`Unsupported file type: ${file.type}. Please upload a WAV, AIF, or AIFF file.`);
+      }
+      
+      // File validation passed, proceed with upload
       await handleDrumSampleUpload(file, index);
     } catch (error) {
       console.error('Error uploading file:', error);
+      // You could add user notification here if needed
     }
   };
 
@@ -100,6 +117,7 @@ export function DrumTool() {
       }
     });
   };
+
 
 
 
@@ -242,7 +260,7 @@ export function DrumTool() {
     setRecordingModal({ isOpen: false, targetIndex: null });
   };
 
-  const handleSaveRecording = async (audioBuffer: AudioBuffer) => {
+  const handleSaveRecording = async (audioBuffer: AudioBuffer, filename: string) => {
     try {
       // Convert AudioBuffer to File-like object for processing
       const numberOfChannels = audioBuffer.numberOfChannels;
@@ -258,9 +276,16 @@ export function DrumTool() {
       
       const renderedBuffer = await offlineContext.startRendering();
       
-      // Create a File-like object from the buffer
-      const wavData = audioBufferToWav(renderedBuffer);
-      const recordedFile = new File([wavData], 'recorded_sample.wav', { type: 'audio/wav' });
+      // Create a File-like object from the buffer with metadata
+      const wavData = audioBufferToWav(renderedBuffer, 16, {
+        rootNote: 60, // Default to C4 for recorded samples
+        loopStart: 0,
+        loopEnd: renderedBuffer.length - 1
+      });
+      
+      // Use the provided filename or fallback to default
+      const finalFilename = filename.trim() || 'recorded_sample';
+      const recordedFile = new File([wavData], `${finalFilename}.wav`, { type: 'audio/wav' });
       
       // If a specific target index was set, upload to that slot
       if (recordingModal.targetIndex !== null) {

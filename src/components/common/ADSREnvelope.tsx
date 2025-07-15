@@ -234,7 +234,7 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
       release: { x: releaseX, y: sustainY }, // Defines end of sustain and start of release
       releaseEnd: { x: envelopeLeft + envelopeWidth, y: minY } // Release curve ends at bottom right
     };
-  }, [width, height]);
+  }, [width]);
 
   // Get handle positions for interactive dragging
   const getHandlePositions = useCallback((envelope: ADSRValues) => {
@@ -463,7 +463,7 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
         break;
       }
     }
-  }, [currentEnvelope, getHandlePositions, activeEnvelope, height, width, onAmpEnvelopeChange, onFilterEnvelopeChange, getPhasePositions]);
+  }, [currentEnvelope, getHandlePositions, activeEnvelope, width, onAmpEnvelopeChange, onFilterEnvelopeChange, getPhasePositions]);
 
   // Simplified mouse move handler for when dragging inside SVG
   const handleMouseMove = useCallback(() => {

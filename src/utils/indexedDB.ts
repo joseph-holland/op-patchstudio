@@ -54,7 +54,7 @@ export interface SampleData {
   name: string;
   type: string;
   size: number;
-  data: ArrayBuffer; // Raw audio data
+  data: Blob; // Raw audio data as Blob to avoid detached ArrayBuffer issues
   metadata: {
     sampleRate: number;
     bitDepth: number;
@@ -316,7 +316,7 @@ class IndexedDBManager {
     
     // Add sample sizes
     samples.forEach(sample => {
-      totalSize += sample.data.byteLength;
+      totalSize += sample.data.size;
       totalSize += JSON.stringify(sample.metadata).length;
     });
     

@@ -37,29 +37,58 @@ interface WavMetadata extends WavHeader, SmplChunk {
 
 // Enhanced WAV metadata parsing with SMPL chunk support
 export async function readWavMetadata(file: File, mapping: 'C3' | 'C4' = 'C3'): Promise<WavMetadata> {
-  const arrayBuffer = await file.arrayBuffer();
-  const dataView = new DataView(arrayBuffer);
-  
-  // Parse WAV header
-  const header = parseWavHeader(dataView);
-  
-  // Decode audio data first to get duration
-  const audioContext = await audioContextManager.getAudioContext();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
-  
-  // Calculate duration from WAV data chunk size to match legacy behavior
-  const calculatedDuration = header.dataLength / (header.bitDepth / 8) / header.channels / header.sampleRate;
-  
-  // Parse SMPL chunk for loop data and MIDI note with proper fallbacks
-  const smplData = parseSmplChunk(dataView, header.sampleRate, calculatedDuration, file.name, mapping);
-  
-  return {
-    ...header,
-    ...smplData,
-    audioBuffer,
-    duration: calculatedDuration, // Use calculated duration instead of AudioBuffer.duration
-    fileSize: file.size,
-  };
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    return await readWavMetadataFromArrayBuffer(arrayBuffer, file.name, file.size, mapping);
+  } catch (error) {
+    throw new Error(`Failed to read WAV metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+// Overloaded version that accepts ArrayBuffer directly (for session restoration)
+export async function readWavMetadataFromArrayBuffer(
+  arrayBuffer: ArrayBuffer, 
+  filename: string, 
+  fileSize: number, 
+  mapping: 'C3' | 'C4' = 'C3'
+): Promise<WavMetadata> {
+  try {
+    // Create separate copies for parsing and decoding to avoid detached buffer issues
+    const parseBuffer = arrayBuffer.slice(0);
+    const decodeBuffer = arrayBuffer.slice(0);
+    
+    const dataView = new DataView(parseBuffer);
+    
+    // Parse WAV header
+    const header = parseWavHeader(dataView);
+    
+    // Decode audio data using separate buffer
+    const audioContext = await audioContextManager.getAudioContext();
+    const audioBuffer = await audioContext.decodeAudioData(decodeBuffer);
+    
+    // Calculate duration from decoded audio buffer
+    const duration = audioBuffer.duration;
+    
+    // Parse SMPL chunk for loop points and MIDI note using the parse buffer
+    const smplData = parseSmplChunk(dataView, header.sampleRate, duration, filename, mapping);
+    
+    return {
+      format: header.format,
+      sampleRate: header.sampleRate,
+      bitDepth: header.bitDepth,
+      channels: header.channels,
+      dataLength: header.dataLength,
+      duration,
+      audioBuffer,
+      midiNote: smplData.midiNote,
+      loopStart: smplData.loopStart,
+      loopEnd: smplData.loopEnd,
+      hasLoopData: smplData.hasLoopData,
+      fileSize
+    };
+  } catch (error) {
+    throw new Error(`Failed to read WAV metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 // Parse WAV file header
@@ -528,8 +557,16 @@ export async function resampleAudio(file: File, targetSampleRate: number): Promi
   }
 }
 
-// Enhanced AudioBuffer to WAV conversion with bit depth support
-export function audioBufferToWav(audioBuffer: AudioBuffer, bitDepth: number = 16): Blob {
+// Enhanced AudioBuffer to WAV conversion with SMPL chunk support
+export function audioBufferToWav(
+  audioBuffer: AudioBuffer, 
+  bitDepth: number = 16,
+  options: {
+    rootNote?: number;
+    loopStart?: number;
+    loopEnd?: number;
+  } = {}
+): Blob {
   const nChannels = audioBuffer.numberOfChannels;
   if (nChannels !== 1 && nChannels !== 2) {
     throw new Error("Expecting mono or stereo audioBuffer");
@@ -537,18 +574,72 @@ export function audioBufferToWav(audioBuffer: AudioBuffer, bitDepth: number = 16
 
   const bufferLength = audioBuffer.length;
   const bytesPerSample = bitDepth / 8;
-  const arrayBuffer = new ArrayBuffer(HEADER_LENGTH + bufferLength * nChannels * bytesPerSample);
   
+  // Calculate sizes
+  const audioDataSize = bufferLength * nChannels * bytesPerSample;
+  const fmtChunkSize = 16;
+  const smplChunkSize = 60; // Fixed size for SMPL chunk with one loop
+  
+  // Calculate total size - SMPL chunk goes before data chunk
+  const hasSmplChunk = options.rootNote !== undefined || options.loopStart !== undefined || options.loopEnd !== undefined;
+  const totalSize = 4 + (8 + fmtChunkSize) + (hasSmplChunk ? (8 + smplChunkSize) : 0) + (8 + audioDataSize);
+  
+  // Create buffer
+  const arrayBuffer = new ArrayBuffer(8 + totalSize);
   const uint8 = new Uint8Array(arrayBuffer);
+  const dataView = new DataView(arrayBuffer);
   
-  // Write WAV header
-  writeWavHeader(uint8, audioBuffer.sampleRate, nChannels, bitDepth, bufferLength);
+  let offset = 0;
   
-  // Write audio data based on bit depth
+  // Write RIFF header
+  writeString(uint8, offset, "RIFF"); offset += 4;
+  dataView.setUint32(offset, totalSize, true); offset += 4;
+  writeString(uint8, offset, "WAVE"); offset += 4;
+  
+  // Write fmt chunk
+  writeString(uint8, offset, "fmt "); offset += 4;
+  dataView.setUint32(offset, fmtChunkSize, true); offset += 4;
+  dataView.setUint16(offset, 1, true); offset += 2; // PCM format
+  dataView.setUint16(offset, nChannels, true); offset += 2;
+  dataView.setUint32(offset, audioBuffer.sampleRate, true); offset += 4;
+  dataView.setUint32(offset, audioBuffer.sampleRate * nChannels * bytesPerSample, true); offset += 4; // byte rate
+  dataView.setUint16(offset, nChannels * bytesPerSample, true); offset += 2; // block align
+  dataView.setUint16(offset, bitDepth, true); offset += 2;
+  
+  // Write SMPL chunk BEFORE data chunk if we have metadata
+  if (hasSmplChunk) {
+    writeString(uint8, offset, "smpl"); offset += 4;
+    dataView.setUint32(offset, smplChunkSize, true); offset += 4;
+    
+    // SMPL chunk data (60 bytes total)
+    dataView.setUint32(offset, 0, true); offset += 4; // manufacturer
+    dataView.setUint32(offset, 0, true); offset += 4; // product
+    dataView.setUint32(offset, Math.round(1000000000 / audioBuffer.sampleRate), true); offset += 4; // sample period (nanoseconds)
+    dataView.setUint32(offset, options.rootNote ?? 60, true); offset += 4; // MIDI unity note
+    dataView.setUint32(offset, 0, true); offset += 4; // MIDI pitch fraction
+    dataView.setUint32(offset, 0, true); offset += 4; // SMPTE format
+    dataView.setUint32(offset, 0, true); offset += 4; // SMPTE offset
+    dataView.setUint32(offset, 1, true); offset += 4; // number of loops
+    dataView.setUint32(offset, 0, true); offset += 4; // sampler data
+    
+    // Loop data (24 bytes)
+    dataView.setUint32(offset, 0, true); offset += 4; // cue point ID
+    dataView.setUint32(offset, 0, true); offset += 4; // type (0 = forward loop)
+    dataView.setUint32(offset, options.loopStart ?? 0, true); offset += 4; // start
+    dataView.setUint32(offset, options.loopEnd ?? (bufferLength - 1), true); offset += 4; // end
+    dataView.setUint32(offset, 0, true); offset += 4; // fraction
+    dataView.setUint32(offset, 0, true); offset += 4; // play count
+  }
+  
+  // Write data chunk
+  writeString(uint8, offset, "data"); offset += 4;
+  dataView.setUint32(offset, audioDataSize, true); offset += 4;
+  
+  // Write audio data
   if (bitDepth === 16) {
-    writeAudioData16(uint8, audioBuffer, HEADER_LENGTH);
+    writeAudioData16(uint8, audioBuffer, offset);
   } else if (bitDepth === 24) {
-    writeAudioData24(uint8, audioBuffer, HEADER_LENGTH);
+    writeAudioData24(uint8, audioBuffer, offset);
   } else {
     throw new Error(`Unsupported bit depth: ${bitDepth}`);
   }
@@ -556,34 +647,11 @@ export function audioBufferToWav(audioBuffer: AudioBuffer, bitDepth: number = 16
   return new Blob([uint8], { type: "audio/wav" });
 }
 
-// Write WAV header
-function writeWavHeader(
-  uint8: Uint8Array,
-  sampleRate: number,
-  channels: number,
-  bitDepth: number,
-  length: number
-): void {
-  const bytesPerSample = bitDepth / 8;
-  const dataSize = length * channels * bytesPerSample;
-  const fileSize = dataSize + 36;
-  const byteRate = sampleRate * channels * bytesPerSample;
-
-  uint8.set([
-    0x52, 0x49, 0x46, 0x46, // "RIFF"
-    fileSize & 0xff, (fileSize >> 8) & 0xff, (fileSize >> 16) & 0xff, (fileSize >> 24) & 0xff,
-    0x57, 0x41, 0x56, 0x45, // "WAVE"
-    0x66, 0x6d, 0x74, 0x20, // "fmt "
-    0x10, 0x00, 0x00, 0x00, // fmt chunk size (16)
-    0x01, 0x00, // PCM format
-    channels & 0xff, (channels >> 8) & 0xff,
-    sampleRate & 0xff, (sampleRate >> 8) & 0xff, (sampleRate >> 16) & 0xff, (sampleRate >> 24) & 0xff,
-    byteRate & 0xff, (byteRate >> 8) & 0xff, (byteRate >> 16) & 0xff, (byteRate >> 24) & 0xff,
-    (channels * bytesPerSample) & 0xff, ((channels * bytesPerSample) >> 8) & 0xff,
-    bitDepth & 0xff, (bitDepth >> 8) & 0xff,
-    0x64, 0x61, 0x74, 0x61, // "data"
-    dataSize & 0xff, (dataSize >> 8) & 0xff, (dataSize >> 16) & 0xff, (dataSize >> 24) & 0xff,
-  ]);
+// Helper function to write strings to Uint8Array
+function writeString(uint8: Uint8Array, offset: number, str: string): void {
+  for (let i = 0; i < str.length; i++) {
+    uint8[offset + i] = str.charCodeAt(i);
+  }
 }
 
 // Write 16-bit audio data
@@ -658,7 +726,7 @@ export function getInvalidPresetNameChars(name: string): string[] {
 
 export function parseFilename(filename: string, mapping: 'C3' | 'C4' = 'C3'): [string, number] {
   const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
-  const match = nameWithoutExt.match(/(.+?)[\s\-]*([A-G](?:b|#)?\d|\d{1,3})$/i);
+  const match = nameWithoutExt.match(/(.+?)[\s-]*([A-G](?:b|#)?\d|\d{1,3})$/i);
   if (!match) {
     throw new Error(`Filename '${filename}' does not match the expected pattern.`);
   }
@@ -804,11 +872,11 @@ export function generateFilename(
   }
   
   // Normalize separators in preset name and trim leading/trailing separators
-  let normalizedPresetName = presetName.replace(/[ _-]+/g, separator).replace(/^[ _-]+|[ _-]+$/g, '');
+  const normalizedPresetName = presetName.replace(/[ _-]+/g, separator).replace(/^[ _-]+|[ _-]+$/g, '');
   
   // Sanitize preset name - remove invalid characters but keep the chosen separator
   const allowedChars = separator === ' ' ? 'a-zA-Z0-9 ' : 'a-zA-Z0-9-';
-  let cleanPresetName = normalizedPresetName.replace(new RegExp(`[^${allowedChars}]`, 'g'), '');
+  const cleanPresetName = normalizedPresetName.replace(new RegExp(`[^${allowedChars}]`, 'g'), '');
   
   if (type === 'drum') {
     // Short drum key labels by index (from DrumKeyboard.tsx)

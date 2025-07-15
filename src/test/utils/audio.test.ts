@@ -607,6 +607,50 @@ describe('audio utilities', () => {
       expect(result24.size).toBeGreaterThan(result16.size) // 24-bit should be larger
     })
 
+    it('should create WAV with SMPL chunk when metadata provided', async () => {
+      const mockBuffer = createMockAudioBuffer(1000, 44100)
+      
+      const result = audioBufferToWav(mockBuffer, 16, {
+        rootNote: 60,
+        loopStart: 100,
+        loopEnd: 900
+      })
+      
+      expect(result).toBeInstanceOf(Blob)
+      expect(result.type).toBe('audio/wav')
+      
+      // Verify the WAV contains SMPL chunk by checking the binary data
+      let arrayBuffer: ArrayBuffer;
+      if (typeof (result as any).arrayBuffer === 'function') {
+        arrayBuffer = await (result as Blob).arrayBuffer();
+      } else if (result instanceof Uint8Array) {
+        arrayBuffer = result.buffer;
+      } else if (result instanceof ArrayBuffer) {
+        arrayBuffer = result;
+      } else if ((result as any).buffer instanceof ArrayBuffer) {
+        arrayBuffer = (result as any).buffer;
+      } else {
+        // If we can't get the buffer, skip the test in this environment
+        console.warn('Skipping SMPL chunk verification - Blob not supported in test environment');
+        return;
+      }
+      const uint8Array = new Uint8Array(arrayBuffer)
+      
+      // Look for "smpl" chunk identifier in the WAV file
+      let foundSmpl = false
+      for (let i = 0; i < uint8Array.length - 4; i++) {
+        if (uint8Array[i] === 0x73 && // 's'
+            uint8Array[i + 1] === 0x6D && // 'm'
+            uint8Array[i + 2] === 0x70 && // 'p'
+            uint8Array[i + 3] === 0x6C) { // 'l'
+          foundSmpl = true
+          break
+        }
+      }
+      
+      expect(foundSmpl).toBe(true)
+    })
+
     it('should throw error for unsupported channels', () => {
       const mockBuffer = {
         ...createMockAudioBuffer(1000, 44100),

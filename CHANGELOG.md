@@ -4,7 +4,15 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.11.0] - 2024-07-15
+## [0.11.1] - 2025-07-15
+
+### fixed
+- fixed: root note and loop points are now properly saved in output wav files for both drum and multisample tools
+- enhanced wav generation to include smpl chunks with metadata (root note, loop start/end points)
+- multisample wav files now include smpl metadata even when no audio conversion is needed
+- fixed multiple critical bugs: drum sample loading limit logic, unused parameters, regex escape characters, variable declarations, case statement scoping, react hook dependencies, typescript comments, and cleaned up all debugging console messages for production readiness
+
+## [0.11.0] - 2025-07-15
 
 ### added
 - users can now save all patch settings (including adsr envelope, filter, and hidden/imported settings) as their personal defaults for both drum and multisample tools
