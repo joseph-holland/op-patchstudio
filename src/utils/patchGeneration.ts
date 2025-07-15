@@ -259,6 +259,7 @@ export async function generateMultisamplePatch(
   // For now, use defaults similar to legacy implementation
 
   const fileReadPromises: Promise<void>[] = [];
+  const regionsInOrder: MultisampleRegion[] = [];
   
   // Get valid samples (with MIDI notes)
   const validSamples: ExtendedMultisampleFile[] = state.multisampleFiles
@@ -274,7 +275,8 @@ export async function generateMultisamplePatch(
 
   // Calculate key ranges and create regions in the same loop (matching working implementation)
   let lastKey = 0;
-  for (const sample of validSamples) {
+  for (let i = 0; i < validSamples.length; i++) {
+    const sample = validSamples[i];
     if (!sample.file || !sample.audioBuffer) continue;
 
     const outputName = state.multisampleSettings.renameFiles 
@@ -374,7 +376,7 @@ export async function generateMultisamplePatch(
               loopEnd: scaledLoopEnd
             });
             zip.file(outputName, wavBlob);
-            patchJson.regions.push(region);
+            regionsInOrder[i] = region;
           } catch (error) {
             console.error(`Failed to convert sample ${sample.name}:`, error);
             // If conversion fails, fall back to using the original file
@@ -386,7 +388,7 @@ export async function generateMultisamplePatch(
                   // Use the original framecount for the region if conversion failed
                   region.framecount = framecount;
                   region["sample.end"] = sampleEnd;
-                  patchJson.regions.push(region);
+                  regionsInOrder[i] = region;
                   resolve();
                 } else {
                   reject(new Error(`Failed to read ${sample.name}`));
@@ -414,7 +416,7 @@ export async function generateMultisamplePatch(
               loopEnd: scaledLoopEnd
             });
             zip.file(outputName, wavBlob);
-            patchJson.regions.push(region);
+            regionsInOrder[i] = region;
           } catch (error) {
             console.error(`Failed to create WAV with metadata for ${sample.name}:`, error);
             // Fall back to using the original file if WAV creation fails
@@ -423,7 +425,7 @@ export async function generateMultisamplePatch(
               reader.onload = (e) => {
                 if (e.target?.result) {
                   zip.file(outputName, e.target.result);
-                  patchJson.regions.push(region);
+                  regionsInOrder[i] = region;
                 }
                 resolve();
               };
@@ -436,12 +438,15 @@ export async function generateMultisamplePatch(
     }
   }
 
+  await Promise.all(fileReadPromises);
+
+  // Add regions in the correct order to patchJson
+  patchJson.regions = regionsInOrder.filter(region => region !== undefined);
+
   // Set the last region's hikey to 127 (matching working implementation)
   if (patchJson.regions.length > 0) {
     patchJson.regions[patchJson.regions.length - 1].hikey = 127;
   }
-
-  await Promise.all(fileReadPromises);
 
   // Add patch.json to ZIP
   zip.file("patch.json", JSON.stringify(patchJson, null, 2));

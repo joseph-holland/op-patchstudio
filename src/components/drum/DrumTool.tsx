@@ -93,10 +93,14 @@ export function DrumTool() {
       const isValidAudioFile = file.type.startsWith('audio/') || 
                               file.name.toLowerCase().endsWith('.wav') ||
                               file.name.toLowerCase().endsWith('.aif') ||
-                              file.name.toLowerCase().endsWith('.aiff');
+                              file.name.toLowerCase().endsWith('.aiff') ||
+                              file.name.toLowerCase().endsWith('.mp3') ||
+                              file.name.toLowerCase().endsWith('.m4a') ||
+                              file.name.toLowerCase().endsWith('.ogg') ||
+                              file.name.toLowerCase().endsWith('.flac');
       
       if (!isValidAudioFile) {
-        throw new Error(`Unsupported file type: ${file.type}. Please upload a WAV, AIF, or AIFF file.`);
+        throw new Error(`Unsupported file type: ${file.type}. Please upload a WAV, AIF, AIFF, MP3, M4A, OGG, or FLAC file.`);
       }
       
       // File validation passed, proceed with upload

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { readWavMetadata } from '../utils/audio';
+import { readAudioMetadata } from '../utils/audioFormats';
 
 export function useFileUpload() {
   const { state, dispatch } = useAppContext();
@@ -11,7 +11,7 @@ export function useFileUpload() {
       dispatch({ type: 'SET_ERROR', payload: null });
 
       // Enhanced audio processing with metadata extraction
-      const metadata = await readWavMetadata(file, state.midiNoteMapping);
+      const metadata = await readAudioMetadata(file, state.midiNoteMapping);
 
       dispatch({
         type: 'LOAD_DRUM_SAMPLE',
@@ -40,7 +40,7 @@ export function useFileUpload() {
       dispatch({ type: 'SET_ERROR', payload: null });
 
       // Enhanced audio processing with metadata extraction
-      const metadata = await readWavMetadata(file, state.midiNoteMapping);
+      const metadata = await readAudioMetadata(file, state.midiNoteMapping);
 
       dispatch({
         type: 'LOAD_MULTISAMPLE_FILE',

@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
-import type { WavMetadata } from '../utils/audio';
+import type { AudioMetadata } from '../utils/audioFormats';
 import { midiNoteToString, parseFilename } from '../utils/audio';
 import type { Notification } from '../components/common/NotificationSystem';
 import { cookieUtils, COOKIE_KEYS } from '../utils/cookies';
@@ -146,10 +146,10 @@ export type AppAction =
   | { type: 'SET_MULTISAMPLE_GAIN'; payload: number }
   | { type: 'SET_MULTISAMPLE_LOOP_ENABLED'; payload: boolean }
   | { type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE'; payload: boolean }
-  | { type: 'LOAD_DRUM_SAMPLE'; payload: { index: number; file: File; audioBuffer: AudioBuffer; metadata: WavMetadata } }
+  | { type: 'LOAD_DRUM_SAMPLE'; payload: { index: number; file: File; audioBuffer: AudioBuffer; metadata: AudioMetadata } }
   | { type: 'CLEAR_DRUM_SAMPLE'; payload: number }
   | { type: 'UPDATE_DRUM_SAMPLE'; payload: { index: number; updates: Partial<DrumSample> } }
-  | { type: 'LOAD_MULTISAMPLE_FILE'; payload: { file: File; audioBuffer: AudioBuffer; metadata: WavMetadata; rootNoteOverride?: number; } }
+  | { type: 'LOAD_MULTISAMPLE_FILE'; payload: { file: File; audioBuffer: AudioBuffer | null; metadata: AudioMetadata; rootNoteOverride?: number; } }
   | { type: 'CLEAR_MULTISAMPLE_FILE'; payload: number }
   | { type: 'UPDATE_MULTISAMPLE_FILE'; payload: { index: number; updates: Partial<MultisampleFile> } }
   | { type: 'REORDER_MULTISAMPLE_FILES'; payload: { fromIndex: number; toIndex: number } }
@@ -482,12 +482,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
     }
       
     case 'LOAD_MULTISAMPLE_FILE': {
-      // Validate that audioBuffer exists and has required properties
-      if (!action.payload.audioBuffer || typeof action.payload.audioBuffer.duration !== 'number') {
-        console.error('Invalid audioBuffer provided to LOAD_MULTISAMPLE_FILE:', action.payload.audioBuffer);
-        return state; // Return current state without changes
-      }
-      
       // Validate that metadata exists and has required properties
       if (!action.payload.metadata || typeof action.payload.metadata.duration !== 'number') {
         console.error('Invalid metadata provided to LOAD_MULTISAMPLE_FILE:', action.payload.metadata);
@@ -499,8 +493,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         return state;
       }
       
-      // Fallback will use parseFilename from audio utils for accurate OP-XY mapping
-      // Auto-detect MIDI note from WAV metadata or filename
+      // Auto-detect MIDI note from metadata or filename
       let detectedMidiNote = 60; // Default to middle C
       let detectedNote = 'C4'; // Default note name
       
@@ -509,7 +502,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         detectedMidiNote = action.payload.rootNoteOverride;
         detectedNote = midiNoteToString(detectedMidiNote, state.midiNoteMapping);
       } else if (action.payload.metadata.midiNote >= 0) {
-        // Use MIDI note from WAV metadata
+        // Use MIDI note from metadata
         detectedMidiNote = action.payload.metadata.midiNote;
         detectedNote = midiNoteToString(action.payload.metadata.midiNote, state.midiNoteMapping);
       } else {
@@ -529,17 +522,17 @@ function appReducer(state: AppState, action: AppAction): AppState {
       const newMultisampleFile: MultisampleFile = {
         ...initialMultisampleFile,
         file: action.payload.file,
-        audioBuffer: action.payload.audioBuffer,
+        audioBuffer: action.payload.audioBuffer, // Can be null for AIF files that can't be decoded
         name: action.payload.file.name,
-        isLoaded: true,
+        isLoaded: action.payload.audioBuffer !== null, // Only mark as loaded if we have an audioBuffer
         rootNote: detectedMidiNote, // Set the actual MIDI note number
         note: detectedNote,
         inPoint: 0,
         outPoint: action.payload.metadata.duration, // Use calculated duration from metadata
-        // Use loop points from WAV metadata if available, otherwise use defaults
+        // Use loop points from metadata if available, otherwise use defaults
         loopStart: action.payload.metadata.hasLoopData ? action.payload.metadata.loopStart : action.payload.metadata.duration * 0.2,
         loopEnd: action.payload.metadata.hasLoopData ? action.payload.metadata.loopEnd : action.payload.metadata.duration * 0.8,
-        // Store WAV metadata
+        // Store metadata
         originalBitDepth: action.payload.metadata.bitDepth,
         originalSampleRate: action.payload.metadata.sampleRate,
         originalChannels: action.payload.metadata.channels,
