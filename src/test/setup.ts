@@ -1,6 +1,48 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
+// Mock AudioBuffer class
+class MockAudioBuffer {
+  numberOfChannels: number;
+  length: number;
+  sampleRate: number;
+  duration: number;
+  private channelData: Float32Array[];
+
+  constructor(numberOfChannels: number, length: number, sampleRate: number) {
+    this.numberOfChannels = numberOfChannels;
+    this.length = length;
+    this.sampleRate = sampleRate;
+    this.duration = length / sampleRate;
+    this.channelData = [];
+    
+    // Create Float32Array for each channel
+    for (let i = 0; i < numberOfChannels; i++) {
+      this.channelData[i] = new Float32Array(length);
+    }
+  }
+
+  getChannelData(channel: number): Float32Array {
+    return this.channelData[channel];
+  }
+
+  copyFromChannel(destination: Float32Array, channelNumber: number, startInChannel: number = 0): void {
+    const source = this.channelData[channelNumber];
+    const length = Math.min(destination.length, source.length - startInChannel);
+    for (let i = 0; i < length; i++) {
+      destination[i] = source[startInChannel + i];
+    }
+  }
+
+  copyToChannel(source: Float32Array, channelNumber: number, startInChannel: number = 0): void {
+    const destination = this.channelData[channelNumber];
+    const length = Math.min(source.length, destination.length - startInChannel);
+    for (let i = 0; i < length; i++) {
+      destination[startInChannel + i] = source[i];
+    }
+  }
+}
+
 // Mock Audio APIs that aren't available in jsdom
 global.AudioContext = vi.fn().mockImplementation(() => ({
   createBufferSource: vi.fn(() => ({
@@ -10,7 +52,9 @@ global.AudioContext = vi.fn().mockImplementation(() => ({
     stop: vi.fn(),
     playbackRate: { value: 1 }
   })),
-  createBuffer: vi.fn(),
+  createBuffer: vi.fn((numberOfChannels: number, length: number, sampleRate: number) => {
+    return new MockAudioBuffer(numberOfChannels, length, sampleRate);
+  }),
   createGain: vi.fn(() => ({
     gain: { value: 1 },
     connect: vi.fn(() => ({ connect: vi.fn() }))
@@ -25,8 +69,11 @@ global.AudioContext = vi.fn().mockImplementation(() => ({
   resume: vi.fn(() => Promise.resolve()),
   suspend: vi.fn(() => Promise.resolve()),
   close: vi.fn(() => Promise.resolve()),
-  decodeAudioData: vi.fn(() => Promise.resolve({}))
+  decodeAudioData: vi.fn(() => Promise.resolve(new MockAudioBuffer(1, 1000, 44100)))
 }))
+
+// Make AudioBuffer available globally
+global.AudioBuffer = MockAudioBuffer as any;
 
 // Mock MediaRecorder
 const MediaRecorderMock = function (this: any) {

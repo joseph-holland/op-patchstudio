@@ -1,7 +1,7 @@
 ---
 description: general info on OP-PatchStudio app
 globs:  ["**/*.ts", "**/*.tsx", "**/*.scss"]
-alwaysApply: false
+alwaysApply: true
 ---
 - app name: op-xy drum & multisample tool
 - purpose: load wav samples, edit settingsand generate `.preset.zip` files compatible with teenage engineering op-1 field/op-z (op-xy firmware)

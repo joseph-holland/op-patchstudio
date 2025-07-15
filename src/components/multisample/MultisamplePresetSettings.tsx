@@ -1,8 +1,9 @@
-import { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { Select, SelectItem, Slider, Toggle } from '@carbon/react';
-import { importPresetFromFile, type MultisamplePresetJson } from '../../utils/presetImport';
+import { Select, SelectItem, Toggle, Slider } from '@carbon/react';
 import { ADSREnvelope } from '../common/ADSREnvelope';
+import { importPresetFromFile } from '../../utils/presetImport';
+import type { MultisamplePresetJson } from '../../utils/presetImport';
 import { percentToInternal } from '../../utils/valueConversions';
 
 // ADSR Presets for different instrument types (copied from ADSREnvelope component)
@@ -79,29 +80,26 @@ export function MultisamplePresetSettings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   
-  // Initialize settings from global state instead of random defaults
-  const [settings, setSettings] = useState<MultisampleAdvancedSettings>(() => {
-    // Use global state if available, otherwise use true defaults
-    if (state.multisampleSettings) {
-      return {
-        playmode: 'poly', // This is not stored in global state, use default
-        loopEnabled: state.multisampleSettings.loopEnabled,
-        loopOnRelease: state.multisampleSettings.loopOnRelease,
-        transpose: 0, // Not stored in global state
-        velocitySensitivity: 20, // Not stored in global state
-        volume: 69, // Not stored in global state
-        width: 0, // Not stored in global state
-        highpass: 0, // Not stored in global state
-        portamentoType: 'linear', // Not stored in global state
-        portamentoAmount: 0, // Not stored in global state
-        tuningRoot: 0, // Not stored in global state
-        ampEnvelope: ADSR_PRESETS.keys.amp, // Use consistent default
-        filterEnvelope: ADSR_PRESETS.keys.filter, // Use consistent default
-      };
-    }
-    return createTrueDefaultSettings();
-  });
-  
+  // Function to convert global state to local settings format
+  const createSettingsFromGlobalState = (): MultisampleAdvancedSettings => {
+    return {
+      playmode: state.multisampleSettings.playmode,
+      loopEnabled: state.multisampleSettings.loopEnabled,
+      loopOnRelease: state.multisampleSettings.loopOnRelease,
+      transpose: state.multisampleSettings.transpose,
+      velocitySensitivity: state.multisampleSettings.velocitySensitivity,
+      volume: state.multisampleSettings.volume,
+      width: state.multisampleSettings.width,
+      highpass: state.multisampleSettings.highpass,
+      portamentoType: state.multisampleSettings.portamentoType,
+      portamentoAmount: state.multisampleSettings.portamentoAmount,
+      tuningRoot: state.multisampleSettings.tuningRoot,
+      ampEnvelope: state.multisampleSettings.ampEnvelope,
+      filterEnvelope: state.multisampleSettings.filterEnvelope,
+    };
+  };
+
+  const [settings, setSettings] = useState<MultisampleAdvancedSettings>(createSettingsFromGlobalState());
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
     sound: false,
@@ -118,19 +116,30 @@ export function MultisamplePresetSettings() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Update local settings when global state changes (e.g., during session restoration)
+  // Sync local settings with global state when global state changes
   useEffect(() => {
-    setSettings(prevSettings => ({
-      ...prevSettings,
-      loopEnabled: state.multisampleSettings.loopEnabled,
-      loopOnRelease: state.multisampleSettings.loopOnRelease,
-    }));
-  }, [state.multisampleSettings.loopEnabled, state.multisampleSettings.loopOnRelease]);
+    const globalSettings = createSettingsFromGlobalState();
+    setSettings(globalSettings);
+  }, [
+    state.multisampleSettings.playmode,
+    state.multisampleSettings.loopEnabled,
+    state.multisampleSettings.loopOnRelease,
+    state.multisampleSettings.transpose,
+    state.multisampleSettings.velocitySensitivity,
+    state.multisampleSettings.volume,
+    state.multisampleSettings.width,
+    state.multisampleSettings.highpass,
+    state.multisampleSettings.portamentoType,
+    state.multisampleSettings.portamentoAmount,
+    state.multisampleSettings.tuningRoot,
+    state.multisampleSettings.ampEnvelope,
+    state.multisampleSettings.filterEnvelope,
+  ]);
 
-  // Dispatch settings to app context whenever settings change
+  // Dispatch initial settings to app context on mount
   useEffect(() => {
     dispatchSettingsToContext(settings);
-  }, [settings, dispatch]); // Run whenever settings change
+  }, []); // Only run once on mount
 
   const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -193,6 +202,7 @@ export function MultisamplePresetSettings() {
   const handleReset = () => {
     const resetSettings = createTrueDefaultSettings();
     setSettings(resetSettings);
+    dispatchSettingsToContext(resetSettings);
   };
 
   const updateSetting = <K extends keyof MultisampleAdvancedSettings>(
@@ -201,16 +211,31 @@ export function MultisamplePresetSettings() {
   ) => {
     setSettings(prev => {
       const newSettings = { ...prev, [key]: value };
+      dispatchSettingsToContext(newSettings);
       return newSettings;
     });
   };
 
   // Function to dispatch current settings to app context
   const dispatchSettingsToContext = (currentSettings: MultisampleAdvancedSettings) => {
+    // Dispatch individual settings to global context for save-as-defaults functionality
+    dispatch({ type: 'SET_MULTISAMPLE_PLAYMODE', payload: currentSettings.playmode });
+    dispatch({ type: 'SET_MULTISAMPLE_TRANSPOSE', payload: currentSettings.transpose });
+    dispatch({ type: 'SET_MULTISAMPLE_VELOCITY_SENSITIVITY', payload: currentSettings.velocitySensitivity });
+    dispatch({ type: 'SET_MULTISAMPLE_VOLUME', payload: currentSettings.volume });
+    dispatch({ type: 'SET_MULTISAMPLE_WIDTH', payload: currentSettings.width });
+    dispatch({ type: 'SET_MULTISAMPLE_HIGHPASS', payload: currentSettings.highpass });
+    dispatch({ type: 'SET_MULTISAMPLE_PORTAMENTO_TYPE', payload: currentSettings.portamentoType });
+    dispatch({ type: 'SET_MULTISAMPLE_PORTAMENTO_AMOUNT', payload: currentSettings.portamentoAmount });
+    dispatch({ type: 'SET_MULTISAMPLE_TUNING_ROOT', payload: currentSettings.tuningRoot });
+    dispatch({ type: 'SET_MULTISAMPLE_AMP_ENVELOPE', payload: currentSettings.ampEnvelope });
+    dispatch({ type: 'SET_MULTISAMPLE_FILTER_ENVELOPE', payload: currentSettings.filterEnvelope });
+    
     // Dispatch loop settings to global context
     dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: currentSettings.loopEnabled });
     dispatch({ type: 'SET_MULTISAMPLE_LOOP_ON_RELEASE', payload: currentSettings.loopOnRelease });
     
+    // Also store in the imported preset format for patch generation
     const payload = {
       engine: {
         playmode: currentSettings.playmode,
@@ -249,6 +274,7 @@ export function MultisamplePresetSettings() {
   const updateAmpEnvelope = (envelope: MultisampleAdvancedSettings['ampEnvelope']) => {
     setSettings(prev => {
       const newSettings = { ...prev, ampEnvelope: envelope };
+      dispatchSettingsToContext(newSettings);
       return newSettings;
     });
   };
@@ -256,6 +282,7 @@ export function MultisamplePresetSettings() {
   const updateFilterEnvelope = (envelope: MultisampleAdvancedSettings['filterEnvelope']) => {
     setSettings(prev => {
       const newSettings = { ...prev, filterEnvelope: envelope };
+      dispatchSettingsToContext(newSettings);
       return newSettings;
     });
   };
@@ -384,8 +411,8 @@ export function MultisamplePresetSettings() {
                   <div style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
-                    alignItems: 'flex-start',
-                    textAlign: 'left'
+                    alignItems: 'center',
+                    textAlign: 'center'
                   }}>
                     <label style={{ 
                       display: 'block',
@@ -414,8 +441,8 @@ export function MultisamplePresetSettings() {
                   <div style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
-                    alignItems: 'flex-start',
-                    textAlign: 'left'
+                    alignItems: 'center',
+                    textAlign: 'center'
                   }}>
                     <label style={{ 
                       display: 'block',
@@ -439,8 +466,8 @@ export function MultisamplePresetSettings() {
                   <div style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
-                    alignItems: 'flex-start',
-                    textAlign: 'left'
+                    alignItems: 'center',
+                    textAlign: 'center'
                   }}>
                     <label style={{ 
                       display: 'block',

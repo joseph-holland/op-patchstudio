@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MultisampleTool } from '../../components/multisample/MultisampleTool';
 import { useAppContext } from '../../context/AppContext';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
+import { createCompleteMultisampleSettings } from '../utils/testHelpers';
 
 // Mock dependencies
 vi.mock('../../context/AppContext');
@@ -181,20 +182,10 @@ describe('MultisampleTool ADSR Integration', () => {
         loopEnd: 2.0,
       },
     ],
-    multisampleSettings: {
-      sampleRate: 0,
-      bitDepth: 0,
-      channels: 0,
+    multisampleSettings: createCompleteMultisampleSettings({
       presetName: 'Test Preset',
-      normalize: false,
-      normalizeLevel: -1.0,
-      cutAtLoopEnd: false,
-      gain: 0,
-      loopEnabled: true,
-      loopOnRelease: true,
-      renameFiles: false,
-      filenameSeparator: ' ',
-    },
+      // add any overrides needed for specific tests
+    }),
     importedMultisamplePreset: {
       engine: {
         playmode: 'poly',
@@ -434,10 +425,9 @@ describe('MultisampleTool ADSR Integration', () => {
   it('should handle gain settings from multisample settings', async () => {
     const stateWithGain = {
       ...defaultState,
-      multisampleSettings: {
-        ...defaultState.multisampleSettings,
+      multisampleSettings: createCompleteMultisampleSettings({
         gain: -6, // -6dB gain
-      },
+      }),
     };
 
     (useAppContext as any).mockReturnValue({
@@ -458,6 +448,118 @@ describe('MultisampleTool ADSR Integration', () => {
           gain: -6,
         })
       );
+    });
+  });
+
+  it('should handle save settings as default', async () => {
+    const mockDispatch = vi.fn();
+    (useAppContext as any).mockReturnValue({
+      state: {
+        ...defaultState,
+        importedMultisamplePreset: {
+          engine: {
+            playmode: 'mono',
+            transpose: 12,
+            'velocity.sensitivity': 16384,
+            volume: 22938,
+            width: 8192,
+            highpass: 16384,
+            'portamento.amount': 3277,
+            'portamento.type': 32767,
+            'tuning.root': 5,
+          },
+          envelope: {
+            amp: {
+              attack: 1000,
+              decay: 2000,
+              sustain: 24576,
+              release: 3000,
+            },
+            filter: {
+              attack: 500,
+              decay: 1500,
+              sustain: 16384,
+              release: 2500,
+            },
+          },
+          regions: []
+        }
+      },
+      dispatch: mockDispatch,
+    });
+
+    render(<MultisampleTool />);
+
+    const saveAsDefaultButton = screen.getByText('save as default');
+    fireEvent.click(saveAsDefaultButton);
+
+    await waitFor(() => {
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: expect.any(String),
+          type: 'success',
+          title: 'settings saved',
+          message: 'multisample settings saved as default'
+        }
+      });
+    });
+  });
+
+  it('should handle save settings as default with advanced settings', async () => {
+    const mockDispatch = vi.fn();
+    const advancedPreset = {
+      engine: {
+        playmode: 'legato',
+        transpose: -6,
+        'velocity.sensitivity': 8192, // 25%
+        volume: 16384, // 50%
+        width: 3277, // 10%
+        highpass: 8192, // 25%
+        'portamento.amount': 16384, // 50%
+        'portamento.type': 0, // exponential
+        'tuning.root': 7, // G
+      },
+      envelope: {
+        amp: {
+          attack: 500,
+          decay: 1000,
+          sustain: 8192, // 25%
+          release: 1500,
+        },
+        filter: {
+          attack: 200,
+          decay: 800,
+          sustain: 12288, // 37.5%
+          release: 1200,
+        },
+      },
+      regions: []
+    };
+
+    (useAppContext as any).mockReturnValue({
+      state: {
+        ...defaultState,
+        importedMultisamplePreset: advancedPreset
+      },
+      dispatch: mockDispatch,
+    });
+
+    render(<MultisampleTool />);
+
+    const saveAsDefaultButton = screen.getByText('save as default');
+    fireEvent.click(saveAsDefaultButton);
+
+    await waitFor(() => {
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: expect.any(String),
+          type: 'success',
+          title: 'settings saved',
+          message: 'multisample settings saved as default'
+        }
+      });
     });
   });
 

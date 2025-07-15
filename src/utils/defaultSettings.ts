@@ -32,7 +32,29 @@ export const defaultMultisampleSettings: AppState['multisampleSettings'] = {
   loopEnabled: true,
   loopOnRelease: true,
   renameFiles: false,
-  filenameSeparator: ' '
+  filenameSeparator: ' ',
+  // Advanced settings
+  playmode: 'poly',
+  transpose: 0,
+  velocitySensitivity: 20,
+  volume: 69,
+  width: 0,
+  highpass: 0,
+  portamentoType: 'linear',
+  portamentoAmount: 0,
+  tuningRoot: 0,
+  ampEnvelope: {
+    attack: 500,
+    decay: 6000,
+    sustain: 22000,
+    release: 12000
+  },
+  filterEnvelope: {
+    attack: 0,
+    decay: 5000,
+    sustain: 18000,
+    release: 10000
+  }
 };
 
 // Extended default settings that include imported preset data
@@ -92,7 +114,19 @@ export function saveMultisampleSettingsAsDefault(settings: AppState['multisample
         loopEnabled: settings.loopEnabled,
         loopOnRelease: settings.loopOnRelease,
         renameFiles: settings.renameFiles,
-        filenameSeparator: settings.filenameSeparator
+        filenameSeparator: settings.filenameSeparator,
+        // Advanced settings
+        playmode: settings.playmode,
+        transpose: settings.transpose,
+        velocitySensitivity: settings.velocitySensitivity,
+        volume: settings.volume,
+        width: settings.width,
+        highpass: settings.highpass,
+        portamentoType: settings.portamentoType,
+        portamentoAmount: settings.portamentoAmount,
+        tuningRoot: settings.tuningRoot,
+        ampEnvelope: settings.ampEnvelope,
+        filterEnvelope: settings.filterEnvelope
       },
       importedPreset: importedPreset
     };
@@ -134,8 +168,36 @@ export function loadMultisampleDefaultSettings(): typeof defaultMultisampleSetti
       
       // Handle both old format (just basic settings) and new format (with imported preset)
       if (parsed.basicSettings) {
-        // New format with imported preset
-        return { ...defaultMultisampleSettings, ...parsed.basicSettings };
+        // New format with imported preset and advanced settings
+        const settings = { ...defaultMultisampleSettings, ...parsed.basicSettings };
+        
+        // Ensure all advanced settings are properly loaded
+        settings.playmode = parsed.basicSettings.playmode || defaultMultisampleSettings.playmode;
+        settings.transpose = parsed.basicSettings.transpose ?? defaultMultisampleSettings.transpose;
+        settings.velocitySensitivity = parsed.basicSettings.velocitySensitivity ?? defaultMultisampleSettings.velocitySensitivity;
+        settings.volume = parsed.basicSettings.volume ?? defaultMultisampleSettings.volume;
+        settings.width = parsed.basicSettings.width ?? defaultMultisampleSettings.width;
+        settings.highpass = parsed.basicSettings.highpass ?? defaultMultisampleSettings.highpass;
+        settings.portamentoType = parsed.basicSettings.portamentoType || defaultMultisampleSettings.portamentoType;
+        settings.portamentoAmount = parsed.basicSettings.portamentoAmount ?? defaultMultisampleSettings.portamentoAmount;
+        settings.tuningRoot = parsed.basicSettings.tuningRoot ?? defaultMultisampleSettings.tuningRoot;
+        
+        // Load envelope settings with fallbacks to defaults
+        settings.ampEnvelope = {
+          attack: parsed.basicSettings.ampEnvelope?.attack ?? defaultMultisampleSettings.ampEnvelope.attack,
+          decay: parsed.basicSettings.ampEnvelope?.decay ?? defaultMultisampleSettings.ampEnvelope.decay,
+          sustain: parsed.basicSettings.ampEnvelope?.sustain ?? defaultMultisampleSettings.ampEnvelope.sustain,
+          release: parsed.basicSettings.ampEnvelope?.release ?? defaultMultisampleSettings.ampEnvelope.release
+        };
+        
+        settings.filterEnvelope = {
+          attack: parsed.basicSettings.filterEnvelope?.attack ?? defaultMultisampleSettings.filterEnvelope.attack,
+          decay: parsed.basicSettings.filterEnvelope?.decay ?? defaultMultisampleSettings.filterEnvelope.decay,
+          sustain: parsed.basicSettings.filterEnvelope?.sustain ?? defaultMultisampleSettings.filterEnvelope.sustain,
+          release: parsed.basicSettings.filterEnvelope?.release ?? defaultMultisampleSettings.filterEnvelope.release
+        };
+        
+        return settings;
       } else {
         // Old format - just basic settings
         return { ...defaultMultisampleSettings, ...parsed };

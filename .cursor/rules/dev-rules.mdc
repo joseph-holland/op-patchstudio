@@ -1,0 +1,8 @@
+---
+description: general dev info for OP-PatchStudio app
+globs:  ["**/*.ts", "**/*.tsx", "**/*.scss"]
+alwaysApply: true
+---
+- ensure not to use copyright code, we can use as reference, but our implementation must not be the same
+- don't ever use emojis in console logs, it's not cute or clever
+- ensure to always remove debug logging after we've fixed any issues, we must not push console logs to prod
