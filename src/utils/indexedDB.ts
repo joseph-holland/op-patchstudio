@@ -16,6 +16,7 @@ export const STORES = {
 export interface SessionData {
   id: string;
   timestamp: number;
+  version?: number; // Schema version for future compatibility
   name?: string;
   drumSettings: AppState['drumSettings'];
   multisampleSettings: AppState['multisampleSettings'];

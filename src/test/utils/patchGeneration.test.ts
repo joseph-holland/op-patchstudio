@@ -2,6 +2,17 @@ import { describe, it, expect, vi } from 'vitest';
 import { generateMultisamplePatch } from '../../utils/patchGeneration';
 import type { AppState } from '../../context/AppContext';
 
+// Mock function to create audio buffer
+function createMockAudioBuffer(length: number, sampleRate: number) {
+  return {
+    sampleRate,
+    duration: length / sampleRate,
+    numberOfChannels: 1,
+    length,
+    getChannelData: () => new Float32Array(length)
+  } as any;
+}
+
 // Mock JSZip
 vi.mock('jszip', () => ({
   default: vi.fn().mockImplementation(() => ({
@@ -16,86 +27,59 @@ describe('patchGeneration', () => {
       // Create mock state with samples in random order
       const mockState: Partial<AppState> = {
         multisampleFiles: [
-          {
-            name: 'C3.wav',
-            file: new File([''], 'C3.wav'),
-            isLoaded: true,
-            rootNote: 60, // C3
-            audioBuffer: {
-              sampleRate: 44100,
-              duration: 1.0,
-              numberOfChannels: 1,
-              length: 44100,
-              getChannelData: () => new Float32Array(44100)
-            } as any,
-            originalSampleRate: 44100,
-            originalBitDepth: 16,
-            originalChannels: 1,
-            duration: 1.0,
-            fileSize: 1000,
-            loopStart: 0.1,
-            loopEnd: 0.9,
-            inPoint: 0,
-            outPoint: 1.0
-          },
-          {
-            name: 'F#3.wav',
-            file: new File([''], 'F#3.wav'),
-            isLoaded: true,
-            rootNote: 66, // F#3
-            audioBuffer: {
-              sampleRate: 44100,
-              duration: 1.0,
-              numberOfChannels: 1,
-              length: 44100,
-              getChannelData: () => new Float32Array(44100)
-            } as any,
-            originalSampleRate: 44100,
-            originalBitDepth: 16,
-            originalChannels: 1,
-            duration: 1.0,
-            fileSize: 1000,
-            loopStart: 0.1,
-            loopEnd: 0.9,
-            inPoint: 0,
-            outPoint: 1.0
-          },
-          {
-            name: 'C2.wav',
-            file: new File([''], 'C2.wav'),
-            isLoaded: true,
-            rootNote: 48, // C2
-            audioBuffer: {
-              sampleRate: 44100,
-              duration: 1.0,
-              numberOfChannels: 1,
-              length: 44100,
-              getChannelData: () => new Float32Array(44100)
-            } as any,
-            originalSampleRate: 44100,
-            originalBitDepth: 16,
-            originalChannels: 1,
-            duration: 1.0,
-            fileSize: 1000,
-            loopStart: 0.1,
-            loopEnd: 0.9,
-            inPoint: 0,
-            outPoint: 1.0
-          }
+                  {
+          name: 'C2.wav',
+          file: new File([''], 'C2.wav'),
+          isLoaded: true,
+          rootNote: 48, // C2
+          audioBuffer: createMockAudioBuffer(44100, 44100),
+          loopStart: 0.1,
+          loopEnd: 0.7, // Different loop end
+          duration: 1,
+          originalSampleRate: 44100,
+          inPoint: 0,
+          outPoint: 1
+        },
+        {
+          name: 'C3.wav',
+          file: new File([''], 'C3.wav'),
+          isLoaded: true,
+          rootNote: 60, // C3
+          audioBuffer: createMockAudioBuffer(44100, 44100),
+          loopStart: 0.1,
+          loopEnd: 0.8, // Different loop end
+          duration: 1,
+          originalSampleRate: 44100,
+          inPoint: 0,
+          outPoint: 1
+        },
+        {
+          name: 'F#3.wav',
+          file: new File([''], 'F#3.wav'),
+          isLoaded: true,
+          rootNote: 66, // F#3
+          audioBuffer: createMockAudioBuffer(44100, 44100),
+          loopStart: 0.1,
+          loopEnd: 0.9, // Different loop end
+          duration: 1,
+          originalSampleRate: 44100,
+          inPoint: 0,
+          outPoint: 1
+        }
         ],
         multisampleSettings: {
           presetName: 'Test',
           filenameSeparator: ' ',
           renameFiles: true,
-          sampleRate: 44100,
-          bitDepth: 16,
-          channels: 2,
-          loopEnabled: false,
+          cutAtLoopEnd: true,
+          loopEnabled: true,
           loopOnRelease: true,
           normalize: false,
-          normalizeLevel: -1,
-          gain: 0,
-          cutAtLoopEnd: false
+          normalizeLevel: -6.0,
+          sampleRate: 44100,
+          bitDepth: 16,
+          channels: 1,
+          gain: 0
         },
         midiNoteMapping: 'C3'
       };

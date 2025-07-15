@@ -11,7 +11,7 @@ export function useSessionManagement() {
 
   // Save current session
   const saveSession = useCallback(async () => {
-    try {      
+    try {
       await sessionStorageIndexedDB.saveSession(state);
     } catch (error) {
       console.error('Failed to save session:', error);
@@ -35,39 +35,48 @@ export function useSessionManagement() {
         return;
       }
 
-      if (await sessionStorageIndexedDB.hasPreviousSession()) {
-        const currentSessionId = sessionStorageIndexedDB.getCurrentSessionId();
-        if (currentSessionId) {
-          const sessionData = await sessionStorageIndexedDB.loadSession(currentSessionId);
-          if (sessionData) {
-            // Don't show restore prompt if session has been saved to library
-            if (sessionData.savedToLibrary) {
-              return;
-            }
+      try {
+        // First, clear any corrupted data
+        await sessionStorageIndexedDB.clearCorruptedData();
+      } catch (error) {
+        console.error('Failed to clear corrupted data:', error);
+      }
+
+      const hasPreviousSession = await sessionStorageIndexedDB.hasPreviousSession();
+      
+      if (hasPreviousSession) {
+        // Get the current session
+        const sessionData = await sessionStorageIndexedDB.getCurrentSession();
+        if (sessionData) {
+          // Don't show restore prompt if session has been saved to library
+          if (sessionData.savedToLibrary) {
+            return;
+          }
+          
+          // Check if session is within the last 12 hours (12 * 60 * 60 * 1000 ms)
+          const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+          const now = Date.now();
+          const sessionAge = now - sessionData.timestamp;
+          
+          if (sessionAge <= TWELVE_HOURS_MS) {
+            // Count loaded samples
+            const drumSamplesCount = sessionData.drumSamples.length;
+            const multisampleFilesCount = sessionData.multisampleFiles.length;
             
-            // Check if session is within the last 12 hours (12 * 60 * 60 * 1000 ms)
-            const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
-            const now = Date.now();
-            if (now - sessionData.timestamp <= TWELVE_HOURS_MS) {
-              // Count loaded samples
-              const drumSamplesCount = sessionData.drumSamples.length;
-              const multisampleFilesCount = sessionData.multisampleFiles.length;
+            // Only show restoration modal if there are samples to restore
+            if (drumSamplesCount > 0 || multisampleFilesCount > 0) {
+              // Set session info for the modal
+              dispatch({
+                type: 'SET_SESSION_INFO',
+                payload: {
+                  timestamp: sessionData.timestamp,
+                  drumSamplesCount,
+                  multisampleFilesCount
+                }
+              });
               
-              // Only show restoration modal if there are samples to restore
-              if (drumSamplesCount > 0 || multisampleFilesCount > 0) {
-                // Set session info for the modal
-                dispatch({
-                  type: 'SET_SESSION_INFO',
-                  payload: {
-                    timestamp: sessionData.timestamp,
-                    drumSamplesCount,
-                    multisampleFilesCount
-                  }
-                });
-                
-                // Show restoration modal
-                dispatch({ type: 'SET_SESSION_RESTORATION_MODAL_OPEN', payload: true });
-              }
+              // Show restoration modal
+              dispatch({ type: 'SET_SESSION_RESTORATION_MODAL_OPEN', payload: true });
             }
           }
         }
@@ -104,13 +113,9 @@ export function useSessionManagement() {
 
   // Load session
   const loadSession = useCallback(async () => {
-    const currentSessionId = sessionStorageIndexedDB.getCurrentSessionId();
-    if (!currentSessionId) return;
-
     try {
-      const sessionData = await sessionStorageIndexedDB.loadSession(currentSessionId);
+      const sessionData = await sessionStorageIndexedDB.loadSession();
       if (!sessionData) {
-        console.log('No session data available to restore');
         return;
       }
 
@@ -153,6 +158,7 @@ export function useSessionManagement() {
           restoredDrumSamples[storedSample.originalIndex] = restoredSample;
         } catch (error) {
           console.error(`Failed to restore drum sample ${storedSample.sampleId}:`, error);
+          // Continue with other samples even if one fails
         }
       }
 
@@ -188,6 +194,7 @@ export function useSessionManagement() {
           restoredMultisampleFiles.push(restoredFile);
         } catch (error) {
           console.error(`Failed to restore multisample file ${storedFile.sampleId}:`, error);
+          // Continue with other files even if one fails
         }
       }
 
@@ -195,16 +202,6 @@ export function useSessionManagement() {
       restoredMultisampleFiles.sort((a, b) => b.rootNote - a.rootNote);
 
       // Now restore everything in one go with the complete state
-      console.log('Dispatching RESTORE_SESSION with:', {
-        drumSettings: sessionData.drumSettings,
-        multisampleSettings: sessionData.multisampleSettings,
-        drumSamplesCount: restoredDrumSamples.length,
-        multisampleFilesCount: restoredMultisampleFiles.length,
-        selectedMultisample: sessionData.selectedMultisample,
-        isDrumKeyboardPinned: sessionData.isDrumKeyboardPinned,
-        isMultisampleKeyboardPinned: sessionData.isMultisampleKeyboardPinned,
-      });
-      
       dispatch({
         type: 'RESTORE_SESSION',
         payload: {
@@ -218,48 +215,60 @@ export function useSessionManagement() {
         }
       });
 
-      console.log('Session restoration completed successfully');
     } catch (error) {
       console.error('Failed to load session:', error);
     }
   }, [dispatch]);
 
-  // Start new session (clear current session)
-  const startNewSession = useCallback(() => {
-    // Mark that user has declined to restore session to prevent future prompts
+  // Decline session restoration
+  const declineSessionRestoration = useCallback(() => {
     hasUserDeclinedSessionRef.current = true;
-    sessionStorageIndexedDB.clearCurrentSession();
     dispatch({ type: 'SET_SESSION_RESTORATION_MODAL_OPEN', payload: false });
-    dispatch({ type: 'SET_SESSION_INFO', payload: null });
   }, [dispatch]);
 
-  // Auto-save session periodically (as backup)
-  useEffect(() => {
-    const autoSaveInterval = setInterval(() => {
-      // Don't auto-save if session restoration modal is open
-      if (state.isSessionRestorationModalOpen) {
-        return;
-      }
-      
-      // Don't auto-save if a preset is being loaded
-      if (window.sessionStorage.getItem('loading-preset') === 'true') {
-        return;
-      }
-      
-      // Always save session periodically as backup
-      if (saveSessionRef.current) {
-        saveSessionRef.current();
-      }
-    }, 30000); // Save every 30 seconds
+  // Clear current session
+  const clearCurrentSession = useCallback(async () => {
+    try {
+      await sessionStorageIndexedDB.clearCurrentSession();
+    } catch (error) {
+      console.error('Failed to clear current session:', error);
+    }
+  }, []);
 
-    return () => clearInterval(autoSaveInterval);
-  }, [state.drumSamples, state.multisampleFiles, state.drumSettings, state.multisampleSettings, state.isSessionRestorationModalOpen]);
+  // Clear all session data (for migration to new format)
+  const clearAllSessionData = useCallback(async () => {
+    try {
+      await sessionStorageIndexedDB.clearAllSessionData();
+    } catch (error) {
+      console.error('Failed to clear all session data:', error);
+    }
+  }, []);
+
+  // Mark session as saved to library
+  const markSessionAsSavedToLibrary = useCallback(async () => {
+    try {
+      await sessionStorageIndexedDB.markSessionAsSavedToLibrary();
+    } catch (error) {
+      console.error('Failed to mark session as saved to library:', error);
+    }
+  }, []);
+
+  // Reset saved to library flag
+  const resetSavedToLibraryFlag = useCallback(async () => {
+    try {
+      await sessionStorageIndexedDB.resetSavedToLibraryFlag();
+    } catch (error) {
+      console.error('Failed to reset saved to library flag:', error);
+    }
+  }, []);
 
   return {
     saveSession,
     loadSession,
-    startNewSession,
-    isSessionRestorationModalOpen: state.isSessionRestorationModalOpen,
-    sessionInfo: state.sessionInfo
+    declineSessionRestoration,
+    clearCurrentSession,
+    clearAllSessionData,
+    markSessionAsSavedToLibrary,
+    resetSavedToLibraryFlag,
   };
 } 

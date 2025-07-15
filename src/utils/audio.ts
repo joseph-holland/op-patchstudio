@@ -343,15 +343,22 @@ export async function applyLimiter(audioBuffer: AudioBuffer): Promise<AudioBuffe
  * @returns The trimmed audio buffer
  */
 export async function cutAudioAtLoopEnd(audioBuffer: AudioBuffer, loopEnd: number): Promise<AudioBuffer> {
+  // DEBUG: Log cutting information
+  console.log(`[CUT AUDIO] Input: length=${audioBuffer.length}, loopEnd=${loopEnd}`);
+  
   // Validate loop end position
   if (loopEnd <= 0 || loopEnd >= audioBuffer.length) {
+    console.log(`[CUT AUDIO] No cutting - invalid loop end`);
     return audioBuffer;
   }
 
   // Trim point is loopEnd + LOOP_END_PADDING samples (buffer for the loop end)
   const cutPoint = loopEnd + LOOP_END_PADDING;
   
+  console.log(`[CUT AUDIO] Cut point: ${cutPoint} (loopEnd + ${LOOP_END_PADDING})`);
+  
   if (cutPoint >= audioBuffer.length) {
+    console.log(`[CUT AUDIO] No cutting - cut point beyond buffer length`);
     return audioBuffer;
   }
 
@@ -373,6 +380,7 @@ export async function cutAudioAtLoopEnd(audioBuffer: AudioBuffer, loopEnd: numbe
     }
   }
 
+  console.log(`[CUT AUDIO] Cut completed: ${audioBuffer.length} -> ${cutBuffer.length} samples`);
   return cutBuffer;
 }
 
