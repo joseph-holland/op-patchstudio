@@ -149,6 +149,7 @@ export type AppAction =
   | { type: 'LOAD_DRUM_SAMPLE'; payload: { index: number; file: File; audioBuffer: AudioBuffer; metadata: AudioMetadata } }
   | { type: 'CLEAR_DRUM_SAMPLE'; payload: number }
   | { type: 'UPDATE_DRUM_SAMPLE'; payload: { index: number; updates: Partial<DrumSample> } }
+  | { type: 'IMPORT_OP1_DRUM_PRESET'; payload: { samples: Array<{ keyIndex: number; file: File; audioBuffer: AudioBuffer; metadata: AudioMetadata; name: string }>; presetName: string } }
   | { type: 'LOAD_MULTISAMPLE_FILE'; payload: { file: File; audioBuffer: AudioBuffer | null; metadata: AudioMetadata; rootNoteOverride?: number; } }
   | { type: 'CLEAR_MULTISAMPLE_FILE'; payload: number }
   | { type: 'UPDATE_MULTISAMPLE_FILE'; payload: { index: number; updates: Partial<MultisampleFile> } }
@@ -479,6 +480,44 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...action.payload.updates
       };
       return { ...state, drumSamples: updatedDrumSamples };
+    }
+    
+    case 'IMPORT_OP1_DRUM_PRESET': {
+      // Clear existing drum samples
+      const newDrumSamples = [...state.drumSamples];
+      
+      // Load samples from OP-1 preset
+      for (const sample of action.payload.samples) {
+        if (sample.keyIndex >= 0 && sample.keyIndex < 24) {
+          newDrumSamples[sample.keyIndex] = {
+            ...initialDrumSample,
+            file: sample.file,
+            audioBuffer: sample.audioBuffer,
+            name: sample.name,
+            isLoaded: true,
+            inPoint: 0,
+            outPoint: sample.audioBuffer.duration,
+            originalBitDepth: sample.metadata.bitDepth,
+            originalSampleRate: sample.metadata.sampleRate,
+            originalChannels: sample.metadata.channels,
+            fileSize: sample.file.size,
+            duration: sample.audioBuffer.duration,
+            hasBeenEdited: false
+          };
+        }
+      }
+      
+      // Update preset name
+      const updatedDrumSettings = {
+        ...state.drumSettings,
+        presetName: action.payload.presetName
+      };
+      
+      return { 
+        ...state, 
+        drumSamples: newDrumSamples,
+        drumSettings: updatedDrumSettings
+      };
     }
       
     case 'LOAD_MULTISAMPLE_FILE': {

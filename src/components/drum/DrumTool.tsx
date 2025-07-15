@@ -15,6 +15,7 @@ import { DrumKeyboardContainer } from './DrumKeyboardContainer';
 import { savePresetToLibrary } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 import { saveDrumSettingsAsDefault } from '../../utils/defaultSettings';
+import { parseOP1DrumPreset, isOP1DrumPreset } from '../../utils/op1DrumPresetParser';
 
 export function DrumTool() {
   const { state, dispatch } = useAppContext();
@@ -108,6 +109,73 @@ export function DrumTool() {
     } catch (error) {
       console.error('Error uploading file:', error);
       // You could add user notification here if needed
+    }
+  };
+
+  const handleOP1PresetImport = async (file: File) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      dispatch({ type: 'SET_ERROR', payload: null });
+
+      // Read file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Check if this is an OP-1 drum preset
+      if (!isOP1DrumPreset(arrayBuffer)) {
+        throw new Error('This file does not appear to be a valid OP-1 drum preset');
+      }
+
+      // Parse the OP-1 drum preset
+      const preset = await parseOP1DrumPreset(arrayBuffer, file.name);
+      
+      // Convert samples to the format expected by the app context
+      const samples = preset.samples.map(sample => {
+        // Convert AudioBuffer to WAV blob for file creation
+        const wavBlob = audioBufferToWav(sample.audioBuffer);
+        const file = new File([wavBlob], `${sample.name}.wav`, { type: 'audio/wav' });
+        
+        return {
+          keyIndex: sample.keyIndex,
+          file,
+          audioBuffer: sample.audioBuffer,
+          metadata: sample.metadata,
+          name: sample.name
+        };
+      });
+
+      // Import the preset into the app state
+      dispatch({
+        type: 'IMPORT_OP1_DRUM_PRESET',
+        payload: {
+          samples,
+          presetName: preset.name
+        }
+      });
+
+      // Show success notification
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'success',
+          title: 'OP-1 preset imported',
+          message: `"${preset.name}" loaded with ${preset.samples.length} samples`
+        }
+      });
+
+    } catch (error) {
+      console.error('Error importing OP-1 preset:', error);
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'error',
+          title: 'import failed',
+          message: error instanceof Error ? error.message : 'failed to import OP-1 preset'
+        }
+      });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 
@@ -403,6 +471,25 @@ export function DrumTool() {
               padding: '1.75rem',
               flexDirection: isMobile ? 'column' : 'row'
             }}>
+              {/* Hidden file input for OP-1 preset import */}
+              <input
+                type="file"
+                accept=".aif,.aiff"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleOP1PresetImport(file);
+                  }
+                  // Reset the input
+                  e.target.value = '';
+                }}
+                ref={(input) => {
+                  if (input) {
+                    (window as any).op1PresetInput = input;
+                  }
+                }}
+              />
               <button
                 onClick={handleClearAll}
                 disabled={!hasLoadedSamples}
@@ -443,6 +530,37 @@ export function DrumTool() {
               >
                 <i className="fas fa-trash" style={{ fontSize: '1rem' }}></i>
                 clear all
+              </button>
+              <button
+                onClick={() => (window as any).op1PresetInput?.click()}
+                style={{
+                  minHeight: '44px',
+                  minWidth: '44px',
+                  padding: '0.75rem 1.5rem',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--color-interactive-focus)',
+                  color: 'var(--color-white)',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.75rem',
+                  width: isMobile ? '100%' : 'auto',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
+                }}
+              >
+                <i className="fas fa-upload" style={{ fontSize: '1rem' }}></i>
+                import OP-1 preset
               </button>
               <button
                 onClick={() => setBulkEditModal(true)}
