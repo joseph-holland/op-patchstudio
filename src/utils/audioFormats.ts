@@ -6,6 +6,11 @@
 
 import { audioContextManager } from './audioContext';
 import { readWavMetadataFromArrayBuffer } from './audio';
+import { 
+  parseCommChunk, 
+  parseMarkChunk, 
+  parseInstChunk 
+} from './aifParser';
 
 // Audio format types
 export type AudioFormat = 'wav' | 'aif' | 'aiff' | 'mp3' | 'm4a' | 'ogg' | 'flac';
@@ -30,79 +35,6 @@ export interface AudioMetadata {
     start: number;
     end: number;
   }[];
-}
-
-// Parse IEEE 80-bit extended precision float (used for sample rate in AIFF)
-function parseIeee80BitFloat(dataView: DataView, offset: number): number {
-  // IEEE 80-bit format: 1 bit sign, 15 bits exponent, 64 bits mantissa
-  const signBit = (dataView.getUint8(offset) & 0x80) !== 0;
-  const exponent = ((dataView.getUint8(offset) & 0x7F) << 8) | dataView.getUint8(offset + 1);
-  
-  // Extract 64-bit mantissa (8 bytes)
-  let mantissa = 0;
-  for (let i = 2; i < 10; i++) {
-    mantissa = mantissa * 256 + dataView.getUint8(offset + i);
-  }
-  
-  // Handle special cases
-  if (exponent === 0) {
-    return 0; // Zero or denormalized
-  }
-  
-  if (exponent === 0x7FFF) {
-    return signBit ? -Infinity : Infinity; // Infinity or NaN
-  }
-  
-  // Normal calculation
-  const biasedExponent = exponent - 16383;
-  const normalizedMantissa = 1 + mantissa / Math.pow(2, 63);
-  const result = Math.pow(2, biasedExponent) * normalizedMantissa;
-  
-  // Validate and snap to common sample rates
-  if (result > 0 && result < 1000000) {
-    const commonRates = [
-      { rate: 44100, tolerance: 300 },
-      { rate: 48000, tolerance: 200 },
-      { rate: 22050, tolerance: 100 },
-      { rate: 88200, tolerance: 400 },
-      { rate: 96000, tolerance: 200 },
-      { rate: 11025, tolerance: 50 },
-      { rate: 16000, tolerance: 50 },
-      { rate: 8000, tolerance: 50 },
-      { rate: 176400, tolerance: 500 },
-      { rate: 192000, tolerance: 500 }
-    ];
-    
-    for (const { rate, tolerance } of commonRates) {
-      if (Math.abs(result - rate) < tolerance) {
-        return rate;
-      }
-    }
-    
-    // Special case for 44.1kHz range
-    if (result >= 43000 && result <= 45500) {
-      return 44100;
-    }
-  }
-  
-  return signBit ? -result : result;
-}
-
-// Validate and normalize sample rate
-function validateSampleRate(sampleRate: number): number {
-  if (sampleRate >= 8000 && sampleRate <= 192000) {
-    // Check against common sample rates
-    const commonRates = [8000, 11025, 16000, 22050, 44100, 48000, 88200, 96000, 176400, 192000];
-    for (const rate of commonRates) {
-      if (Math.abs(sampleRate - rate) <= rate * 0.02) {
-        return rate;
-      }
-    }
-    return Math.round(sampleRate);
-  }
-  
-  console.warn(`Invalid sample rate detected: ${sampleRate}Hz. Using fallback 44100Hz.`);
-  return 44100;
 }
 
 // Parse AIF metadata from header only (no decodeAudioData)
@@ -145,7 +77,7 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
     let foundLoopPoints = false;
     
     // Marker table for loop points
-    const markers: Record<number, number> = {};
+    let markersList: Array<{ id: number; position: number; name: string }> = [];
 
     // Iterate through all chunks in the file
     while (offset + 8 < bufferCopy.byteLength) {
@@ -155,69 +87,45 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
       
       // Parse COMM chunk for core audio properties
       if (chunkId === 'COMM' && chunkSize >= 18) {
-        channels = dataView.getUint16(chunkDataOffset, false);
-        numSampleFrames = dataView.getUint32(chunkDataOffset + 2, false);
-        bitDepth = dataView.getUint16(chunkDataOffset + 6, false);
-        // Parse IEEE 80-bit float sample rate (standard for AIFF)
-        sampleRate = parseIeee80BitFloat(dataView, chunkDataOffset + 8);
-        sampleRate = validateSampleRate(sampleRate);
+        const commChunk = parseCommChunk(dataView, bufferCopy, chunkDataOffset, chunkSize, formatId);
+        channels = commChunk.channels;
+        numSampleFrames = commChunk.numSampleFrames;
+        bitDepth = commChunk.bitDepth;
+        sampleRate = commChunk.sampleRate;
       }
       
       // Parse MARK chunk for marker positions (used for loop points)
       if (chunkId === 'MARK') {
-        const numMarkers = dataView.getUint16(chunkDataOffset, false);
-        let markerOffset = chunkDataOffset + 2;
-        
-        for (let i = 0; i < numMarkers; i++) {
-          const markerId = dataView.getUint16(markerOffset, false);
-          const markerPosition = dataView.getUint32(markerOffset + 2, false);
-          const markerNameLength = dataView.getUint8(markerOffset + 6);
-          
-          // Parse marker name (Pascal string)
-          const markerNameBytes = new Uint8Array(bufferCopy, markerOffset + 7, markerNameLength);
-          const markerName = textDecoder.decode(markerNameBytes);
-          
-          markers[markerId] = markerPosition;
-          
-          // Check for loop point markers by name (when no INST chunk is present)
-          const lowerName = markerName.toLowerCase();
+        markersList = parseMarkChunk(dataView, bufferCopy, chunkDataOffset);
+        // Check for loop point markers by name (when no INST chunk is present)
+        for (const marker of markersList) {
+          const lowerName = marker.name.toLowerCase();
           if (lowerName.includes('loop start') || lowerName.includes('start')) {
-            loopStart = markerPosition;
+            loopStart = marker.position;
             foundLoopPoints = true;
           } else if (lowerName.includes('loop end') || lowerName.includes('end')) {
-            loopEnd = markerPosition;
+            loopEnd = marker.position;
             foundLoopPoints = true;
           }
-          
-          markerOffset += 7 + markerNameLength + (markerNameLength % 2 === 0 ? 1 : 0);
         }
       }
       
       // Parse INST chunk for root note and loop marker references
       if (chunkId === 'INST') {
-        const baseNote = dataView.getUint8(chunkDataOffset);
-        const detune = dataView.getInt8(chunkDataOffset + 1);
-        const sustainLoop = dataView.getUint16(chunkDataOffset + 8, false);
-        const releaseLoop = dataView.getUint16(chunkDataOffset + 10, false);
-        
+        // Use the markersList from MARK chunk if available
+        const instChunk = parseInstChunk(dataView, chunkDataOffset, markersList || []);
         // Get loop points from markers with validation
-        if (sustainLoop > 0) {
-          if (markers[sustainLoop] !== undefined) {
-            loopStart = markers[sustainLoop];
-          }
+        if (instChunk.loopStart !== undefined) {
+          loopStart = instChunk.loopStart;
           foundLoopPoints = true;
         }
-        
-        if (releaseLoop > 0) {
-          if (markers[releaseLoop] !== undefined) {
-            loopEnd = markers[releaseLoop];
-          }
+        if (instChunk.loopEnd !== undefined) {
+          loopEnd = instChunk.loopEnd;
           foundLoopPoints = true;
         }
-        
         // Calculate root note from base note and detune
-        if (baseNote > 0) {
-          rootNote = baseNote + Math.round(detune / 100);
+        if (instChunk.rootNote !== undefined) {
+          rootNote = instChunk.rootNote;
         }
       }
       
@@ -234,12 +142,12 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
       }
       
       // Move to next chunk (chunks are padded to even boundaries)
-      offset += 8 + (chunkSize + 1 & ~1);
+      offset += 8 + chunkSize + (chunkSize % 2);
     }
 
     // Fallbacks and validation for missing or incomplete metadata
-    if (!numSampleFrames && Object.keys(markers).length > 0) {
-      numSampleFrames = Math.max(...Object.values(markers));
+    if (!numSampleFrames && markersList.length > 0) {
+      numSampleFrames = Math.max(...markersList.map(m => m.position));
     }
     
     // Validate and set loop points only if they were found in the file
@@ -269,9 +177,7 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
       loopStart = 0;
       loopEnd = Math.max(0, numSampleFrames - 1);
     }
-    
 
-    
     const duration = numSampleFrames / sampleRate;
 
     // Now attempt to decode the audio data for playback
@@ -311,6 +217,9 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
     const loopStartSeconds = loopStart !== undefined ? loopStart / sampleRate : 0;
     const loopEndSeconds = loopEnd !== undefined ? loopEnd / sampleRate : duration;
     
+    // Ensure rootNote is set on metadata if found in INST chunk
+    const finalRootNote = rootNote !== undefined ? rootNote : undefined;
+
     // Return extracted metadata with audioBuffer (may be null if decoding failed)
     return {
       format: 'aiff',
@@ -324,7 +233,7 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
       loopStart: loopStartSeconds,
       loopEnd: loopEndSeconds,
       hasLoopData: foundLoopPoints,
-      rootNote: rootNote
+      rootNote: finalRootNote
     };
   } catch (error) {
     throw new Error(`Failed to parse AIF metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -548,10 +457,11 @@ export async function audioBufferToWavWithMetadata(
   const { audioBufferToWav } = await import('./audio');
   
   // Use metadata loop points if available
+  // Convert from seconds to frames since audioBufferToWav expects frame indices
   const options = {
     rootNote: metadata.rootNote || metadata.midiNote,
-    loopStart: metadata.hasLoopData ? metadata.loopStart : undefined,
-    loopEnd: metadata.hasLoopData ? metadata.loopEnd : undefined
+    loopStart: metadata.hasLoopData ? Math.floor(metadata.loopStart * audioBuffer.sampleRate) : undefined,
+    loopEnd: metadata.hasLoopData ? Math.floor(metadata.loopEnd * audioBuffer.sampleRate) : undefined
   };
   
   return audioBufferToWav(audioBuffer, bitDepth, options);

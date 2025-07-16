@@ -210,53 +210,60 @@ describe('audioFormats', () => {
 
     it('should read AIF metadata', async () => {
       // Create a mock AIF file with proper structure
-      const aiffBuffer = new ArrayBuffer(200)
+      const aiffBuffer = new ArrayBuffer(300)
       const dataView = new DataView(aiffBuffer)
       
       // Write FORM header
       const textEncoder = new TextEncoder()
       new Uint8Array(aiffBuffer, 0, 4).set(textEncoder.encode('FORM'))
-      dataView.setUint32(4, 196, false) // Big-endian chunk size
+      dataView.setUint32(4, 296, false) // Big-endian chunk size
       new Uint8Array(aiffBuffer, 8, 4).set(textEncoder.encode('AIFF'))
       
-      // Write COMM chunk
+      // Write COMM chunk at offset 12
       new Uint8Array(aiffBuffer, 12, 4).set(textEncoder.encode('COMM'))
       dataView.setUint32(16, 18, false) // COMM chunk size
       dataView.setUint16(20, 1, false) // channels
       dataView.setUint32(22, 44100, false) // numSampleFrames
       dataView.setUint16(26, 16, false) // bitDepth
-      
-      // Write sample rate (80-bit extended)
       dataView.setUint16(28, 0x4000, false) // exponent
       dataView.setUint32(30, 0xAC440000, false) // mantissa (44100)
       
-      // Write INST chunk
-      new Uint8Array(aiffBuffer, 38, 4).set(textEncoder.encode('INST'))
-      dataView.setUint32(42, 20, false) // INST chunk size
-      dataView.setUint8(46, 60) // baseNote (middle C)
-      dataView.setInt8(47, 0) // detune
-      dataView.setUint8(48, 0) // lowNote
-      dataView.setUint8(49, 127) // highNote
-      dataView.setUint8(50, 0) // lowVelocity
-      dataView.setUint8(51, 127) // highVelocity
-      dataView.setInt16(52, 0, false) // gain
-      
-      // Sustain loop
-      dataView.setUint16(54, 1, false) // playMode
-      dataView.setUint16(56, 4410, false) // beginLoop (0.1s)
-      dataView.setUint16(58, 39690, false) // endLoop (0.9s)
-      
-      // Release loop
-      dataView.setUint16(60, 0, false) // playMode
-      dataView.setUint16(62, 0, false) // beginLoop
-      dataView.setUint16(64, 0, false) // endLoop
-
+      // Write MARK chunk at offset 38
+      new Uint8Array(aiffBuffer, 38, 4).set(textEncoder.encode('MARK'))
+      dataView.setUint32(42, 28, false) // MARK chunk size (2 markers, 14 bytes each)
+      dataView.setUint16(46, 2, false) // numMarkers
+      // First marker: loop start
+      dataView.setUint16(48, 1, false) // id
+      dataView.setUint32(50, 4410, false) // position (0.1s)
+      dataView.setUint8(54, 10) // name length
+      new Uint8Array(aiffBuffer, 55, 10).set(textEncoder.encode('loop start'))
+      // Second marker: loop end
+      dataView.setUint16(65, 2, false) // id
+      dataView.setUint32(67, 39690, false) // position (0.9s)
+      dataView.setUint8(71, 8) // name length
+      new Uint8Array(aiffBuffer, 72, 8).set(textEncoder.encode('loop end'))
+      // Write INST chunk at offset 74 (immediately after MARK chunk: 38 + 8 + 28 = 74)
+      new Uint8Array(aiffBuffer, 74, 4).set(textEncoder.encode('INST'))
+      dataView.setUint32(78, 20, false) // INST chunk size
+      dataView.setUint8(82, 60) // baseNote (middle C)
+      dataView.setInt8(83, 0) // detune
+      dataView.setUint8(84, 0) // lowNote
+      dataView.setUint8(85, 127) // highNote
+      dataView.setUint8(86, 0) // lowVelocity
+      dataView.setUint8(87, 127) // highVelocity
+      dataView.setInt16(88, 0, false) // gain
+      // Sustain loop references marker 1 for start, marker 2 for end
+      dataView.setUint16(90, 1, false) // playMode (forward)
+      dataView.setUint16(92, 1, false) // beginLoop (marker id 1 - loop start)
+      dataView.setUint16(94, 2, false) // endLoop (marker id 2 - loop end)
+      // Release loop (not used in this test)
+      dataView.setUint16(96, 0, false) // playMode (no loop)
+      dataView.setUint16(98, 0, false) // beginLoop (unused)
+      dataView.setUint16(100, 0, false) // endLoop (unused)
       const file = new File([aiffBuffer], 'test.aiff', { type: 'audio/aiff' })
       // Mock the arrayBuffer method
       file.arrayBuffer = vi.fn().mockResolvedValue(aiffBuffer)
-      
       const metadata = await readAudioMetadata(file, 'C3')
-
       expect(metadata.format).toBe('aiff')
       expect(metadata.sampleRate).toBe(44100)
       expect(metadata.bitDepth).toBe(16)
