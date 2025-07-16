@@ -135,10 +135,13 @@ export function useSessionManagement() {
           
           // Create the restored sample with all settings applied
           const restoredSample = {
+            originalIndex: storedSample.originalIndex,
             file: sampleData.file,
             audioBuffer: sampleData.audioBuffer,
             name: sampleData.file.name,
             isLoaded: true,
+            isAssigned: storedSample.isAssigned,
+            assignedKey: storedSample.assignedKey,
             inPoint: storedSample.settings.inPoint,
             outPoint: storedSample.settings.outPoint,
             playmode: storedSample.settings.playmode,
@@ -154,8 +157,8 @@ export function useSessionManagement() {
             duration: sampleData.metadata.duration
           };
           
-          // Place the sample at its original index
-          restoredDrumSamples[storedSample.originalIndex] = restoredSample;
+          // Add the sample to the array (not using sparse array)
+          restoredDrumSamples.push(restoredSample);
         } catch (error) {
           console.error(`Failed to restore drum sample ${storedSample.sampleId}:`, error);
           // Continue with other samples even if one fails

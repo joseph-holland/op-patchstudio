@@ -30,6 +30,10 @@ export interface DrumSample {
   
   // Editing status
   hasBeenEdited: boolean;
+  
+  // Assignment status - for unassigned samples beyond the 24 drum keys
+  isAssigned: boolean; // true if assigned to a drum key (0-23), false if unassigned
+  assignedKey?: number; // the drum key index this sample is assigned to (0-23)
 }
 
 export interface MultisampleFile {
@@ -183,6 +187,10 @@ export type AppAction =
   | { type: 'CLEAR_DRUM_SAMPLE'; payload: number }
   | { type: 'UPDATE_DRUM_SAMPLE'; payload: { index: number; updates: Partial<DrumSample> } }
   | { type: 'REORDER_DRUM_SAMPLES'; payload: { fromIndex: number; toIndex: number } }
+  | { type: 'SWAP_DRUM_SAMPLES'; payload: { fromIndex: number; toIndex: number } }
+  | { type: 'ADD_UNASSIGNED_DRUM_SAMPLE'; payload: { file: File; audioBuffer: AudioBuffer; metadata: AudioMetadata } }
+  | { type: 'ASSIGN_DRUM_SAMPLE'; payload: { sampleIndex: number; targetKeyIndex: number } }
+  | { type: 'UNASSIGN_DRUM_SAMPLE'; payload: number }
   | { type: 'IMPORT_OP1_DRUM_PRESET'; payload: { samples: Array<{ keyIndex: number; file: File; audioBuffer: AudioBuffer; metadata: AudioMetadata; name: string }>; presetName: string } }
   | { type: 'LOAD_MULTISAMPLE_FILE'; payload: { file: File; audioBuffer: AudioBuffer | null; metadata: AudioMetadata; rootNoteOverride?: number; } }
   | { type: 'CLEAR_MULTISAMPLE_FILE'; payload: number }
@@ -197,10 +205,11 @@ export type AppAction =
   | { type: 'SET_IMPORTED_MULTISAMPLE_PRESET'; payload: any | null }
   | { type: 'TOGGLE_DRUM_KEYBOARD_PIN' }
   | { type: 'TOGGLE_MULTISAMPLE_KEYBOARD_PIN' }
-  | { type: 'RESTORE_SESSION'; payload: { drumSettings: AppState['drumSettings']; multisampleSettings: AppState['multisampleSettings']; drumSamples: DrumSample[]; multisampleFiles: MultisampleFile[]; selectedMultisample: number | null; isDrumKeyboardPinned: boolean; isMultisampleKeyboardPinned: boolean } }
+  | { type: 'RESTORE_SESSION'; payload: { drumSettings: AppState['drumSettings']; multisampleSettings: AppState['multisampleSettings']; drumSamples: Array<{ originalIndex: number; isAssigned: boolean; assignedKey?: number; file: File; audioBuffer: AudioBuffer; name: string; isLoaded: boolean; inPoint: number; outPoint: number; playmode: 'oneshot' | 'group' | 'loop' | 'gate'; reverse: boolean; tune: number; pan: number; gain: number; hasBeenEdited: boolean; originalBitDepth: number; originalSampleRate: number; originalChannels: number; fileSize: number; duration: number }>; multisampleFiles: MultisampleFile[]; selectedMultisample: number | null; isDrumKeyboardPinned: boolean; isMultisampleKeyboardPinned: boolean } }
   | { type: 'SET_SESSION_RESTORATION_MODAL_OPEN'; payload: boolean }
   | { type: 'SET_SESSION_INFO'; payload: { timestamp: number; drumSamplesCount: number; multisampleFilesCount: number } | null }
-  | { type: 'SET_MIDI_NOTE_MAPPING'; payload: 'C3' | 'C4' };
+  | { type: 'SET_MIDI_NOTE_MAPPING'; payload: 'C3' | 'C4' }
+  | { type: 'CLEAR_ALL_DRUM_SAMPLES' };
 
 // Initial state
 const initialDrumSample: DrumSample = {
@@ -215,7 +224,9 @@ const initialDrumSample: DrumSample = {
   tune: 0,
   pan: 0,
   gain: 0,
-  hasBeenEdited: false
+  hasBeenEdited: false,
+  isAssigned: true, // Default to assigned for the 24 drum keys
+  assignedKey: undefined
 };
 
 const initialMultisampleFile: MultisampleFile = {
@@ -595,7 +606,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
         originalChannels: action.payload.metadata.channels,
         fileSize: action.payload.file.size,
         duration: action.payload.audioBuffer.duration,
-        hasBeenEdited: false
+        hasBeenEdited: false,
+        isAssigned: true, // Assigned to the specific drum key
+        assignedKey: action.payload.index
       };
       
       return { ...state, drumSamples: newDrumSamples };
@@ -623,14 +636,154 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, drumSamples: reorderedSamples };
     }
     
-    case 'IMPORT_OP1_DRUM_PRESET': {
-      // Clear existing drum samples
-      const newDrumSamples = [...state.drumSamples];
+    case 'SWAP_DRUM_SAMPLES': {
+      const { fromIndex, toIndex } = action.payload;
+      const swappedSamples = [...state.drumSamples];
       
+      // Swap the samples
+      [swappedSamples[fromIndex], swappedSamples[toIndex]] = [swappedSamples[toIndex], swappedSamples[fromIndex]];
+      
+      // Update the assignedKey properties to reflect the new positions
+      if (swappedSamples[fromIndex]?.isAssigned) {
+        swappedSamples[fromIndex] = {
+          ...swappedSamples[fromIndex],
+          assignedKey: fromIndex
+        };
+      }
+      if (swappedSamples[toIndex]?.isAssigned) {
+        swappedSamples[toIndex] = {
+          ...swappedSamples[toIndex],
+          assignedKey: toIndex
+        };
+      }
+      
+      return { ...state, drumSamples: swappedSamples };
+    }
+    
+    case 'ADD_UNASSIGNED_DRUM_SAMPLE': {
+      // Validate that audioBuffer exists and has required properties
+      if (!action.payload.audioBuffer || typeof action.payload.audioBuffer.duration !== 'number') {
+        console.error('Invalid audioBuffer provided to ADD_UNASSIGNED_DRUM_SAMPLE:', action.payload.audioBuffer);
+        return state;
+      }
+      
+      // Validate that metadata exists and has required properties
+      if (!action.payload.metadata || typeof action.payload.metadata.duration !== 'number') {
+        console.error('Invalid metadata provided to ADD_UNASSIGNED_DRUM_SAMPLE:', action.payload.metadata);
+        return state;
+      }
+      
+      const newUnassignedSample: DrumSample = {
+        ...initialDrumSample,
+        file: action.payload.file,
+        audioBuffer: action.payload.audioBuffer,
+        name: action.payload.file.name,
+        isLoaded: true,
+        inPoint: 0,
+        outPoint: action.payload.audioBuffer.duration,
+        originalBitDepth: action.payload.metadata.bitDepth,
+        originalSampleRate: action.payload.metadata.sampleRate,
+        originalChannels: action.payload.metadata.channels,
+        fileSize: action.payload.file.size,
+        duration: action.payload.audioBuffer.duration,
+        hasBeenEdited: false,
+        isAssigned: false, // Mark as unassigned
+        assignedKey: undefined
+      };
+      
+      return { ...state, drumSamples: [...state.drumSamples, newUnassignedSample] };
+    }
+    
+    case 'ASSIGN_DRUM_SAMPLE': {
+      const { sampleIndex, targetKeyIndex } = action.payload;
+      
+      // Validate indices
+      if (sampleIndex < 0 || sampleIndex >= state.drumSamples.length) {
+        console.error('Invalid sample index:', sampleIndex);
+        return state;
+      }
+      
+      if (targetKeyIndex < 0 || targetKeyIndex >= 24) {
+        console.error('Invalid target key index:', targetKeyIndex);
+        return state;
+      }
+      
+      const updatedDrumSamples = [...state.drumSamples];
+      const sampleToAssign = updatedDrumSamples[sampleIndex];
+      
+      if (!sampleToAssign?.isLoaded) {
+        console.error('Cannot assign unloaded sample');
+        return state;
+      }
+      
+      // If target key already has a sample, unassign it first
+      const existingSampleIndex = updatedDrumSamples.findIndex(s => s.isAssigned && s.assignedKey === targetKeyIndex);
+      if (existingSampleIndex !== -1) {
+        updatedDrumSamples[existingSampleIndex] = {
+          ...updatedDrumSamples[existingSampleIndex],
+          isAssigned: false,
+          assignedKey: undefined
+        };
+      }
+      
+      // Assign the sample to the target key
+      updatedDrumSamples[sampleIndex] = {
+        ...sampleToAssign,
+        isAssigned: true,
+        assignedKey: targetKeyIndex
+      };
+      
+      return { ...state, drumSamples: updatedDrumSamples };
+    }
+    
+    case 'UNASSIGN_DRUM_SAMPLE': {
+      const sampleIndex = action.payload;
+      
+      if (sampleIndex < 0 || sampleIndex >= state.drumSamples.length) {
+        console.error('Invalid sample index:', sampleIndex);
+        return state;
+      }
+      
+      const updatedDrumSamples = [...state.drumSamples];
+      updatedDrumSamples[sampleIndex] = {
+        ...updatedDrumSamples[sampleIndex],
+        isAssigned: false,
+        assignedKey: undefined
+      };
+      
+      return { ...state, drumSamples: updatedDrumSamples };
+    }
+    
+    case 'CLEAR_ALL_DRUM_SAMPLES': {
+      // Reset drum samples array to just the first 24 slots
+      const resetDrumSamples = Array.from({ length: 24 }, () => ({ ...initialDrumSample }));
+      return { ...state, drumSamples: resetDrumSamples };
+    }
+    
+    case 'IMPORT_OP1_DRUM_PRESET': {
+      // Start with existing drum samples
+      const newDrumSamples = [...state.drumSamples];
+      let samplesAddedAsUnassigned = 0;
+      
+      // Find the first available empty slot in the 0-23 range
+      const findFirstEmptySlot = (samples: DrumSample[]): number | null => {
+        for (let i = 0; i < 24; i++) {
+          const sample = samples[i];
+          if (!sample || !sample.isLoaded || !sample.isAssigned) {
+            return i;
+          }
+        }
+        return null; // No empty slots found
+      };
+
       // Load samples from OP-1 preset
       for (const sample of action.payload.samples) {
-        if (sample.keyIndex >= 0 && sample.keyIndex < 24) {
-          newDrumSamples[sample.keyIndex] = {
+        // Try to find an empty slot in the 0-23 range
+        const emptySlotIndex = findFirstEmptySlot(newDrumSamples);
+        
+        if (emptySlotIndex !== null) {
+          // Found an empty slot, assign the sample there
+          newDrumSamples[emptySlotIndex] = {
             ...initialDrumSample,
             file: sample.file,
             audioBuffer: sample.audioBuffer,
@@ -643,8 +796,31 @@ function appReducer(state: AppState, action: AppAction): AppState {
             originalChannels: sample.metadata.channels,
             fileSize: sample.file.size,
             duration: sample.audioBuffer.duration,
-            hasBeenEdited: false
+            hasBeenEdited: false,
+            isAssigned: true,
+            assignedKey: emptySlotIndex
           };
+        } else {
+          // No empty slots in 0-23, add as unassigned sample
+          const unassignedSample = {
+            ...initialDrumSample,
+            file: sample.file,
+            audioBuffer: sample.audioBuffer,
+            name: sample.name,
+            isLoaded: true,
+            inPoint: 0,
+            outPoint: sample.audioBuffer.duration,
+            originalBitDepth: sample.metadata.bitDepth,
+            originalSampleRate: sample.metadata.sampleRate,
+            originalChannels: sample.metadata.channels,
+            fileSize: sample.file.size,
+            duration: sample.audioBuffer.duration,
+            hasBeenEdited: false,
+            isAssigned: false,
+            assignedKey: undefined
+          };
+          newDrumSamples.push(unassignedSample);
+          samplesAddedAsUnassigned++;
         }
       }
       
@@ -792,10 +968,36 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, isMultisampleKeyboardPinned: !state.isMultisampleKeyboardPinned };
       
     case 'RESTORE_SESSION': {
-      // Create a properly sized drum samples array (24 slots)
-      const restoredDrumSamples = Array.from({ length: 24 }, (_, index) => {
+      // Create a properly sized drum samples array that can accommodate all samples
+      // Find the highest originalIndex to determine the array size
+      const maxIndex = Math.max(...action.payload.drumSamples.map(s => s.originalIndex), 23); // At least 24 slots
+      const restoredDrumSamples = Array.from({ length: maxIndex + 1 }, (_, index) => {
         // If there's a restored sample at this index, use it; otherwise use initial state
-        return action.payload.drumSamples[index] || { ...initialDrumSample };
+        const restoredSample = action.payload.drumSamples.find(s => s.originalIndex === index);
+        if (restoredSample) {
+          return {
+            file: restoredSample.file,
+            audioBuffer: restoredSample.audioBuffer,
+            name: restoredSample.name,
+            isLoaded: restoredSample.isLoaded,
+            isAssigned: restoredSample.isAssigned,
+            assignedKey: restoredSample.assignedKey,
+            inPoint: restoredSample.inPoint,
+            outPoint: restoredSample.outPoint,
+            playmode: restoredSample.playmode,
+            reverse: restoredSample.reverse,
+            tune: restoredSample.tune,
+            pan: restoredSample.pan,
+            gain: restoredSample.gain,
+            hasBeenEdited: restoredSample.hasBeenEdited,
+            originalBitDepth: restoredSample.originalBitDepth,
+            originalSampleRate: restoredSample.originalSampleRate,
+            originalChannels: restoredSample.originalChannels,
+            fileSize: restoredSample.fileSize,
+            duration: restoredSample.duration
+          };
+        }
+        return { ...initialDrumSample };
       });
       
       const newState = {

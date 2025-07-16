@@ -15,6 +15,7 @@ interface DrumSampleTableProps {
   onFileUpload: (index: number, file: File) => void;
   onClearSample: (index: number) => void;
   onRecordSample?: (index: number) => void;
+  onAddUnassignedSample?: (file: File) => void;
 }
 
 // Full drum names from OP-XY documentation - all lowercase
@@ -41,7 +42,7 @@ const c = {
 
 
 
-export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }: DrumSampleTableProps) {
+export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample, onAddUnassignedSample }: DrumSampleTableProps) {
   const { state, dispatch } = useAppContext();
   const { play } = useAudioPlayer();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -149,20 +150,50 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
         file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
       );
       if (audioFile) {
-        handleFileSelect(targetIndex, audioFile);
+        // If dropping on a drum key (0-23), assign the sample
+        if (targetIndex < 24) {
+          if (onAddUnassignedSample) {
+            onAddUnassignedSample(audioFile);
+          }
+        } else {
+          handleFileSelect(targetIndex, audioFile);
+        }
         return;
       }
     }
     
-    // Handle sample swapping
+    // Handle sample assignment and swapping
     if (draggedItem !== null && draggedItem !== targetIndex) {
-      dispatch({
-        type: 'REORDER_DRUM_SAMPLES',
-        payload: {
-          fromIndex: draggedItem,
-          toIndex: targetIndex
-        }
-      });
+      const draggedSample = state.drumSamples[draggedItem];
+      
+      // If dropping an unassigned sample on a drum key (0-23), assign it
+      if (targetIndex < 24 && draggedSample && !draggedSample.isAssigned) {
+        dispatch({
+          type: 'ASSIGN_DRUM_SAMPLE',
+          payload: {
+            sampleIndex: draggedItem,
+            targetKeyIndex: targetIndex
+          }
+        });
+      } else if (draggedItem < 24 && targetIndex < 24) {
+        // Both are drum keys (0-23) - swap the samples while keeping key names fixed
+        dispatch({
+          type: 'SWAP_DRUM_SAMPLES',
+          payload: {
+            fromIndex: draggedItem,
+            toIndex: targetIndex
+          }
+        });
+      } else {
+        // Handle reordering of unassigned samples or mixed scenarios
+        dispatch({
+          type: 'REORDER_DRUM_SAMPLES',
+          payload: {
+            fromIndex: draggedItem,
+            toIndex: targetIndex
+          }
+        });
+      }
     }
     
     setDraggedItem(null);
@@ -486,8 +517,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
         padding: 0,
         margin: 0
       }}>
-        {Array.from({ length: 24 }, (_, index) => {
-          const sample = state.drumSamples[index];
+        {state.drumSamples.map((sample, index) => {
           const isLoaded = sample?.isLoaded;
           
           return (
@@ -513,7 +543,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                   gap: '0.5rem',
                   padding: 0, // Remove row padding
                   background: isLoaded && hoveredIndex === index && draggedItem !== null && draggedItem !== index ? c.bgAlt : c.bg,
-                  borderBottom: index < 23 ? `1px solid ${c.border}` : 'none',
+                  borderBottom: index < state.drumSamples.length - 1 ? `1px solid ${c.border}` : 'none',
                   transition: 'background 0.2s ease',
                   alignItems: 'center',
                   minHeight: '54px',
@@ -548,7 +578,22 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                   gap: '0.5rem',
                   paddingLeft: '16px'
                 }}>
-                  {drumSampleNames[index]}
+                  {isLoaded && (
+                    <i 
+                      className="fas fa-grip-lines" 
+                      style={{ 
+                        fontSize: '12px', 
+                        color: c.textSecondary,
+                        opacity: 0.6,
+                        cursor: 'move'
+                      }}
+                      title="drag to reorder"
+                    ></i>
+                  )}
+                  {index < 24 
+                    ? drumSampleNames[index] 
+                    : 'unassigned'
+                  }
                   {sample?.hasBeenEdited && (
                     <i 
                       className="fas fa-pencil-alt" 

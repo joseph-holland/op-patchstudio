@@ -77,7 +77,9 @@ async function restoreDrumSamples(drumSamples: any[], audioContext: AudioContext
           ...rest,
           audioBuffer,
           originalIndex,
-          file: new File([sample.audioBlob], sample.name, { type: 'audio/wav' })
+          file: new File([sample.audioBlob], sample.name, { type: 'audio/wav' }),
+          isAssigned: true,
+          assignedKey: sample.originalIndex
         });
       } catch (error) {
         console.error('Failed to restore audio buffer for drum sample:', sample.name, error);
@@ -516,13 +518,19 @@ export function LibraryPage() {
         const restoredSamples = await restoreDrumSamples(presetData.drumSamples || [], audioContext);
         
         // Convert back to array format with proper indexing for patch generation
-        const drumSamplesArray = Array.from({ length: 24 }, () => ({ ...initialDrumSample }));
+        const drumSamplesArray = Array.from({ length: 24 }, () => ({ 
+          ...initialDrumSample,
+          isAssigned: false,
+          assignedKey: undefined
+        }));
         restoredSamples.forEach((sample) => {
           if (sample && typeof sample.originalIndex === 'number' && 
               sample.originalIndex >= 0 && sample.originalIndex < 24) {
             drumSamplesArray[sample.originalIndex] = {
               ...sample,
-              isLoaded: true
+              isLoaded: true,
+              isAssigned: true,
+              assignedKey: sample.originalIndex
             };
           }
         });

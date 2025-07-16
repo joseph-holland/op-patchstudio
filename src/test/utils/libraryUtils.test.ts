@@ -135,6 +135,8 @@ const mockAppState: Partial<AppState> = {
       pan: 0,
       gain: 0,
       hasBeenEdited: false,
+      isAssigned: true,
+      assignedKey: 0,
       originalBitDepth: 16,
       originalSampleRate: 44100,
       originalChannels: 2,
@@ -412,7 +414,11 @@ describe('Drum Sample Index Preservation', () => {
         presetName: 'Test Multisample',
         normalizeLevel: -6.0
       }),
-      drumSamples: mockDrumSamples,
+      drumSamples: mockDrumSamples.map(sample => ({
+        ...sample,
+        isAssigned: true,
+        assignedKey: 0
+      })),
       multisampleFiles: [],
       selectedMultisample: null,
       isLoading: false,
@@ -547,7 +553,9 @@ describe('Drum Sample Index Preservation', () => {
         tune: 0,
         pan: 0,
         gain: 0,
-        hasBeenEdited: false
+        hasBeenEdited: false,
+        isAssigned: false,
+        assignedKey: undefined
       })),
       multisampleFiles: [],
       selectedMultisample: null,

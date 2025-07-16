@@ -23,6 +23,8 @@ export interface SessionData {
   drumSamples: Array<{
     originalIndex: number;
     sampleId: string; // Reference to samples store
+    isAssigned: boolean; // Assignment status
+    assignedKey?: number; // Assigned drum key (0-23) if assigned
     settings: {
       inPoint: number;
       outPoint: number;

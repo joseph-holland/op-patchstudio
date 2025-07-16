@@ -11,6 +11,7 @@ import { DrumBulkEditModal } from './DrumBulkEditModal';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { usePatchGeneration } from '../../hooks/usePatchGeneration';
 import { audioBufferToWav } from '../../utils/audio';
+import { readAudioMetadata } from '../../utils/audioFormats';
 import { DrumKeyboardContainer } from './DrumKeyboardContainer';
 import { savePresetToLibrary } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
@@ -190,6 +191,48 @@ export function DrumTool() {
     });
   };
 
+  const handleAddUnassignedSample = async (file: File) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      dispatch({ type: 'SET_ERROR', payload: null });
+
+      const metadata = await readAudioMetadata(file, state.midiNoteMapping);
+
+      dispatch({
+        type: 'ADD_UNASSIGNED_DRUM_SAMPLE',
+        payload: {
+          file,
+          audioBuffer: metadata.audioBuffer,
+          metadata
+        }
+      });
+
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'success',
+          title: 'sample added',
+          message: `"${file.name}" added as unassigned sample`
+        }
+      });
+
+    } catch (error) {
+      console.error('Error adding unassigned sample:', error);
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'error',
+          title: 'upload failed',
+          message: error instanceof Error ? error.message : 'failed to add sample'
+        }
+      });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
 
 
 
@@ -273,9 +316,8 @@ export function DrumTool() {
       isOpen: true,
       message: 'are you sure you want to clear all loaded samples?',
       onConfirm: async () => {
-        for (let i = 0; i < 24; i++) {
-          clearDrumSample(i);
-        }
+        // Clear all samples and reset to 24 slots
+        dispatch({ type: 'CLEAR_ALL_DRUM_SAMPLES' });
         // Reset saved to library flag since we're starting fresh
         await sessionStorageIndexedDB.resetSavedToLibraryFlag();
         setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
@@ -288,10 +330,8 @@ export function DrumTool() {
       isOpen: true,
       message: 'are you sure you want to reset everything to defaults? this will clear all samples, reset preset name, audio settings and preset settings.',
       onConfirm: async () => {
-        // Clear all samples
-        for (let i = 0; i < 24; i++) {
-          clearDrumSample(i);
-        }
+        // Clear all samples and reset to 24 slots
+        dispatch({ type: 'CLEAR_ALL_DRUM_SAMPLES' });
         
         // Reset preset name
         dispatch({ type: 'SET_DRUM_PRESET_NAME', payload: '' });
@@ -460,6 +500,7 @@ export function DrumTool() {
               onFileUpload={handleFileUpload}
               onClearSample={handleClearSample}
               onRecordSample={handleOpenRecording}
+              onAddUnassignedSample={handleAddUnassignedSample}
             />
             {/* Action Buttons Below Table - RESTORED */}
             <div style={{
@@ -487,6 +528,25 @@ export function DrumTool() {
                 ref={(input) => {
                   if (input) {
                     (window as any).op1PresetInput = input;
+                  }
+                }}
+              />
+              {/* Hidden file input for unassigned samples */}
+              <input
+                type="file"
+                accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.ogg,.flac"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleAddUnassignedSample(file);
+                  }
+                  // Reset the input
+                  e.target.value = '';
+                }}
+                ref={(input) => {
+                  if (input) {
+                    (window as any).unassignedSampleInput = input;
                   }
                 }}
               />
@@ -598,6 +658,37 @@ export function DrumTool() {
               >
                 <i className="fas fa-pencil" style={{ fontSize: '1rem' }}></i>
                 bulk edit
+              </button>
+              <button
+                onClick={() => (window as any).unassignedSampleInput?.click()}
+                style={{
+                  minHeight: '44px',
+                  minWidth: '44px',
+                  padding: '0.75rem 1.5rem',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--color-interactive-focus)',
+                  color: 'var(--color-white)',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.75rem',
+                  width: isMobile ? '100%' : 'auto',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
+                }}
+              >
+                <i className="fas fa-folder-open" style={{ fontSize: '1rem' }}></i>
+                browse
               </button>
             </div>
           </div>

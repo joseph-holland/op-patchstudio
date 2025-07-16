@@ -81,6 +81,8 @@ describe('usePatchGeneration', () => {
           pan: 0,
           gain: 0,
           hasBeenEdited: false,
+          isAssigned: true,
+          assignedKey: 0,
           originalBitDepth: 16,
           originalSampleRate: 44100,
           originalChannels: 2,

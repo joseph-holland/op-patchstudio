@@ -135,20 +135,39 @@ export async function generateDrumPatch(
   }
 
   const fileReadPromises: Promise<void>[] = [];
+  // Only include the first 24 assigned samples in patch.json
+  const assignedSamples = state.drumSamples
+    .map((sample, index) => ({ ...sample, originalIndex: index }))
+    .filter(sample => 
+      sample.isLoaded && 
+      sample.file && 
+      sample.audioBuffer && 
+      (
+        // Either explicitly assigned
+        (sample.isAssigned && typeof sample.assignedKey === 'number' && sample.assignedKey >= 0 && sample.assignedKey < 24) ||
+        // Or in the first 24 slots and not explicitly unassigned
+        (sample.originalIndex < 24 && sample.isAssigned !== false)
+      )
+    )
+    .sort((a, b) => {
+      // Sort by assignedKey if available, otherwise by originalIndex
+      const aKey = a.assignedKey ?? a.originalIndex;
+      const bKey = b.assignedKey ?? b.originalIndex;
+      return aKey - bKey;
+    })
+    .slice(0, 24);
+
   let midiNoteCounter = 53; // Start from F#3 like legacy
 
-  // Process loaded drum samples
-  for (let i = 0; i < state.drumSamples.length; i++) {
-    const sample = state.drumSamples[i];
-    if (!sample.isLoaded || !sample.file || !sample.audioBuffer) continue;
-
+  // Build patch.json regions strictly from assignedSamples
+  for (let i = 0; i < assignedSamples.length; i++) {
+    const sample = assignedSamples[i];
+    const sampleKey = sample.assignedKey ?? sample.originalIndex;
     const outputName = state.drumSettings.renameFiles 
-      ? generateFilename(state.drumSettings.presetName, state.drumSettings.filenameSeparator, 'drum', i, sample.file.name)
-      : sanitizeName(sample.file.name).replace(/\.[^/.]+$/, '.wav');
-    const originalSampleRate = sample.originalSampleRate || sample.audioBuffer.sampleRate;
-    const duration = sample.audioBuffer.duration;
-
-    // Create region object in correct OP-XY format
+      ? generateFilename(state.drumSettings.presetName, state.drumSettings.filenameSeparator, 'drum', sampleKey, sample.file!.name)
+      : sanitizeName(sample.file!.name).replace(/\.[^/.]+$/, '.wav');
+    const originalSampleRate = sample.originalSampleRate || sample.audioBuffer!.sampleRate;
+    const duration = sample.audioBuffer!.duration;
     const midiNote = midiNoteCounter++;
     const effectiveSampleRate = targetSampleRate || originalSampleRate;
     const framecount = Math.floor(duration * effectiveSampleRate);
@@ -171,13 +190,22 @@ export async function generateDrumPatch(
       "sample.start": sampleStart,
       "sample.end": sampleEnd,
     };
+    patchJson.regions.push(region);
+  }
 
-    // Handle audio conversions if needed
+  // Still add all loaded samples to the ZIP as before
+  for (let i = 0; i < state.drumSamples.length; i++) {
+    const sample = state.drumSamples[i];
+    if (!sample.isLoaded || !sample.file || !sample.audioBuffer) continue;
+    const outputName = state.drumSettings.renameFiles 
+      ? generateFilename(state.drumSettings.presetName, state.drumSettings.filenameSeparator, 'drum', sample.assignedKey ?? i, sample.file.name)
+      : sanitizeName(sample.file.name).replace(/\.[^/.]+$/, '.wav');
+    const originalSampleRate = sample.originalSampleRate || sample.audioBuffer.sampleRate;
+    const duration = sample.audioBuffer.duration;
     const needsConversion = 
       (targetSampleRate && originalSampleRate !== targetSampleRate) ||
       (targetBitDepth && targetBitDepth !== sample.originalBitDepth) ||
       (targetChannels === "mono" && sample.audioBuffer.numberOfChannels > 1);
-
     if (needsConversion) {
       fileReadPromises.push(
         (async () => {
@@ -187,39 +215,29 @@ export async function generateDrumPatch(
               bitDepth: targetBitDepth || sample.originalBitDepth || 16,
               channels: targetChannels === "mono" ? 1 : sample.audioBuffer!.numberOfChannels
             });
-            
-            // Validate that converted buffer frame count matches our calculation
-            const expectedFramecount = Math.floor(duration * effectiveSampleRate);
-            validateFrameCount(sample.name, expectedFramecount, convertedBuffer.length, region);
-            
-            // Convert to WAV blob with metadata
             const { audioBufferToWav } = await import('./audio');
             const wavBlob = audioBufferToWav(convertedBuffer, targetBitDepth || 16, {
-              rootNote: midiNote,
+              rootNote: 60, // Not used for ZIP-only samples
               loopStart: 0,
-              loopEnd: framecount - 1
+              loopEnd: Math.floor(duration * (targetSampleRate || originalSampleRate)) - 1
             });
             zip.file(outputName, wavBlob);
-            patchJson.regions.push(region);
           } catch (error) {
             console.error(`Failed to convert sample ${sample.name}:`, error);
           }
         })()
       );
     } else {
-      // No conversion needed, but still create WAV with SMPL metadata
       fileReadPromises.push(
         (async () => {
           try {
-            // Convert to WAV blob with metadata even when no conversion is needed
             const { audioBufferToWav } = await import('./audio');
             const wavBlob = audioBufferToWav(sample.audioBuffer!, targetBitDepth || sample.originalBitDepth || 16, {
-              rootNote: midiNote,
+              rootNote: 60,
               loopStart: 0,
-              loopEnd: framecount - 1
+              loopEnd: Math.floor(duration * originalSampleRate) - 1
             });
             zip.file(outputName, wavBlob);
-            patchJson.regions.push(region);
           } catch (error) {
             throw new Error(`Failed to create WAV with metadata for ${sample.name}: ${error instanceof Error ? error.message : error}`);
           }
