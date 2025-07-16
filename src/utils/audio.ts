@@ -226,8 +226,8 @@ export interface ConversionOptions {
   bitDepth?: number;
   channels?: number;
   normalize?: boolean;
-  normalizeLevel?: number; // dB
-  gain?: number; // dB
+  normalizeLevel?: number; // dBFS
+  gain?: number; // dBFS
   cutAtLoopEnd?: boolean;
   loopEnd?: number; // Sample position to trim at (if cutAtLoopEnd is true)
   applyLimiter?: boolean; // Apply limiter to prevent clipping
@@ -240,7 +240,7 @@ export interface ConversionOptions {
  * @param targetLevelDB - Target level in dBFS (default: -0.1)
  * @returns The normalized audio buffer
  */
-export async function normalizeAudioBuffer(audioBuffer: AudioBuffer, targetLevelDB: number = -1.0): Promise<AudioBuffer> {
+export async function normalizeAudioBuffer(audioBuffer: AudioBuffer, targetLevelDB: number = 0.0): Promise<AudioBuffer> {
   const normalizeGain = calculatePeakNormalizationGain(audioBuffer, targetLevelDB);
   
   // Create a new audio buffer with the same properties
@@ -267,10 +267,10 @@ export async function normalizeAudioBuffer(audioBuffer: AudioBuffer, targetLevel
 /**
  * Calculate peak normalization gain factor for an AudioBuffer
  * @param audioBuffer - The audio buffer to analyze
- * @param targetLevelDB - Target level in dBFS (default: -1.0)
+ * @param targetLevelDB - Target level in dBFS (default: 0.0)
  * @returns The gain factor to apply, or 1.0 if no normalization needed
  */
-export function calculatePeakNormalizationGain(audioBuffer: AudioBuffer, targetLevelDB: number = -1.0): number {
+export function calculatePeakNormalizationGain(audioBuffer: AudioBuffer, targetLevelDB: number = 0.0): number {
   // Find maximum amplitude across all channels
   let maxAmplitude = 0;
   for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
@@ -293,13 +293,14 @@ export function calculatePeakNormalizationGain(audioBuffer: AudioBuffer, targetL
 /**
  * Create a limiter for audio processing
  * @param audioContext - The audio context (can be AudioContext or OfflineAudioContext)
+ * @param threshold - Threshold in dBFS (default: -0.1dBFS for safety)
  * @returns A configured DynamicsCompressor node
  */
-export function createLimiter(audioContext: BaseAudioContext): DynamicsCompressorNode {
+export function createLimiter(audioContext: BaseAudioContext, threshold: number = -0.1): DynamicsCompressorNode {
   const limiter = audioContext.createDynamicsCompressor();
   
   // Professional limiter settings
-  limiter.threshold.setValueAtTime(-1, audioContext.currentTime);    // -1dB threshold
+  limiter.threshold.setValueAtTime(threshold, audioContext.currentTime);    // Configurable threshold
   limiter.knee.setValueAtTime(0, audioContext.currentTime);          // Hard knee
   limiter.ratio.setValueAtTime(20, audioContext.currentTime);        // 20:1 ratio
   limiter.attack.setValueAtTime(0.001, audioContext.currentTime);    // 1ms attack
@@ -311,9 +312,10 @@ export function createLimiter(audioContext: BaseAudioContext): DynamicsCompresso
 /**
  * Apply limiter to audio buffer
  * @param audioBuffer - The audio buffer to process
+ * @param threshold - Threshold in dBFS (default: -0.1dBFS for safety)
  * @returns The limited audio buffer
  */
-export async function applyLimiter(audioBuffer: AudioBuffer): Promise<AudioBuffer> {
+export async function applyLimiter(audioBuffer: AudioBuffer, threshold: number = -0.1): Promise<AudioBuffer> {
   // Create offline context for processing
   const offlineContext = audioContextManager.createOfflineContext(
     audioBuffer.numberOfChannels,
@@ -322,7 +324,7 @@ export async function applyLimiter(audioBuffer: AudioBuffer): Promise<AudioBuffe
   );
   
   // Create limiter from the offline context
-  const limiter = createLimiter(offlineContext);
+  const limiter = createLimiter(offlineContext, threshold);
   
   // Create buffer source
   const source = offlineContext.createBufferSource();
@@ -438,7 +440,7 @@ export async function convertAudioFormat(
   // Debug logging for normalization and gain
   if (normalize || gain !== 0) {
     const sampleInfo = options.sampleName ? ` (${options.sampleName})` : '';
-    console.log(`[AUDIO PROCESSING]${sampleInfo} normalization: ${normalize}, target: ${normalizeLevel}dB, original peak: ${originalPeakDB.toFixed(1)}dB, normalizeGain: ${normalizeGain.toFixed(4)}, gain: ${gain}dB, final gainValue: ${gainValue.toFixed(4)}`);
+    console.log(`[AUDIO PROCESSING]${sampleInfo} normalization: ${normalize}, target: ${normalizeLevel}dBFS, original peak: ${originalPeakDB.toFixed(1)}dBFS, normalizeGain: ${normalizeGain.toFixed(4)}, gain: ${gain}dBFS, final gainValue: ${gainValue.toFixed(4)}`);
   }
 
   gainNode.gain.value = gainValue;
@@ -491,7 +493,10 @@ export async function convertAudioFormat(
   
   // Apply limiter if enabled
   if (shouldApplyLimiter) {
-    result = await applyLimiter(result);
+    // Set limiter threshold based on normalization target
+    // Add small headroom (0.1dB) to prevent limiting normalized audio
+    const limiterThreshold = normalize ? normalizeLevel + 0.1 : -0.1;
+    result = await applyLimiter(result, limiterThreshold);
   }
   
   return result;

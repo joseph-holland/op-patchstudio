@@ -161,7 +161,7 @@ export function AudioProcessingSection({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
             <div style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left', width: '100%' }}>
-              normalization level: {normalizeLevel.toFixed(1)} db
+              normalization level: {normalizeLevel.toFixed(1)} dbfs
             </div>
             <div style={{ width: isMobile ? '90%' : '100%', margin: isMobile ? '0 auto' : undefined }}>
               <Slider
@@ -288,7 +288,7 @@ export function AudioProcessingSection({
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
                 <div style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left', width: '100%' }}>
-                  gain: {gain} db
+                  gain: {gain} dbfs
                 </div>
                 <div style={{ width: isMobile ? '90%' : '100%', margin: isMobile ? '0 auto' : undefined }}>
                   <Slider

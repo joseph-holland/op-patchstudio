@@ -8,7 +8,7 @@ export function createCompleteMultisampleSettings(overrides: Partial<AppState['m
     channels: 2,
     presetName: '',
     normalize: false,
-    normalizeLevel: -1.0,
+    normalizeLevel: 0.0,
     autoZeroCrossing: true,
     cutAtLoopEnd: false,
     gain: 0,

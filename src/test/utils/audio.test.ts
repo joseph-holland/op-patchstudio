@@ -121,6 +121,8 @@ vi.mock('../../utils/audioContext', () => ({
                   data.fill(0.5); // Normalize to -6dB: 0.25 -> 0.5
                 } else if (currentTestContext === 'both') {
                   data.fill(1.0); // Normalize then gain: 0.25 -> 0.5 -> 1.0
+                } else if (currentTestContext === 'normalize_to_zero') {
+                  data.fill(1.0); // Normalize to 0dBFS: 0.5 -> 1.0 (without limiter interference)
                 } else {
                   // Default fallback
                   data.fill(0.5);
@@ -763,6 +765,24 @@ describe('audio utilities', () => {
       // Should normalize 0.25 to 0.5, then apply +6dB to get 1.0
       const resultData = result.getChannelData(0);
       expect(resultData[0]).toBeCloseTo(1.0, 2);
+    });
+
+    it('should normalize to 0 dBFS without limiter interference', async () => {
+      currentTestContext = 'normalize_to_zero';
+      const mockBuffer = createMockAudioBuffer(1000, 44100);
+      const mockChannelData = new Float32Array(1000);
+      mockChannelData.fill(0.5); // Set all samples to 0.5 (-6dBFS)
+      mockBuffer.getChannelData = vi.fn().mockReturnValue(mockChannelData);
+
+      const result = await convertAudioFormat(mockBuffer, { 
+        normalize: true, 
+        normalizeLevel: 0, // Normalize to 0dBFS (1.0)
+        applyLimiter: true // Limiter should not interfere
+      });
+      
+      // Should normalize to exactly 1.0 (0dBFS) without limiter reduction
+      const resultData = result.getChannelData(0);
+      expect(resultData[0]).toBeCloseTo(1.0, 3);
     });
   })
 

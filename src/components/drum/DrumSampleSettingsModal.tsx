@@ -435,7 +435,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               marginBottom: '0.5rem',
               textTransform: 'lowercase',
             }}>
-              gain: {settings.gain} db
+              gain: {settings.gain} dbfs
             </div>
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: 0, margin: 0 }}>
               <Slider
