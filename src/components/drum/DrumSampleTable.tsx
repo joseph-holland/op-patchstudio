@@ -15,7 +15,6 @@ interface DrumSampleTableProps {
   onFileUpload: (index: number, file: File) => void;
   onClearSample: (index: number) => void;
   onRecordSample?: (index: number) => void;
-  onAddUnassignedSample?: (file: File) => void;
 }
 
 // Full drum names from OP-XY documentation - all lowercase
@@ -42,7 +41,7 @@ const c = {
 
 
 
-export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample, onAddUnassignedSample }: DrumSampleTableProps) {
+export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }: DrumSampleTableProps) {
   const { state, dispatch } = useAppContext();
   const { play } = useAudioPlayer();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -150,14 +149,8 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample, o
         file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
       );
       if (audioFile) {
-        // If dropping on a drum key (0-23), assign the sample
-        if (targetIndex < 24) {
-          if (onAddUnassignedSample) {
-            onAddUnassignedSample(audioFile);
-          }
-        } else {
-          handleFileSelect(targetIndex, audioFile);
-        }
+        // Always assign the file directly to the target index
+        handleFileSelect(targetIndex, audioFile);
         return;
       }
     }

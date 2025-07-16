@@ -211,7 +211,7 @@ export type AppAction =
   | { type: 'SET_MIDI_NOTE_MAPPING'; payload: 'C3' | 'C4' }
   | { type: 'CLEAR_ALL_DRUM_SAMPLES' };
 
-// Initial state
+// Initial state for drum samples
 const initialDrumSample: DrumSample = {
   file: null,
   audioBuffer: null,
@@ -225,9 +225,16 @@ const initialDrumSample: DrumSample = {
   pan: 0,
   gain: 0,
   hasBeenEdited: false,
-  isAssigned: true, // Default to assigned for the 24 drum keys
+  isAssigned: false, // Default to unassigned - will be set appropriately based on context
   assignedKey: undefined
 };
+
+// Helper function to create a drum sample with proper assignment state
+const createDrumSample = (index: number, isAssigned: boolean = false): DrumSample => ({
+  ...initialDrumSample,
+  isAssigned,
+  assignedKey: isAssigned ? index : undefined
+});
 
 const initialMultisampleFile: MultisampleFile = {
   file: null,
@@ -282,7 +289,7 @@ const initialState: AppState = {
   currentTab: getInitialTab(),
   drumSettings: loadDrumDefaultSettings(),
   multisampleSettings: loadMultisampleDefaultSettings(),
-  drumSamples: Array.from({ length: 24 }, () => ({ ...initialDrumSample })),
+  drumSamples: Array.from({ length: 24 }, (_, index) => createDrumSample(index, true)), // First 24 slots are assigned to their respective keys
   multisampleFiles: [], // Dynamic array, 1-24 samples max
   selectedMultisample: null,
   isLoading: false,
@@ -607,7 +614,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         fileSize: action.payload.file.size,
         duration: action.payload.audioBuffer.duration,
         hasBeenEdited: false,
-        isAssigned: true, // Assigned to the specific drum key
+        isAssigned: true, // Assigned to the specific drum key (0-23)
         assignedKey: action.payload.index
       };
       
@@ -616,7 +623,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
       
     case 'CLEAR_DRUM_SAMPLE': {
       const clearedDrumSamples = [...state.drumSamples];
-      clearedDrumSamples[action.payload] = { ...initialDrumSample };
+      // Reset to initial state but maintain proper assignment for the first 24 slots
+      const isInFirst24Slots = action.payload < 24;
+      clearedDrumSamples[action.payload] = createDrumSample(action.payload, isInFirst24Slots);
       return { ...state, drumSamples: clearedDrumSamples };
     }
       
@@ -674,7 +683,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
       }
       
       const newUnassignedSample: DrumSample = {
-        ...initialDrumSample,
+        ...createDrumSample(state.drumSamples.length, false), // Create as unassigned sample
         file: action.payload.file,
         audioBuffer: action.payload.audioBuffer,
         name: action.payload.file.name,
@@ -686,9 +695,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         originalChannels: action.payload.metadata.channels,
         fileSize: action.payload.file.size,
         duration: action.payload.audioBuffer.duration,
-        hasBeenEdited: false,
-        isAssigned: false, // Mark as unassigned
-        assignedKey: undefined
+        hasBeenEdited: false
       };
       
       return { ...state, drumSamples: [...state.drumSamples, newUnassignedSample] };
@@ -755,8 +762,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
     }
     
     case 'CLEAR_ALL_DRUM_SAMPLES': {
-      // Reset drum samples array to just the first 24 slots
-      const resetDrumSamples = Array.from({ length: 24 }, () => ({ ...initialDrumSample }));
+      // Reset drum samples array to just the first 24 slots with proper assignment
+      const resetDrumSamples = Array.from({ length: 24 }, (_, index) => createDrumSample(index, true));
       return { ...state, drumSamples: resetDrumSamples };
     }
     
@@ -769,7 +776,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
       const findFirstEmptySlot = (samples: DrumSample[]): number | null => {
         for (let i = 0; i < 24; i++) {
           const sample = samples[i];
-          if (!sample || !sample.isLoaded || !sample.isAssigned) {
+          // Only consider slot empty if no sample exists or sample is not loaded
+          // Preserve unassigned samples (they should not be overwritten)
+          if (!sample || !sample.isLoaded) {
             return i;
           }
         }
@@ -784,7 +793,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         if (emptySlotIndex !== null) {
           // Found an empty slot, assign the sample there
           newDrumSamples[emptySlotIndex] = {
-            ...initialDrumSample,
+            ...createDrumSample(emptySlotIndex, true),
             file: sample.file,
             audioBuffer: sample.audioBuffer,
             name: sample.name,
@@ -796,14 +805,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
             originalChannels: sample.metadata.channels,
             fileSize: sample.file.size,
             duration: sample.audioBuffer.duration,
-            hasBeenEdited: false,
-            isAssigned: true,
-            assignedKey: emptySlotIndex
+            hasBeenEdited: false
           };
         } else {
           // No empty slots in 0-23, add as unassigned sample
           const unassignedSample = {
-            ...initialDrumSample,
+            ...createDrumSample(newDrumSamples.length, false),
             file: sample.file,
             audioBuffer: sample.audioBuffer,
             name: sample.name,
@@ -815,9 +822,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
             originalChannels: sample.metadata.channels,
             fileSize: sample.file.size,
             duration: sample.audioBuffer.duration,
-            hasBeenEdited: false,
-            isAssigned: false,
-            assignedKey: undefined
+            hasBeenEdited: false
           };
           newDrumSamples.push(unassignedSample);
           samplesAddedAsUnassigned++;

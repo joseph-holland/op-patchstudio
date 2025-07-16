@@ -500,7 +500,6 @@ export function DrumTool() {
               onFileUpload={handleFileUpload}
               onClearSample={handleClearSample}
               onRecordSample={handleOpenRecording}
-              onAddUnassignedSample={handleAddUnassignedSample}
             />
             {/* Action Buttons Below Table - RESTORED */}
             <div style={{
