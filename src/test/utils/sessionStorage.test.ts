@@ -47,6 +47,7 @@ describe('sessionStorage', () => {
           presetName: '',
           normalize: false,
           normalizeLevel: 0,
+          autoZeroCrossing: true,
           presetSettings: {
             playmode: 'poly' as const,
             transpose: 0,

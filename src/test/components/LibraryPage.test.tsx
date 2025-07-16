@@ -278,6 +278,16 @@ describe('LibraryPage', () => {
     });
 
     it('should sort presets by name', async () => {
+      // Wait for loading to complete and table to be rendered
+      await waitFor(() => {
+        expect(screen.queryByText('loading...')).not.toBeInTheDocument();
+      });
+      
+      // Wait for the table headers to be rendered
+      await waitFor(() => {
+        expect(screen.getByText('name')).toBeInTheDocument();
+      });
+      
       const nameHeader = screen.getByText('name');
       fireEvent.click(nameHeader);
 

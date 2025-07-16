@@ -49,6 +49,7 @@ describe('defaultSettings', () => {
         presetName: 'test preset',
         normalize: true,
         normalizeLevel: -3.0,
+        autoZeroCrossing: true,
         renameFiles: true,
         filenameSeparator: '-' as const,
         presetSettings: {
@@ -72,6 +73,7 @@ describe('defaultSettings', () => {
             presetName: 'test preset',
             normalize: true,
             normalizeLevel: -3.0,
+            autoZeroCrossing: true,
             renameFiles: true,
             filenameSeparator: '-',
             presetSettings: {
@@ -96,6 +98,7 @@ describe('defaultSettings', () => {
         presetName: 'test preset',
         normalize: true,
         normalizeLevel: -3.0,
+        autoZeroCrossing: true,
         renameFiles: true,
         filenameSeparator: '-' as const,
         presetSettings: {
@@ -129,6 +132,7 @@ describe('defaultSettings', () => {
             presetName: 'test preset',
             normalize: true,
             normalizeLevel: -3.0,
+            autoZeroCrossing: true,
             renameFiles: true,
             filenameSeparator: '-',
             presetSettings: {
@@ -274,6 +278,7 @@ describe('defaultSettings', () => {
             presetName: 'test multisample',
             normalize: false,
             normalizeLevel: -6.0,
+            autoZeroCrossing: true,
             cutAtLoopEnd: false,
             gain: 0,
             loopEnabled: true,
@@ -367,6 +372,7 @@ describe('defaultSettings', () => {
             presetName: 'test multisample',
             normalize: false,
             normalizeLevel: -6.0,
+            autoZeroCrossing: true,
             cutAtLoopEnd: true,
             gain: 5,
             loopEnabled: false,

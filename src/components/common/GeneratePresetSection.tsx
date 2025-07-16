@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Toggle } from '@carbon/react';
 import { PatchSizeIndicator } from './PatchSizeIndicator';
 import { PresetNameInput } from '../library/PresetNameInput';
 import type { FilenameSeparator } from '../../utils/constants';
@@ -173,75 +174,90 @@ export function GeneratePresetSection({
           >
             {/* Rename Files Toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
-              <input
-                type="checkbox"
-                id={`rename-files-${inputId}`}
-                checked={renameFiles}
-                onChange={(e) => onRenameFilesChange(e.target.checked)}
-                style={{
-                  width: '16px',
-                  height: '16px',
-                  accentColor: 'var(--color-interactive-focus)'
-                }}
+              <Toggle
+                id={`rename-files-toggle-${inputId}`}
+                labelText="rename files with preset name"
+                toggled={renameFiles}
+                onToggle={onRenameFilesChange}
+                size="sm"
+                className="rename-files-toggle"
               />
-              <label
-                htmlFor={`rename-files-${inputId}`}
-                style={{
-                  fontSize: '0.9rem',
-                  color: 'var(--color-text-primary)',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  width: isMobile ? 'auto' : undefined,
-                  textAlign: isMobile ? 'center' : 'left',
-                }}
-              >
-                rename files with preset name
-              </label>
+              <style>{`
+                .rename-files-toggle .cds--toggle-input__appearance {
+                  background-color: var(--color-bg-slider-track) !important;
+                }
+                .rename-files-toggle .cds--toggle-input__appearance:before {
+                  background-color: var(--color-interactive-secondary) !important;
+                }
+                .rename-files-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance {
+                  background-color: var(--color-interactive-dark) !important;
+                }
+                .rename-files-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
+                  background-color: var(--color-bg-primary) !important;
+                }
+                .rename-files-toggle .cds--toggle__text,
+                .rename-files-toggle .cds--toggle__text--off,
+                .rename-files-toggle .cds--toggle__text--on,
+                .rename-files-toggle label,
+                .rename-files-toggle span {
+                  color: var(--color-text-primary) !important;
+                  font-size: 0.9rem !important;
+                  font-weight: 500 !important;
+                  line-height: 1.2 !important;
+                }
+                .rename-files-toggle .cds--toggle {
+                  font-size: 0.9rem !important;
+                  font-weight: 500 !important;
+                }
+                .rename-files-toggle .cds--toggle * {
+                  font-size: 0.9rem !important;
+                  font-weight: 500 !important;
+                }
+              `}</style>
             </div>
 
             {/* Filename Separator Options */}
-            {renameFiles && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
-                <div style={{
-                  fontSize: '0.8rem',
-                  color: 'var(--color-text-secondary)',
-                  marginBottom: '0.25rem',
-                  textAlign: isMobile ? 'center' : 'left',
-                  width: isMobile ? '100%' : 'auto',
-                }}>
-                  filename separator:
-                </div>
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
-                  {([' ', '-'] as const).map((separator) => (
-                    <label
-                      key={separator}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem',
-                        color: 'var(--color-text-primary)',
-                        userSelect: 'none',
-                        textAlign: isMobile ? 'center' : 'left',
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name={`filename-separator-${inputId}`}
-                        value={separator}
-                        checked={filenameSeparator === separator}
-                        onChange={() => onFilenameSeparatorChange(separator)}
-                        style={{ accentColor: 'var(--color-interactive-focus)' }}
-                      />
-                      <span>
-                        {separator === ' ' ? "space ' '" : "hyphen '-'"}
-                      </span>
-                    </label>
-                  ))}
-                </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
+              <div style={{
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                color: 'var(--color-text-primary)',
+                marginBottom: '0.25rem',
+                textAlign: isMobile ? 'center' : 'left',
+                width: isMobile ? '100%' : 'auto',
+              }}>
+                filename separator
               </div>
-            )}
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
+                {([' ', '-'] as const).map((separator) => (
+                  <label
+                    key={separator}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      color: 'var(--color-text-primary)',
+                      userSelect: 'none',
+                      textAlign: isMobile ? 'center' : 'left',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name={`filename-separator-${inputId}`}
+                      value={separator}
+                      checked={filenameSeparator === separator}
+                      onChange={() => onFilenameSeparatorChange(separator)}
+                      style={{ accentColor: 'var(--color-interactive-focus)' }}
+                    />
+                    <span>
+                      {separator === ' ' ? "space ' '" : "hyphen '-'"}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
         

@@ -713,6 +713,8 @@ export function MultisampleTool() {
           normalizeLevel={state.multisampleSettings.normalizeLevel}
           onNormalizeChange={handleNormalizeChange}
           onNormalizeLevelChange={handleNormalizeLevelChange}
+          autoZeroCrossing={state.multisampleSettings.autoZeroCrossing}
+          onAutoZeroCrossingChange={(enabled) => dispatch({ type: 'SET_MULTISAMPLE_AUTO_ZERO_CROSSING', payload: enabled })}
           gain={state.multisampleSettings.gain}
           onGainChange={handleGainChange}
           cutAtLoopEnd={state.multisampleSettings.cutAtLoopEnd}

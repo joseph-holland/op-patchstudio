@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Toggle, Slider } from '@carbon/react';
 import { AudioFormatControls } from './AudioFormatControls';
+import { EnhancedTooltip } from './EnhancedTooltip';
 
 interface AudioProcessingSectionProps {
   type: 'drum' | 'multisample';
@@ -15,6 +16,8 @@ interface AudioProcessingSectionProps {
   normalizeLevel: number;
   onNormalizeChange: (enabled: boolean) => void;
   onNormalizeLevelChange: (level: number) => void;
+  autoZeroCrossing: boolean;
+  onAutoZeroCrossingChange: (enabled: boolean) => void;
   cutAtLoopEnd?: boolean;
   onCutAtLoopEndChange?: (enabled: boolean) => void;
   onResetAudioSettingsConfirm?: () => void;
@@ -35,6 +38,8 @@ export function AudioProcessingSection({
   normalizeLevel,
   onNormalizeChange,
   onNormalizeLevelChange,
+  autoZeroCrossing,
+  onAutoZeroCrossingChange,
   cutAtLoopEnd = false,
   onCutAtLoopEndChange,
   onResetAudioSettingsConfirm,
@@ -42,6 +47,7 @@ export function AudioProcessingSection({
   onGainChange
 }: AudioProcessingSectionProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const [isZeroCrossingTooltipVisible, setIsZeroCrossingTooltipVisible] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -60,6 +66,7 @@ export function AudioProcessingSection({
     channels !== 0 ||
     normalize !== false ||
     normalizeLevel !== 0.0 ||
+    autoZeroCrossing !== true || // Default is true
     (type === 'multisample' && cutAtLoopEnd !== false) ||
     (type === 'multisample' && gain !== 0)
   );
@@ -110,7 +117,7 @@ export function AudioProcessingSection({
             display: 'flex',
             flexDirection: 'column',
             gap: '1rem',
-            marginBottom: '1rem',
+            marginBottom: isMobile ? '1rem' : '2rem',
           }}
         >
           <AudioFormatControls
@@ -138,7 +145,7 @@ export function AudioProcessingSection({
         >
           {/* Normalization Row */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
-            <div style={{ fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+            <div style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)' }}>
               normalization
             </div>
             <div style={{ padding: '4px' }}>
@@ -153,7 +160,7 @@ export function AudioProcessingSection({
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
-            <div style={{ fontSize: isMobile ? '0.9rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left', width: '100%' }}>
+            <div style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left', width: '100%' }}>
               normalization level: {normalizeLevel.toFixed(1)} db
             </div>
             <div style={{ width: isMobile ? '90%' : '100%', margin: isMobile ? '0 auto' : undefined }}>
@@ -186,11 +193,68 @@ export function AudioProcessingSection({
             `}</style>
           </div>
 
+          {/* Auto Zero Crossing Row */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)' }}>
+                auto zero crossing
+              </div>
+              <EnhancedTooltip
+                content={
+                  <div>
+                    <p>automatically snap loop points and markers to zero crossings when importing samples for cleaner audio</p>
+                  </div>
+                }
+                isVisible={isZeroCrossingTooltipVisible}
+              >
+                <i 
+                  className="fas fa-question-circle" 
+                  style={{ 
+                    fontSize: '14px', 
+                    color: 'var(--color-text-secondary)',
+                    cursor: 'help'
+                  }}
+                  onMouseEnter={() => setIsZeroCrossingTooltipVisible(true)}
+                  onMouseLeave={() => setIsZeroCrossingTooltipVisible(false)}
+                />
+              </EnhancedTooltip>
+            </div>
+            <div style={{ padding: '4px' }}>
+              <Toggle
+                id="auto-zero-crossing-toggle"
+                labelA="off"
+                labelB="on"
+                toggled={autoZeroCrossing}
+                onToggle={onAutoZeroCrossingChange}
+                size="sm"
+              />
+            </div>
+            <style>{`
+              #auto-zero-crossing-toggle .cds--toggle-input__appearance {
+                background-color: var(--color-bg-slider-track) !important;
+              }
+              #auto-zero-crossing-toggle .cds--toggle-input__appearance:before {
+                background-color: var(--color-interactive-secondary) !important;
+              }
+              #auto-zero-crossing-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance {
+                background-color: var(--color-interactive-dark) !important;
+              }
+              #auto-zero-crossing-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
+                background-color: var(--color-bg-primary) !important;
+              }
+              #auto-zero-crossing-toggle .cds--toggle__text--off,
+              #auto-zero-crossing-toggle .cds--toggle__text--on {
+                color: var(--color-interactive-secondary) !important;
+              }
+            `}</style>
+          </div>
+
+
           {/* Trim to Loop End + Gain Row (multisample only) */}
           {type === 'multisample' && (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
-                <div style={{ fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)' }}>
                   trim to loop end
                 </div>
                 <div style={{ padding: '4px' }}>
@@ -223,7 +287,7 @@ export function AudioProcessingSection({
                 `}</style>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
-                <div style={{ fontSize: isMobile ? '0.9rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left', width: '100%' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left', width: '100%' }}>
                   gain: {gain} db
                 </div>
                 <div style={{ width: isMobile ? '90%' : '100%', margin: isMobile ? '0 auto' : undefined }}>

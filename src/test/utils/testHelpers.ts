@@ -9,6 +9,7 @@ export function createCompleteMultisampleSettings(overrides: Partial<AppState['m
     presetName: '',
     normalize: false,
     normalizeLevel: -1.0,
+    autoZeroCrossing: true,
     cutAtLoopEnd: false,
     gain: 0,
     loopEnabled: true,

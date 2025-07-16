@@ -155,9 +155,12 @@ export function AudioFormatControls({
         flex: isMobile ? 'none' : '1',
         width: isMobile ? '100%' : 'auto'
       }}>
+        <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
+          sample rate
+        </div>
         <Select
           id="sample-rate"
-          labelText="sample rate"
+          labelText=""
           value={sampleRate.toString()}
           onChange={(e) => onSampleRateChange(e.target.value)}
           size={size}
@@ -187,9 +190,12 @@ export function AudioFormatControls({
         flex: isMobile ? 'none' : '1',
         width: isMobile ? '100%' : 'auto'
       }}>
+        <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
+          bit depth
+        </div>
         <Select
           id="bit-depth"
-          labelText="bit depth"
+          labelText=""
           value={bitDepth.toString()}
           onChange={(e) => onBitDepthChange(e.target.value)}
           size={size}
@@ -214,9 +220,12 @@ export function AudioFormatControls({
         flex: isMobile ? 'none' : '1',
         width: isMobile ? '100%' : 'auto'
       }}>
+        <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
+          channels
+        </div>
         <Select
           id="channels"
-          labelText="channels"
+          labelText=""
           value={channels.toString()}
           onChange={(e) => onChannelsChange(e.target.value)}
           size={size}

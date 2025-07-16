@@ -6,6 +6,7 @@ import type { Notification } from '../components/common/NotificationSystem';
 import { cookieUtils, COOKIE_KEYS } from '../utils/cookies';
 import type { FilenameSeparator } from '../utils/constants';
 import { loadDrumDefaultSettings, loadMultisampleDefaultSettings, loadDrumImportedPreset, loadMultisampleImportedPreset } from '../utils/defaultSettings';
+import { applyZeroCrossingToMarkers } from '../utils/audio';
 
 // Define enhanced types for the application state
 export interface DrumSample {
@@ -67,6 +68,7 @@ export interface AppState {
     presetName: string;
     normalize: boolean;
     normalizeLevel: number; // -6.0 to 0.0 dB
+    autoZeroCrossing: boolean; // Enable automatic zero-crossing detection
     renameFiles: boolean; // Whether to rename files with preset name
     filenameSeparator: FilenameSeparator; // Separator for filename parts
     presetSettings: {
@@ -86,6 +88,7 @@ export interface AppState {
     presetName: string;
     normalize: boolean;
     normalizeLevel: number; // -6.0 to 0.0 dB
+    autoZeroCrossing: boolean; // Enable automatic zero-crossing detection
     cutAtLoopEnd: boolean;
     gain: number; // -30 to +20 dB
     loopEnabled: boolean;
@@ -153,6 +156,7 @@ export type AppAction =
   | { type: 'SET_DRUM_PRESET_NAME'; payload: string }
   | { type: 'SET_DRUM_NORMALIZE'; payload: boolean }
   | { type: 'SET_DRUM_NORMALIZE_LEVEL'; payload: number }
+  | { type: 'SET_DRUM_AUTO_ZERO_CROSSING'; payload: boolean }
   | { type: 'SET_DRUM_RENAME_FILES'; payload: boolean }
   | { type: 'SET_DRUM_FILENAME_SEPARATOR'; payload: FilenameSeparator }
   | { type: 'SET_DRUM_PRESET_PLAYMODE'; payload: 'poly' | 'mono' | 'legato' }
@@ -166,6 +170,7 @@ export type AppAction =
   | { type: 'SET_MULTISAMPLE_PRESET_NAME'; payload: string }
   | { type: 'SET_MULTISAMPLE_NORMALIZE'; payload: boolean }
   | { type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL'; payload: number }
+  | { type: 'SET_MULTISAMPLE_AUTO_ZERO_CROSSING'; payload: boolean }
   | { type: 'SET_MULTISAMPLE_RENAME_FILES'; payload: boolean }
   | { type: 'SET_MULTISAMPLE_FILENAME_SEPARATOR'; payload: FilenameSeparator }
   | { type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END'; payload: boolean }
@@ -352,6 +357,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         drumSettings: { ...state.drumSettings, normalizeLevel: action.payload }
       };
       
+    case 'SET_DRUM_AUTO_ZERO_CROSSING':
+      return { 
+        ...state, 
+        drumSettings: { ...state.drumSettings, autoZeroCrossing: action.payload }
+      };
+      
     case 'SET_DRUM_RENAME_FILES':
       return { 
         ...state, 
@@ -443,6 +454,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { 
         ...state, 
         multisampleSettings: { ...state.multisampleSettings, normalizeLevel: action.payload }
+      };
+      
+    case 'SET_MULTISAMPLE_AUTO_ZERO_CROSSING':
+      return { 
+        ...state, 
+        multisampleSettings: { ...state.multisampleSettings, autoZeroCrossing: action.payload }
       };
       
     case 'SET_MULTISAMPLE_RENAME_FILES':
@@ -600,14 +617,38 @@ function appReducer(state: AppState, action: AppAction): AppState {
       }
       
       const newDrumSamples = [...state.drumSamples];
+      
+      // Calculate initial marker positions
+      const initialInPoint = 0;
+      const initialOutPoint = action.payload.audioBuffer.duration;
+      
+      // Apply zero-crossing detection if enabled
+      let finalInPoint = initialInPoint;
+      let finalOutPoint = initialOutPoint;
+      
+      if (state.drumSettings.autoZeroCrossing) {
+        const result = applyZeroCrossingToMarkers(
+          action.payload.audioBuffer,
+          initialInPoint,
+          initialOutPoint
+        );
+        finalInPoint = result.inPoint;
+        finalOutPoint = result.outPoint;
+        
+        // Log adjustments if any were made
+        if (result.adjustments.length > 0) {
+          console.log(`Applied zero-crossing adjustments to ${action.payload.file.name}:`, result.adjustments);
+        }
+      }
+      
       newDrumSamples[action.payload.index] = {
         ...initialDrumSample,
         file: action.payload.file,
         audioBuffer: action.payload.audioBuffer,
         name: action.payload.file.name,
         isLoaded: true,
-        inPoint: 0,
-        outPoint: action.payload.audioBuffer.duration,
+        inPoint: finalInPoint,
+        outPoint: finalOutPoint,
         originalBitDepth: action.payload.metadata.bitDepth,
         originalSampleRate: action.payload.metadata.sampleRate,
         originalChannels: action.payload.metadata.channels,
@@ -682,14 +723,37 @@ function appReducer(state: AppState, action: AppAction): AppState {
         return state;
       }
       
+      // Calculate initial marker positions
+      const initialInPoint = 0;
+      const initialOutPoint = action.payload.audioBuffer.duration;
+      
+      // Apply zero-crossing detection if enabled
+      let finalInPoint = initialInPoint;
+      let finalOutPoint = initialOutPoint;
+      
+      if (state.drumSettings.autoZeroCrossing) {
+        const result = applyZeroCrossingToMarkers(
+          action.payload.audioBuffer,
+          initialInPoint,
+          initialOutPoint
+        );
+        finalInPoint = result.inPoint;
+        finalOutPoint = result.outPoint;
+        
+        // Log adjustments if any were made
+        if (result.adjustments.length > 0) {
+          console.log(`Applied zero-crossing adjustments to ${action.payload.file.name}:`, result.adjustments);
+        }
+      }
+      
       const newUnassignedSample: DrumSample = {
         ...createDrumSample(state.drumSamples.length, false), // Create as unassigned sample
         file: action.payload.file,
         audioBuffer: action.payload.audioBuffer,
         name: action.payload.file.name,
         isLoaded: true,
-        inPoint: 0,
-        outPoint: action.payload.audioBuffer.duration,
+        inPoint: finalInPoint,
+        outPoint: finalOutPoint,
         originalBitDepth: action.payload.metadata.bitDepth,
         originalSampleRate: action.payload.metadata.sampleRate,
         originalChannels: action.payload.metadata.channels,
@@ -787,6 +851,29 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
       // Load samples from OP-1 preset
       for (const sample of action.payload.samples) {
+        // Calculate initial marker positions
+        const initialInPoint = 0;
+        const initialOutPoint = sample.audioBuffer.duration;
+        
+        // Apply zero-crossing detection if enabled
+        let finalInPoint = initialInPoint;
+        let finalOutPoint = initialOutPoint;
+        
+        if (state.drumSettings.autoZeroCrossing) {
+          const result = applyZeroCrossingToMarkers(
+            sample.audioBuffer,
+            initialInPoint,
+            initialOutPoint
+          );
+          finalInPoint = result.inPoint;
+          finalOutPoint = result.outPoint;
+          
+          // Log adjustments if any were made
+          if (result.adjustments.length > 0) {
+            console.log(`Applied zero-crossing adjustments to ${sample.name}:`, result.adjustments);
+          }
+        }
+        
         // Try to find an empty slot in the 0-23 range
         const emptySlotIndex = findFirstEmptySlot(newDrumSamples);
         
@@ -798,8 +885,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
             audioBuffer: sample.audioBuffer,
             name: sample.name,
             isLoaded: true,
-            inPoint: 0,
-            outPoint: sample.audioBuffer.duration,
+            inPoint: finalInPoint,
+            outPoint: finalOutPoint,
             originalBitDepth: sample.metadata.bitDepth,
             originalSampleRate: sample.metadata.sampleRate,
             originalChannels: sample.metadata.channels,
@@ -815,8 +902,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
             audioBuffer: sample.audioBuffer,
             name: sample.name,
             isLoaded: true,
-            inPoint: 0,
-            outPoint: sample.audioBuffer.duration,
+            inPoint: finalInPoint,
+            outPoint: finalOutPoint,
             originalBitDepth: sample.metadata.bitDepth,
             originalSampleRate: sample.metadata.sampleRate,
             originalChannels: sample.metadata.channels,
@@ -880,6 +967,37 @@ function appReducer(state: AppState, action: AppAction): AppState {
         }
       }
       
+      // Calculate initial marker positions
+      const initialInPoint = 0;
+      const initialOutPoint = action.payload.metadata.duration;
+      const initialLoopStart = action.payload.metadata.hasLoopData ? action.payload.metadata.loopStart : action.payload.metadata.duration * 0.2;
+      const initialLoopEnd = action.payload.metadata.hasLoopData ? action.payload.metadata.loopEnd : action.payload.metadata.duration * 0.8;
+      
+      // Apply zero-crossing detection if enabled and audioBuffer is available
+      let finalInPoint = initialInPoint;
+      let finalOutPoint = initialOutPoint;
+      let finalLoopStart = initialLoopStart;
+      let finalLoopEnd = initialLoopEnd;
+      
+      if (state.multisampleSettings.autoZeroCrossing && action.payload.audioBuffer) {
+        const result = applyZeroCrossingToMarkers(
+          action.payload.audioBuffer,
+          initialInPoint,
+          initialOutPoint,
+          initialLoopStart,
+          initialLoopEnd
+        );
+        finalInPoint = result.inPoint;
+        finalOutPoint = result.outPoint;
+        finalLoopStart = result.loopStart || initialLoopStart;
+        finalLoopEnd = result.loopEnd || initialLoopEnd;
+        
+        // Log adjustments if any were made
+        if (result.adjustments.length > 0) {
+          console.log(`Applied zero-crossing adjustments to ${action.payload.file.name}:`, result.adjustments);
+        }
+      }
+      
       const newMultisampleFile: MultisampleFile = {
         ...initialMultisampleFile,
         file: action.payload.file,
@@ -888,11 +1006,11 @@ function appReducer(state: AppState, action: AppAction): AppState {
         isLoaded: action.payload.audioBuffer !== null, // Only mark as loaded if we have an audioBuffer
         rootNote: detectedMidiNote, // Set the actual MIDI note number
         note: detectedNote,
-        inPoint: 0,
-        outPoint: action.payload.metadata.duration, // Use calculated duration from metadata
-        // Use loop points from metadata if available, otherwise use defaults
-        loopStart: action.payload.metadata.hasLoopData ? action.payload.metadata.loopStart : action.payload.metadata.duration * 0.2,
-        loopEnd: action.payload.metadata.hasLoopData ? action.payload.metadata.loopEnd : action.payload.metadata.duration * 0.8,
+        inPoint: finalInPoint,
+        outPoint: finalOutPoint,
+        // Use adjusted loop points
+        loopStart: finalLoopStart,
+        loopEnd: finalLoopEnd,
         // Store metadata
         originalBitDepth: action.payload.metadata.bitDepth,
         originalSampleRate: action.payload.metadata.sampleRate,

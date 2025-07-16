@@ -52,6 +52,7 @@ describe('patchGeneration', () => {
           presetName: 'Test Kit',
           normalize: false,
           normalizeLevel: -6.0,
+          autoZeroCrossing: true,
           presetSettings: {
             playmode: 'poly',
             transpose: 0,
@@ -69,6 +70,7 @@ describe('patchGeneration', () => {
            presetName: 'Test Multisample',
            normalize: false,
            normalizeLevel: -6.0,
+           autoZeroCrossing: true,
            renameFiles: false,
            filenameSeparator: ' ',
            cutAtLoopEnd: false,

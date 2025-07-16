@@ -107,6 +107,7 @@ const mockAppState: Partial<AppState> = {
     presetName: 'Test Drum Kit',
     normalize: false,
     normalizeLevel: -6.0,
+    autoZeroCrossing: true,
     presetSettings: {
       playmode: 'poly',
       transpose: 0,
@@ -400,6 +401,7 @@ describe('Drum Sample Index Preservation', () => {
         presetName: 'Test Drum Kit',
         normalize: false,
         normalizeLevel: -6.0,
+        autoZeroCrossing: true,
         presetSettings: {
           playmode: 'poly',
           transpose: 0,
@@ -527,6 +529,7 @@ describe('Drum Sample Index Preservation', () => {
         presetName: 'Test Drum Kit',
         normalize: false,
         normalizeLevel: -6.0,
+        autoZeroCrossing: true,
         presetSettings: {
           playmode: 'poly',
           transpose: 0,
@@ -660,6 +663,7 @@ describe('Multisample Loop Points Preservation', () => {
          presetName: '',
          normalize: false,
          normalizeLevel: -6.0,
+         autoZeroCrossing: true,
          presetSettings: {
            playmode: 'poly' as const,
            transpose: 0,

@@ -205,7 +205,8 @@ export async function generateDrumPatch(
     const needsConversion = 
       (targetSampleRate && originalSampleRate !== targetSampleRate) ||
       (targetBitDepth && targetBitDepth !== sample.originalBitDepth) ||
-      (targetChannels === "mono" && sample.audioBuffer.numberOfChannels > 1);
+      (targetChannels === "mono" && sample.audioBuffer.numberOfChannels > 1) ||
+      state.drumSettings.normalize;
     if (needsConversion) {
       fileReadPromises.push(
         (async () => {
@@ -213,7 +214,10 @@ export async function generateDrumPatch(
             const convertedBuffer = await convertAudioFormat(sample.audioBuffer!, {
               sampleRate: targetSampleRate || originalSampleRate,
               bitDepth: targetBitDepth || sample.originalBitDepth || 16,
-              channels: targetChannels === "mono" ? 1 : sample.audioBuffer!.numberOfChannels
+              channels: targetChannels === "mono" ? 1 : sample.audioBuffer!.numberOfChannels,
+              normalize: state.drumSettings.normalize,
+              normalizeLevel: state.drumSettings.normalizeLevel,
+              sampleName: sample.name
             });
             const { audioBufferToWav } = await import('./audio');
             const wavBlob = audioBufferToWav(convertedBuffer, targetBitDepth || 16, {
@@ -383,7 +387,8 @@ export async function generateMultisamplePatch(
               normalizeLevel: state.multisampleSettings.normalizeLevel,
               gain: multisampleGain,
               cutAtLoopEnd: state.multisampleSettings.cutAtLoopEnd,
-              loopEnd: scaledLoopEnd
+              loopEnd: scaledLoopEnd,
+              sampleName: sample.name
             });
             // Validate that converted buffer frame count matches our calculation
             const expectedFramecount = state.multisampleSettings.cutAtLoopEnd 

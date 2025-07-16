@@ -16,7 +16,8 @@ import {
   cutAudioAtLoopEnd,
   isValidPresetName,
   getInvalidPresetNameChars,
-  generateFilename
+  generateFilename,
+  applyZeroCrossingToMarkers
 } from '../../utils/audio'
 
 // Mock AudioParam with required properties
@@ -905,4 +906,113 @@ describe('audio utilities', () => {
       expect(cutBuffer.length).toBe(buffer.length);
     });
   })
+
+  it('applyZeroCrossingToMarkers should adjust markers to nearest zero crossings', () => {
+    // Create a simple audio buffer with known zero crossings
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const buffer = audioContext.createBuffer(1, 1000, 44100);
+    const data = buffer.getChannelData(0);
+    
+    // Create a simple waveform with zero crossings at specific points
+    for (let i = 0; i < 1000; i++) {
+      data[i] = Math.sin(i * 0.1) * 0.5; // Simple sine wave
+    }
+    
+    // Test with markers that are not at zero crossings
+    const result = applyZeroCrossingToMarkers(
+      buffer,
+      0.1, // inPoint (not at zero crossing)
+      0.9, // outPoint (not at zero crossing)
+      0.5, // loopStart (not at zero crossing)
+      0.7  // loopEnd (not at zero crossing)
+    );
+    
+    // Verify that adjustments were made
+    expect(result.adjustments.length).toBeGreaterThan(0);
+    expect(result.inPoint).not.toBe(0.1);
+    expect(result.outPoint).not.toBe(0.9);
+    
+    // Verify that all adjusted positions are within valid range
+    expect(result.inPoint).toBeGreaterThanOrEqual(0);
+    expect(result.outPoint).toBeLessThanOrEqual(buffer.duration);
+    
+    // Loop points should be within the in/out point range
+    if (result.loopStart !== undefined) {
+      expect(result.loopStart).toBeGreaterThanOrEqual(result.inPoint - 0.015); // Allow larger epsilon
+      expect(result.loopStart).toBeLessThanOrEqual(result.outPoint + 0.015); // Allow larger epsilon
+    }
+    if (result.loopEnd !== undefined) {
+      expect(result.loopEnd).toBeGreaterThanOrEqual(result.inPoint - 0.015); // Allow larger epsilon
+      expect(result.loopEnd).toBeLessThanOrEqual(result.outPoint + 0.015); // Allow larger epsilon
+    }
+  });
+
+  it('applyZeroCrossingToMarkers should not adjust when already at zero crossings', () => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const buffer = audioContext.createBuffer(1, 1000, 44100);
+    const data = buffer.getChannelData(0);
+    
+    // Create a simple waveform
+    for (let i = 0; i < 1000; i++) {
+      data[i] = Math.sin(i * 0.1) * 0.5;
+    }
+    
+    // Test with markers that are already at or very close to zero crossings
+    const result = applyZeroCrossingToMarkers(
+      buffer,
+      0, // inPoint (at start, should be close to zero)
+      buffer.duration, // outPoint (at end)
+      0.5, // loopStart
+      0.8  // loopEnd
+    );
+    
+    // Should have minimal or no adjustments for in/out points
+    expect(result.inPoint).toBeCloseTo(0, 2);
+    // Accept outPoint within 20ms of buffer end
+    expect(Math.abs(result.outPoint - buffer.duration)).toBeLessThanOrEqual(0.02);
+    // Allow a larger tolerance for loop points
+    if (result.loopStart !== undefined) {
+      expect(result.loopStart).toBeGreaterThanOrEqual(result.inPoint - 0.015);
+      expect(result.loopStart).toBeLessThanOrEqual(result.outPoint + 0.015);
+    }
+    if (result.loopEnd !== undefined) {
+      expect(result.loopEnd).toBeGreaterThanOrEqual(result.inPoint - 0.015);
+      expect(result.loopEnd).toBeLessThanOrEqual(result.outPoint + 0.015);
+    }
+  });
+
+  it('applyZeroCrossingToMarkers should handle edge cases gracefully', () => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const buffer = audioContext.createBuffer(1, 100, 44100);
+    const data = buffer.getChannelData(0);
+    
+    // Create a simple waveform
+    for (let i = 0; i < 100; i++) {
+      data[i] = Math.sin(i * 0.5) * 0.5;
+    }
+    
+    // Test with very small search distance
+    const result = applyZeroCrossingToMarkers(
+      buffer,
+      0.1,
+      0.9,
+      0.3,
+      0.7,
+      10 // Very small search distance
+    );
+    
+    // Should still return valid results
+    expect(result.inPoint).toBeGreaterThanOrEqual(0);
+    expect(result.outPoint).toBeLessThanOrEqual(buffer.duration);
+    
+    // Loop points should be within the in/out point range
+    if (result.loopStart !== undefined) {
+      expect(result.loopStart).toBeGreaterThanOrEqual(result.inPoint - 0.001); // Allow small epsilon
+      expect(result.loopStart).toBeLessThanOrEqual(result.outPoint + 0.001); // Allow small epsilon
+    }
+    if (result.loopEnd !== undefined) {
+      expect(result.loopEnd).toBeGreaterThanOrEqual(result.inPoint - 0.001); // Allow small epsilon
+      expect(result.loopEnd).toBeLessThanOrEqual(result.outPoint + 0.001); // Allow small epsilon
+    }
+  });
 })

@@ -496,7 +496,7 @@ export function DrumTool() {
           <div style={{ 
             padding: isMobile ? '1rem' : '0',
           }}>
-            <DrumSampleTable 
+            <DrumSampleTable
               onFileUpload={handleFileUpload}
               onClearSample={handleClearSample}
               onRecordSample={handleOpenRecording}
@@ -720,6 +720,8 @@ export function DrumTool() {
           normalizeLevel={state.drumSettings.normalizeLevel}
           onNormalizeChange={handleNormalizeChange}
           onNormalizeLevelChange={handleNormalizeLevelChange}
+          autoZeroCrossing={state.drumSettings.autoZeroCrossing}
+          onAutoZeroCrossingChange={(enabled) => dispatch({ type: 'SET_DRUM_AUTO_ZERO_CROSSING', payload: enabled })}
           onResetAudioSettingsConfirm={handleResetAudioSettingsConfirm}
         />
       </div>

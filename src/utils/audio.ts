@@ -231,6 +231,7 @@ export interface ConversionOptions {
   cutAtLoopEnd?: boolean;
   loopEnd?: number; // Sample position to trim at (if cutAtLoopEnd is true)
   applyLimiter?: boolean; // Apply limiter to prevent clipping
+  sampleName?: string; // For logging purposes
 }
 
 /**
@@ -414,9 +415,30 @@ export async function convertAudioFormat(
   }
 
   // Apply normalization if enabled
+  let normalizeGain = 1;
+  let originalPeakDB = 0;
   if (normalize) {
-    const normalizeGain = calculatePeakNormalizationGain(processedBuffer, normalizeLevel);
+    // Calculate original peak level in dBFS
+    let maxAmplitude = 0;
+    for (let ch = 0; ch < processedBuffer.numberOfChannels; ch++) {
+      const channelData = processedBuffer.getChannelData(ch);
+      for (let i = 0; i < channelData.length; i++) {
+        const amplitude = Math.abs(channelData[i]);
+        if (amplitude > maxAmplitude) {
+          maxAmplitude = amplitude;
+        }
+      }
+    }
+    originalPeakDB = maxAmplitude > 0 ? 20 * Math.log10(maxAmplitude) : -Infinity;
+    
+    normalizeGain = calculatePeakNormalizationGain(processedBuffer, normalizeLevel);
     gainValue *= normalizeGain;
+  }
+
+  // Debug logging for normalization and gain
+  if (normalize || gain !== 0) {
+    const sampleInfo = options.sampleName ? ` (${options.sampleName})` : '';
+    console.log(`[AUDIO PROCESSING]${sampleInfo} normalization: ${normalize}, target: ${normalizeLevel}dB, original peak: ${originalPeakDB.toFixed(1)}dB, normalizeGain: ${normalizeGain.toFixed(4)}, gain: ${gain}dB, final gainValue: ${gainValue.toFixed(4)}`);
   }
 
   gainNode.gain.value = gainValue;
@@ -506,7 +528,8 @@ export function findNearestZeroCrossing(
   audioBuffer: AudioBuffer,
   framePosition: number,
   direction: 'forward' | 'backward' | 'both' = 'both',
-  maxDistance: number = 1000
+  maxDistance: number = 1000,
+  bounds?: { min?: number; max?: number }
 ): number {
   const channelData = audioBuffer.getChannelData(0);
   const length = channelData.length;
@@ -520,7 +543,11 @@ export function findNearestZeroCrossing(
   const searchStart = direction === 'forward' ? framePosition : Math.max(0, framePosition - maxDistance);
   const searchEnd = direction === 'backward' ? framePosition : Math.min(length - 1, framePosition + maxDistance);
   
-  for (let i = searchStart; i <= searchEnd; i++) {
+  // Apply bounds if provided
+  const boundedSearchStart = bounds?.min !== undefined ? Math.max(searchStart, bounds.min) : searchStart;
+  const boundedSearchEnd = bounds?.max !== undefined ? Math.min(searchEnd, bounds.max) : boundedSearchStart;
+  
+  for (let i = boundedSearchStart; i <= boundedSearchEnd; i++) {
     const amplitude = Math.abs(channelData[i]);
     if (amplitude < minAmplitude) {
       minAmplitude = amplitude;
@@ -534,6 +561,109 @@ export function findNearestZeroCrossing(
   }
   
   return bestPosition;
+}
+
+// Apply zero-crossing detection to sample markers
+export function applyZeroCrossingToMarkers(
+  audioBuffer: AudioBuffer,
+  inPoint: number,
+  outPoint: number,
+  loopStart?: number,
+  loopEnd?: number,
+  maxSearchDistance: number = 500
+): {
+  inPoint: number;
+  outPoint: number;
+  loopStart?: number;
+  loopEnd?: number;
+  adjustments: { marker: string; original: number; adjusted: number }[];
+} {
+  const adjustments: { marker: string; original: number; adjusted: number }[] = [];
+  
+  // Convert time-based positions to frame positions
+  const inFrame = Math.floor(inPoint * audioBuffer.sampleRate);
+  const outFrame = Math.floor(outPoint * audioBuffer.sampleRate);
+  
+  // Apply zero-crossing detection to in point (search forward)
+  const adjustedInFrame = findNearestZeroCrossing(audioBuffer, inFrame, 'forward', maxSearchDistance);
+  if (adjustedInFrame !== inFrame) {
+    adjustments.push({
+      marker: 'inPoint',
+      original: inFrame,
+      adjusted: adjustedInFrame
+    });
+  }
+  
+  // Apply zero-crossing detection to out point (search backward)
+  const adjustedOutFrame = findNearestZeroCrossing(audioBuffer, outFrame, 'backward', maxSearchDistance);
+  if (adjustedOutFrame !== outFrame) {
+    adjustments.push({
+      marker: 'outPoint',
+      original: outFrame,
+      adjusted: adjustedOutFrame
+    });
+  }
+  
+  // Apply zero-crossing detection to loop points if they exist
+  let adjustedLoopStart: number | undefined;
+  let adjustedLoopEnd: number | undefined;
+  
+  if (loopStart !== undefined) {
+    const loopStartFrame = Math.floor(loopStart * audioBuffer.sampleRate);
+    const inFrame = Math.floor(inPoint * audioBuffer.sampleRate);
+    const outFrame = Math.floor(outPoint * audioBuffer.sampleRate);
+    
+    // Find zero crossing within the in/out point bounds
+    adjustedLoopStart = findNearestZeroCrossing(
+      audioBuffer, 
+      loopStartFrame, 
+      'both', 
+      maxSearchDistance,
+      { min: inFrame, max: outFrame }
+    );
+    
+    if (adjustedLoopStart !== loopStartFrame) {
+      adjustments.push({
+        marker: 'loopStart',
+        original: loopStartFrame,
+        adjusted: adjustedLoopStart
+      });
+    }
+  }
+  
+  if (loopEnd !== undefined) {
+    const loopEndFrame = Math.floor(loopEnd * audioBuffer.sampleRate);
+    const inFrame = Math.floor(inPoint * audioBuffer.sampleRate);
+    const outFrame = Math.floor(outPoint * audioBuffer.sampleRate);
+    
+    // Find zero crossing within the in/out point bounds
+    adjustedLoopEnd = findNearestZeroCrossing(
+      audioBuffer, 
+      loopEndFrame, 
+      'both', 
+      maxSearchDistance,
+      { min: inFrame, max: outFrame }
+    );
+    
+    if (adjustedLoopEnd !== loopEndFrame) {
+      adjustments.push({
+        marker: 'loopEnd',
+        original: loopEndFrame,
+        adjusted: adjustedLoopEnd
+      });
+    }
+  }
+  
+  // Convert frame positions back to time
+  const result = {
+    inPoint: adjustedInFrame / audioBuffer.sampleRate,
+    outPoint: adjustedOutFrame / audioBuffer.sampleRate,
+    loopStart: adjustedLoopStart !== undefined ? adjustedLoopStart / audioBuffer.sampleRate : undefined,
+    loopEnd: adjustedLoopEnd !== undefined ? adjustedLoopEnd / audioBuffer.sampleRate : undefined,
+    adjustments
+  };
+  
+  return result;
 }
 
 // Enhanced resample audio with better quality
