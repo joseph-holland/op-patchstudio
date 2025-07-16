@@ -4,6 +4,14 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.13.2] - 2025-07-16
+
+### added
+- drag and drop support to drum sample management table
+
+### fixed
+- fixed loading of drum samples allowing more than 24 to be loaded
+
 ## [0.13.1] - 2025-07-16
 
 ### fixed

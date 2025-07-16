@@ -141,14 +141,16 @@ export function AudioProcessingSection({
             <div style={{ fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
               normalization
             </div>
-            <Toggle
-              id="normalize-toggle"
-              labelA="off"
-              labelB="on"
-              toggled={normalize}
-              onToggle={onNormalizeChange}
-              size="sm"
-            />
+            <div style={{ padding: '4px' }}>
+              <Toggle
+                id="normalize-toggle"
+                labelA="off"
+                labelB="on"
+                toggled={normalize}
+                onToggle={onNormalizeChange}
+                size="sm"
+              />
+            </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
             <div style={{ fontSize: isMobile ? '0.9rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: '0.5rem', textAlign: isMobile ? 'center' : 'left', width: '100%' }}>
@@ -191,14 +193,16 @@ export function AudioProcessingSection({
                 <div style={{ fontSize: isMobile ? '0.95rem' : '1rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
                   trim to loop end
                 </div>
-                <Toggle
-                  id="cut-loop-toggle"
-                  labelA="off"
-                  labelB="on"
-                  toggled={cutAtLoopEnd}
-                  onToggle={onCutAtLoopEndChange || (() => {})}
-                  size="sm"
-                />
+                <div style={{ padding: '4px' }}>
+                  <Toggle
+                    id="cut-loop-toggle"
+                    labelA="off"
+                    labelB="on"
+                    toggled={cutAtLoopEnd}
+                    onToggle={onCutAtLoopEndChange || (() => {})}
+                    size="sm"
+                  />
+                </div>
                 <style>{`
                   #cut-loop-toggle .cds--toggle-input__appearance {
                     background-color: var(--color-bg-slider-track) !important;
