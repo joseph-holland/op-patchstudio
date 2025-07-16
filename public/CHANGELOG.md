@@ -4,6 +4,14 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.13.3] - 2025-07-16
+
+### added
+- option to always try and snap markers to zero crossings on import
+
+### fixed
+- fixed -dbfs limiter being applied to samples on export
+
 ## [0.13.2] - 2025-07-16
 
 ### added
