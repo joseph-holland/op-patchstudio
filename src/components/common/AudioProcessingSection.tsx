@@ -66,7 +66,7 @@ export function AudioProcessingSection({
     channels !== 0 ||
     normalize !== false ||
     normalizeLevel !== 0.0 ||
-    autoZeroCrossing !== true || // Default is true
+    autoZeroCrossing !== false || // Default is false
     (type === 'multisample' && cutAtLoopEnd !== false) ||
     (type === 'multisample' && gain !== 0)
   );
@@ -202,7 +202,7 @@ export function AudioProcessingSection({
               <EnhancedTooltip
                 content={
                   <div>
-                    <p>automatically snap loop points and markers to zero crossings when importing samples for cleaner audio</p>
+                    <p>when enabled, turning this on will immediately snap all sample markers to zero crossings for cleaner audio. this does not affect future imports.</p>
                   </div>
                 }
                 isVisible={isZeroCrossingTooltipVisible}

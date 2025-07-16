@@ -188,6 +188,10 @@ export type AppAction =
   | { type: 'SET_MULTISAMPLE_TUNING_ROOT'; payload: number }
   | { type: 'SET_MULTISAMPLE_AMP_ENVELOPE'; payload: { attack: number; decay: number; sustain: number; release: number } }
   | { type: 'SET_MULTISAMPLE_FILTER_ENVELOPE'; payload: { attack: number; decay: number; sustain: number; release: number } }
+  | { type: 'APPLY_ZERO_CROSSING_TO_DRUM_SAMPLE'; payload: number }
+  | { type: 'APPLY_ZERO_CROSSING_TO_MULTISAMPLE_FILE'; payload: number }
+  | { type: 'APPLY_ZERO_CROSSING_TO_ALL_DRUM_SAMPLES' }
+  | { type: 'APPLY_ZERO_CROSSING_TO_ALL_MULTISAMPLE_FILES' }
   | { type: 'LOAD_DRUM_SAMPLE'; payload: { index: number; file: File; audioBuffer: AudioBuffer; metadata: AudioMetadata } }
   | { type: 'CLEAR_DRUM_SAMPLE'; payload: number }
   | { type: 'UPDATE_DRUM_SAMPLE'; payload: { index: number; updates: Partial<DrumSample> } }
@@ -597,6 +601,145 @@ function appReducer(state: AppState, action: AppAction): AppState {
         }
       };
       
+    case 'APPLY_ZERO_CROSSING_TO_DRUM_SAMPLE': {
+      const sampleIndex = action.payload;
+      const updatedDrumSamples = [...state.drumSamples];
+      const sampleToApply = updatedDrumSamples[sampleIndex];
+
+      if (!sampleToApply?.isLoaded) {
+        console.error('Cannot apply zero-crossing to unloaded sample');
+        return state;
+      }
+
+      // Calculate initial marker positions
+      const initialInPoint = 0;
+      const initialOutPoint = sampleToApply.audioBuffer!.duration;
+      
+      // Apply zero-crossing detection if enabled
+      let finalInPoint = initialInPoint;
+      let finalOutPoint = initialOutPoint;
+      
+      if (state.drumSettings.autoZeroCrossing) {
+        const result = applyZeroCrossingToMarkers(
+          sampleToApply.audioBuffer!,
+          initialInPoint,
+          initialOutPoint
+        );
+        finalInPoint = result.inPoint;
+        finalOutPoint = result.outPoint;
+        
+        // Log adjustments if any were made
+        if (result.adjustments.length > 0) {
+          console.log(`Applied zero-crossing adjustments to ${sampleToApply.name}:`, result.adjustments);
+        }
+      }
+      
+      updatedDrumSamples[sampleIndex] = {
+        ...sampleToApply,
+        inPoint: finalInPoint,
+        outPoint: finalOutPoint,
+        hasBeenEdited: true
+      };
+      
+      return { ...state, drumSamples: updatedDrumSamples };
+    }
+
+    case 'APPLY_ZERO_CROSSING_TO_MULTISAMPLE_FILE': {
+      const fileIndex = action.payload;
+      const updatedMultisampleFiles = [...state.multisampleFiles];
+      const fileToApply = updatedMultisampleFiles[fileIndex];
+
+      if (!fileToApply?.isLoaded) {
+        console.error('Cannot apply zero-crossing to unloaded multisample file');
+        return state;
+      }
+
+      // Calculate initial marker positions
+      const initialInPoint = 0;
+      const initialOutPoint = fileToApply.audioBuffer!.duration;
+      const initialLoopStart = fileToApply.loopStart;
+      const initialLoopEnd = fileToApply.loopEnd;
+      
+      // Apply zero-crossing detection if enabled
+      let finalInPoint = initialInPoint;
+      let finalOutPoint = initialOutPoint;
+      let finalLoopStart = initialLoopStart;
+      let finalLoopEnd = initialLoopEnd;
+      
+      if (state.multisampleSettings.autoZeroCrossing && fileToApply.audioBuffer) {
+        const result = applyZeroCrossingToMarkers(
+          fileToApply.audioBuffer,
+          initialInPoint,
+          initialOutPoint,
+          initialLoopStart,
+          initialLoopEnd
+        );
+        finalInPoint = result.inPoint;
+        finalOutPoint = result.outPoint;
+        finalLoopStart = result.loopStart || initialLoopStart;
+        finalLoopEnd = result.loopEnd || initialLoopEnd;
+        
+        // Log adjustments if any were made
+        if (result.adjustments.length > 0) {
+          console.log(`Applied zero-crossing adjustments to ${fileToApply.name}:`, result.adjustments);
+        }
+      }
+      
+             updatedMultisampleFiles[fileIndex] = {
+         ...fileToApply,
+         inPoint: finalInPoint,
+         outPoint: finalOutPoint,
+         loopStart: finalLoopStart,
+         loopEnd: finalLoopEnd
+       };
+      
+      return { ...state, multisampleFiles: updatedMultisampleFiles };
+    }
+
+    case 'APPLY_ZERO_CROSSING_TO_ALL_DRUM_SAMPLES': {
+      const updatedDrumSamples = state.drumSamples.map((sample) => {
+        if (!sample.isLoaded || !sample.audioBuffer) return sample;
+        const initialInPoint = 0;
+        const initialOutPoint = sample.audioBuffer.duration;
+        const result = applyZeroCrossingToMarkers(
+          sample.audioBuffer,
+          initialInPoint,
+          initialOutPoint
+        );
+        return {
+          ...sample,
+          inPoint: result.inPoint,
+          outPoint: result.outPoint,
+          hasBeenEdited: true
+        };
+      });
+      return { ...state, drumSamples: updatedDrumSamples };
+    }
+    case 'APPLY_ZERO_CROSSING_TO_ALL_MULTISAMPLE_FILES': {
+      const updatedMultisampleFiles = state.multisampleFiles.map((file) => {
+        if (!file.isLoaded || !file.audioBuffer) return file;
+        const initialInPoint = 0;
+        const initialOutPoint = file.audioBuffer.duration;
+        const initialLoopStart = file.loopStart;
+        const initialLoopEnd = file.loopEnd;
+        const result = applyZeroCrossingToMarkers(
+          file.audioBuffer,
+          initialInPoint,
+          initialOutPoint,
+          initialLoopStart,
+          initialLoopEnd
+        );
+        return {
+          ...file,
+          inPoint: result.inPoint,
+          outPoint: result.outPoint,
+          loopStart: result.loopStart ?? initialLoopStart,
+          loopEnd: result.loopEnd ?? initialLoopEnd
+        };
+      });
+      return { ...state, multisampleFiles: updatedMultisampleFiles };
+    }
+      
     case 'LOAD_DRUM_SAMPLE': {
       // Validate that audioBuffer exists and has required properties
       if (!action.payload.audioBuffer || typeof action.payload.audioBuffer.duration !== 'number') {
@@ -622,24 +765,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
       const initialInPoint = 0;
       const initialOutPoint = action.payload.audioBuffer.duration;
       
-      // Apply zero-crossing detection if enabled
-      let finalInPoint = initialInPoint;
-      let finalOutPoint = initialOutPoint;
-      
-      if (state.drumSettings.autoZeroCrossing) {
-        const result = applyZeroCrossingToMarkers(
-          action.payload.audioBuffer,
-          initialInPoint,
-          initialOutPoint
-        );
-        finalInPoint = result.inPoint;
-        finalOutPoint = result.outPoint;
-        
-        // Log adjustments if any were made
-        if (result.adjustments.length > 0) {
-          console.log(`Applied zero-crossing adjustments to ${action.payload.file.name}:`, result.adjustments);
-        }
-      }
+      // Use initial marker positions (no automatic zero-crossing)
+      const finalInPoint = initialInPoint;
+      const finalOutPoint = initialOutPoint;
       
       newDrumSamples[action.payload.index] = {
         ...initialDrumSample,
@@ -727,24 +855,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
       const initialInPoint = 0;
       const initialOutPoint = action.payload.audioBuffer.duration;
       
-      // Apply zero-crossing detection if enabled
-      let finalInPoint = initialInPoint;
-      let finalOutPoint = initialOutPoint;
-      
-      if (state.drumSettings.autoZeroCrossing) {
-        const result = applyZeroCrossingToMarkers(
-          action.payload.audioBuffer,
-          initialInPoint,
-          initialOutPoint
-        );
-        finalInPoint = result.inPoint;
-        finalOutPoint = result.outPoint;
-        
-        // Log adjustments if any were made
-        if (result.adjustments.length > 0) {
-          console.log(`Applied zero-crossing adjustments to ${action.payload.file.name}:`, result.adjustments);
-        }
-      }
+      // Use initial marker positions (no automatic zero-crossing)
+      const finalInPoint = initialInPoint;
+      const finalOutPoint = initialOutPoint;
       
       const newUnassignedSample: DrumSample = {
         ...createDrumSample(state.drumSamples.length, false), // Create as unassigned sample
@@ -855,24 +968,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
         const initialInPoint = 0;
         const initialOutPoint = sample.audioBuffer.duration;
         
-        // Apply zero-crossing detection if enabled
-        let finalInPoint = initialInPoint;
-        let finalOutPoint = initialOutPoint;
-        
-        if (state.drumSettings.autoZeroCrossing) {
-          const result = applyZeroCrossingToMarkers(
-            sample.audioBuffer,
-            initialInPoint,
-            initialOutPoint
-          );
-          finalInPoint = result.inPoint;
-          finalOutPoint = result.outPoint;
-          
-          // Log adjustments if any were made
-          if (result.adjustments.length > 0) {
-            console.log(`Applied zero-crossing adjustments to ${sample.name}:`, result.adjustments);
-          }
-        }
+        // Use initial marker positions (no automatic zero-crossing)
+        const finalInPoint = initialInPoint;
+        const finalOutPoint = initialOutPoint;
         
         // Try to find an empty slot in the 0-23 range
         const emptySlotIndex = findFirstEmptySlot(newDrumSamples);

@@ -9,7 +9,7 @@ export const defaultDrumSettings: AppState['drumSettings'] = {
   presetName: '',
   normalize: false,
   normalizeLevel: 0.0,
-  autoZeroCrossing: true, // Enable automatic zero-crossing detection by default
+  autoZeroCrossing: false, // Disable automatic zero-crossing detection by default
   renameFiles: false,
   filenameSeparator: ' ',
   presetSettings: {
@@ -28,7 +28,7 @@ export const defaultMultisampleSettings: AppState['multisampleSettings'] = {
   presetName: '',
   normalize: false,
   normalizeLevel: 0.0,
-  autoZeroCrossing: true, // Enable automatic zero-crossing detection by default
+  autoZeroCrossing: false, // Disable automatic zero-crossing detection by default
   cutAtLoopEnd: false,
   gain: 0,
   loopEnabled: true,

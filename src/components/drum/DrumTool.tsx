@@ -721,7 +721,12 @@ export function DrumTool() {
           onNormalizeChange={handleNormalizeChange}
           onNormalizeLevelChange={handleNormalizeLevelChange}
           autoZeroCrossing={state.drumSettings.autoZeroCrossing}
-          onAutoZeroCrossingChange={(enabled) => dispatch({ type: 'SET_DRUM_AUTO_ZERO_CROSSING', payload: enabled })}
+          onAutoZeroCrossingChange={(enabled) => {
+            dispatch({ type: 'SET_DRUM_AUTO_ZERO_CROSSING', payload: enabled });
+            if (enabled) {
+              dispatch({ type: 'APPLY_ZERO_CROSSING_TO_ALL_DRUM_SAMPLES' });
+            }
+          }}
           onResetAudioSettingsConfirm={handleResetAudioSettingsConfirm}
         />
       </div>
