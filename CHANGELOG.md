@@ -4,6 +4,11 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.13.1] - 2025-07-16
+
+### fixed
+- fixed aif metadata parsing issue causing incorrect loop points to be loaded
+
 ## [0.13.0] - 2025-07-15
 
 ### added

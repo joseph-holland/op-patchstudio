@@ -1,12 +1,15 @@
-// OP-1 and OP-1 Field Drum Preset Parser
-// Parses single AIFF files containing multiple drum samples with metadata
-// for triggering each sample at the corresponding key position.
+// OP-1 drum preset parser
+// Parses OP-1 drum preset files (.aif/.aiff) and extracts individual drum samples
 //
-// Implementation based on analysis of OP-1 drum preset structure.
-// No code was copied from proprietary sources.
+// Implementation based on public AIF/AIFF format documentation and OP-1 file structure analysis.
+// No code was copied from proprietary or third-party sources.
 
-import type { AudioMetadata } from './audioFormats';
 import { audioContextManager } from './audioContext';
+import { 
+  parseCommChunk, 
+  parseMarkChunk 
+} from './aifParser';
+import type { AudioMetadata } from './audioFormats';
 
 export interface OP1DrumSample {
   keyIndex: number; // 0-23 for OP-XY drum keys
@@ -73,32 +76,12 @@ export async function parseOP1DrumPreset(arrayBuffer: ArrayBuffer, filename: str
       
       // Parse COMM chunk for core audio properties
       if (chunkId === 'COMM') {
-        // COMM chunk: offset points to start of chunk (i.e., 'COMM'), chunk data starts at offset + 8
-        // Structure:
-        // 0–3: 'COMM'
-        // 4–7: chunk size
-        // 8–9: channels
-        // 10–13: numSampleFrames
-        // 14–15: bitDepth
-        // 16–25: sampleRate (80-bit float)
-        // For AIFC: 26-29: compression type (4 bytes)
-        const commDataOffset = offset + 8;
-        channels = dataView.getUint16(commDataOffset, false);
-        numSampleFrames = dataView.getUint32(commDataOffset + 2, false);
-        bitDepth = dataView.getUint16(commDataOffset + 6, false);
-        sampleRate = readExtendedFloat80(new Uint8Array(arrayBuffer), commDataOffset + 8);
-        sampleRate = validateSampleRate(sampleRate);
-        
-        // Check for AIFC compression type
-        if (formatId === 'AIFC' && chunkSize >= 22) {
-          // AIFC has compression type after sample rate
-          const compressionType = textDecoder.decode(new Uint8Array(arrayBuffer, commDataOffset + 18, 4));
-          
-          if (compressionType === 'sowt') {
-            // 'sowt' means signed 16-bit little-endian (reverse of 'twos')
-            isLittleEndian = true;
-          }
-        }
+        const commChunk = parseCommChunk(dataView, arrayBuffer, chunkDataOffset, chunkSize, formatId);
+        channels = commChunk.channels;
+        numSampleFrames = commChunk.numSampleFrames;
+        bitDepth = commChunk.bitDepth;
+        sampleRate = commChunk.sampleRate;
+        isLittleEndian = commChunk.isLittleEndian;
       }
       
       // Parse SSND chunk for audio data location
@@ -175,36 +158,26 @@ export async function parseOP1DrumPreset(arrayBuffer: ArrayBuffer, filename: str
       
       // Parse MARK chunk for marker-based sample positions (fallback)
       if (chunkId === 'MARK' && sampleMetadata.length === 0) {
-        const numMarkers = dataView.getUint16(chunkDataOffset, false);
-        let markerOffset = chunkDataOffset + 2;
+        const markersList = parseMarkChunk(dataView, arrayBuffer, chunkDataOffset);
         
-        for (let i = 0; i < numMarkers; i++) {
-          const markerId = dataView.getUint16(markerOffset, false);
-          const markerPosition = dataView.getUint32(markerOffset + 2, false);
-          const markerNameLength = dataView.getUint8(markerOffset + 6);
-          
-          const markerNameBytes = new Uint8Array(arrayBuffer, markerOffset + 7, markerNameLength);
-          const markerName = textDecoder.decode(markerNameBytes);
-          
+        for (const marker of markersList) {
           // Try to extract key index from marker name or ID
-          let keyIndex = extractKeyIndexFromMarker(markerId, markerName);
+          let keyIndex = extractKeyIndexFromMarker(marker.id, marker.name);
           
           // If no key index found, use the marker index as key index (load in order found)
           if (keyIndex === null) {
-            keyIndex = i;
+            keyIndex = markersList.indexOf(marker);
           }
           
           // Only add if we have a valid key index
           if (keyIndex >= 0 && keyIndex < 24) {
             sampleMetadata.push({
               keyIndex,
-              startSample: markerPosition,
+              startSample: marker.position,
               endSample: 0, // Will be calculated from next marker
-              name: markerName || `${baseFilename} sample ${keyIndex + 1}`
+              name: marker.name || `${baseFilename} sample ${keyIndex + 1}`
             });
           }
-          
-          markerOffset += 7 + markerNameLength + (markerNameLength % 2 === 0 ? 1 : 0);
         }
         
         // Calculate end samples from start positions
@@ -389,76 +362,6 @@ export async function parseOP1DrumPreset(arrayBuffer: ArrayBuffer, filename: str
     console.error('Error parsing OP-1 drum preset:', error);
     throw new Error(`Failed to parse OP-1 drum preset: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
-
-// Parse 80-bit extended float (AIFF sample rate)
-function readExtendedFloat80(buffer: Uint8Array, offset: number = 0): number {
-  if (buffer.length < offset + 10) {
-    throw new Error("Buffer too small to contain 80-bit float");
-  }
-  
-  // Read exponent (2 bytes, big-endian)
-  const expon = (buffer[offset] << 8) | buffer[offset + 1];
-  
-  // Read high and low mantissa (each 4 bytes, big-endian, unsigned)
-  // Use multiplication instead of left shifts to avoid signed integer overflow
-  const hiMant = (
-    (buffer[offset + 2] * 0x1000000) + // equivalent to << 24 but safe
-    (buffer[offset + 3] << 16) +
-    (buffer[offset + 4] << 8) +
-    buffer[offset + 5]
-  ) >>> 0; // ensure unsigned
-  
-  const loMant = (
-    (buffer[offset + 6] * 0x1000000) +
-    (buffer[offset + 7] << 16) +
-    (buffer[offset + 8] << 8) +
-    buffer[offset + 9]
-  ) >>> 0;
-
-  if (expon === 0 && hiMant === 0 && loMant === 0) {
-    return 0.0;
-  }
-
-  // Sign bit is in the highest bit of exponent
-  const sign = (expon & 0x8000) ? -1 : 1;
-  const exponent = (expon & 0x7FFF) - 16383;
-
-  // Combine mantissa (63 bits used)
-  const mantissa = hiMant * Math.pow(2, 32) + loMant;
-  const fraction = mantissa / Math.pow(2, 63);
-
-  return sign * fraction * Math.pow(2, exponent);
-}
-
-// Validate and correct sample rate for OP-1 drum presets
-function validateSampleRate(sampleRate: number): number {
-  // Standard sample rates for audio files
-  const standardRates = [8000, 11025, 16000, 22050, 44100, 48000, 88200, 96000, 176400, 192000];
-  
-  // Check if the parsed rate is close to any standard rate
-  for (const rate of standardRates) {
-    const tolerance = rate * 0.05; // 5% tolerance
-    if (Math.abs(sampleRate - rate) <= tolerance) {
-      return rate;
-    }
-  }
-  
-  // Special handling for OP-1 drum presets with unusual sample rates
-  // The value 76868 appears to be a parsing error - let's check if it's in a reasonable range
-  if (sampleRate > 70000 && sampleRate < 80000) {
-    // This range suggests it might be a 48kHz file with parsing issues
-    return 48000;
-  }
-  
-  if (sampleRate > 40000 && sampleRate < 50000) {
-    // This range suggests it might be a 44.1kHz file with parsing issues
-    return 44100;
-  }
-  
-  // If all else fails, use the parsed rate but ensure it's positive
-  const result = Math.abs(sampleRate);
-  return result;
 }
 
 // Extract key index from marker ID or name

@@ -304,9 +304,13 @@ export async function generateMultisamplePatch(
     const originalDuration = sample.duration || duration;
     const originalFramecount = Math.floor(originalDuration * originalSampleRate);
     
-    // Calculate loop points using original sample rate (matching legacy behavior)
-    const loopStart = getClamped(Math.floor(originalFramecount * (prop(sample.loopStart, originalDuration * 0.1) / originalDuration)), 0, originalFramecount - 1);
-    const loopEnd = getClamped(Math.floor(originalFramecount * (prop(sample.loopEnd, originalDuration * 0.9) / originalDuration)), loopStart + 1, originalFramecount);
+    // Calculate loop points - convert from seconds to frames
+    // sample.loopStart and sample.loopEnd are already in seconds, so multiply by sample rate to get frames
+    const loopStartFrames = prop(sample.loopStart, originalDuration * 0.1) * originalSampleRate;
+    const loopEndFrames = prop(sample.loopEnd, originalDuration * 0.9) * originalSampleRate;
+    
+    const loopStart = getClamped(Math.floor(loopStartFrames), 0, originalFramecount - 1);
+    const loopEnd = getClamped(Math.floor(loopEndFrames), loopStart + 1, originalFramecount);
     
     // Scale loop points to target sample rate if resampling
     const scaleFactor = effectiveSampleRate / originalSampleRate;
