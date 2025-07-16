@@ -6,6 +6,7 @@ import { AppContextProvider, useAppContext } from './context/AppContext';
 import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import { Footer } from './components/common/Footer';
 import { FeedbackPage } from './components/common/FeedbackPage';
+import { DonatePage } from './components/common/DonatePage';
 import { SessionRestorationModal } from './components/common/SessionRestorationModal';
 import { useSessionManagement } from './hooks/useSessionManagement';
 import './theme/device-themes.scss';
@@ -42,7 +43,9 @@ function AppContent() {
   const [showRotateOverlay, setShowRotateOverlay] = useState(false);
   const [currentRoute, setCurrentRoute] = useState(() => {
     // Initialize route from URL hash
-    return window.location.hash === '#/feedback' ? 'feedback' : 'home';
+    if (window.location.hash === '#/feedback') return 'feedback';
+    if (window.location.hash === '#/donate') return 'donate';
+    return 'home';
   });
 
   // Session management
@@ -62,7 +65,13 @@ function AppContent() {
   // Handle routing
   useEffect(() => {
     const handleHashChange = () => {
-      setCurrentRoute(window.location.hash === '#/feedback' ? 'feedback' : 'home');
+      if (window.location.hash === '#/feedback') {
+        setCurrentRoute('feedback');
+      } else if (window.location.hash === '#/donate') {
+        setCurrentRoute('donate');
+      } else {
+        setCurrentRoute('home');
+      }
     };
 
     window.addEventListener('hashchange', handleHashChange);
@@ -129,6 +138,8 @@ function AppContent() {
           }}>
             {currentRoute === 'feedback' ? (
               <FeedbackPage />
+            ) : currentRoute === 'donate' ? (
+              <DonatePage />
             ) : (
               <>
                 <AppHeader />
