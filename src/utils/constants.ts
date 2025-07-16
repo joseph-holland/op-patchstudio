@@ -28,5 +28,10 @@ export const MIDI_CONSTANTS = {
   MIN_NOTE: 0,
 } as const;
 
+// Feature flags
+export const FEATURE_FLAGS = {
+  DONATE_PAGE: false, // Enable/disable donate page tab
+} as const;
+
 // Filename separator options for generated preset files
 export type FilenameSeparator = ' ' | '-'; 
