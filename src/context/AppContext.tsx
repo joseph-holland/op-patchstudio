@@ -182,6 +182,7 @@ export type AppAction =
   | { type: 'LOAD_DRUM_SAMPLE'; payload: { index: number; file: File; audioBuffer: AudioBuffer; metadata: AudioMetadata } }
   | { type: 'CLEAR_DRUM_SAMPLE'; payload: number }
   | { type: 'UPDATE_DRUM_SAMPLE'; payload: { index: number; updates: Partial<DrumSample> } }
+  | { type: 'REORDER_DRUM_SAMPLES'; payload: { fromIndex: number; toIndex: number } }
   | { type: 'IMPORT_OP1_DRUM_PRESET'; payload: { samples: Array<{ keyIndex: number; file: File; audioBuffer: AudioBuffer; metadata: AudioMetadata; name: string }>; presetName: string } }
   | { type: 'LOAD_MULTISAMPLE_FILE'; payload: { file: File; audioBuffer: AudioBuffer | null; metadata: AudioMetadata; rootNoteOverride?: number; } }
   | { type: 'CLEAR_MULTISAMPLE_FILE'; payload: number }
@@ -615,6 +616,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, drumSamples: updatedDrumSamples };
     }
     
+    case 'REORDER_DRUM_SAMPLES': {
+      const reorderedSamples = [...state.drumSamples];
+      const [movedSample] = reorderedSamples.splice(action.payload.fromIndex, 1);
+      reorderedSamples.splice(action.payload.toIndex, 0, movedSample);
+      return { ...state, drumSamples: reorderedSamples };
+    }
+    
     case 'IMPORT_OP1_DRUM_PRESET': {
       // Clear existing drum samples
       const newDrumSamples = [...state.drumSamples];
@@ -838,6 +846,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
     }
   }
 }
+
+// Export for testing
+export { appReducer, initialState };
 
 // Create context
 const AppContext = createContext<{
