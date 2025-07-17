@@ -7,6 +7,7 @@ interface FileDetailsBadgesProps {
   channels?: number;
   bitDepth?: number;
   sampleRate?: number;
+  isFloat?: boolean;
 }
 
 export function FileDetailsBadges({ 
@@ -14,7 +15,8 @@ export function FileDetailsBadges({
   fileSize, 
   channels, 
   bitDepth, 
-  sampleRate 
+  sampleRate,
+  isFloat = false
 }: FileDetailsBadgesProps) {
   if (!duration || !fileSize || !channels || !bitDepth || !sampleRate) {
     return null;
@@ -78,7 +80,7 @@ export function FileDetailsBadges({
       {/* Bit Depth */}
       <span style={badgeStyle}>
         <i className="fa fa-database" style={iconStyle}></i>
-        {bitDepth}-bit
+        {bitDepth === 32 && isFloat ? '32-bit float' : `${bitDepth}-bit`}
       </span>
 
       {/* Sample Rate */}

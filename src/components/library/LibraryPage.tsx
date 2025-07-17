@@ -18,7 +18,7 @@ const defaultDrumSettings = {
   channels: 2,
   presetName: '',
   normalize: false,
-  normalizeLevel: -1.0,
+  normalizeLevel: -0.1, // Default to -0.1 dBFS for safety
   presetSettings: {
     playmode: 'poly' as const,
     transpose: 0,
@@ -34,7 +34,7 @@ const defaultMultisampleSettings = {
   channels: 2,
   presetName: '',
   normalize: false,
-  normalizeLevel: -1.0,
+  normalizeLevel: -0.1, // Default to -0.1 dBFS for safety
   cutAtLoopEnd: false,
   gain: 0,
   loopEnabled: true,
@@ -77,7 +77,9 @@ async function restoreDrumSamples(drumSamples: any[], audioContext: AudioContext
           ...rest,
           audioBuffer,
           originalIndex,
-          file: new File([sample.audioBlob], sample.name, { type: 'audio/wav' })
+          file: new File([sample.audioBlob], sample.name, { type: 'audio/wav' }),
+          isAssigned: true,
+          assignedKey: sample.originalIndex
         });
       } catch (error) {
         console.error('Failed to restore audio buffer for drum sample:', sample.name, error);
@@ -516,13 +518,19 @@ export function LibraryPage() {
         const restoredSamples = await restoreDrumSamples(presetData.drumSamples || [], audioContext);
         
         // Convert back to array format with proper indexing for patch generation
-        const drumSamplesArray = Array.from({ length: 24 }, () => ({ ...initialDrumSample }));
+        const drumSamplesArray = Array.from({ length: 24 }, () => ({ 
+          ...initialDrumSample,
+          isAssigned: false,
+          assignedKey: undefined
+        }));
         restoredSamples.forEach((sample) => {
           if (sample && typeof sample.originalIndex === 'number' && 
               sample.originalIndex >= 0 && sample.originalIndex < 24) {
             drumSamplesArray[sample.originalIndex] = {
               ...sample,
-              isLoaded: true
+              isLoaded: true,
+              isAssigned: true,
+              assignedKey: sample.originalIndex
             };
           }
         });

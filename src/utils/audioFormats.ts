@@ -9,7 +9,7 @@ import { readWavMetadataFromArrayBuffer } from './audio';
 import { 
   parseCommChunk, 
   parseMarkChunk, 
-  parseInstChunk 
+  parseInstChunk
 } from './aifParser';
 
 // Audio format types
@@ -29,7 +29,8 @@ export interface AudioMetadata {
   loopStart: number;
   loopEnd: number;
   hasLoopData: boolean;
-  // AIF-specific metadata
+  // Format-specific metadata
+  isFloat?: boolean; // Whether audio data is floating point (32-bit float, etc.)
   rootNote?: number;
   loopPoints?: {
     start: number;
@@ -69,6 +70,7 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
     let numSampleFrames = 0;
     let bitDepth = 16;
     let sampleRate = 44100;
+    let isFloat = false;
     let loopStart: number | undefined;
     let loopEnd: number | undefined;
     let rootNote: number | undefined;
@@ -92,6 +94,12 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
         numSampleFrames = commChunk.numSampleFrames;
         bitDepth = commChunk.bitDepth;
         sampleRate = commChunk.sampleRate;
+        isFloat = commChunk.isFloat;
+        
+        // Log format detection for debugging
+        if (isFloat) {
+          console.log(`[AIF PARSER] Detected ${bitDepth}-bit float format`);
+        }
       }
       
       // Parse MARK chunk for marker positions (used for loop points)
@@ -101,9 +109,11 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
         for (const marker of markersList) {
           const lowerName = marker.name.toLowerCase();
           if (lowerName.includes('loop start') || lowerName.includes('start')) {
+            // Markers should be in sample frames - use position directly
             loopStart = marker.position;
             foundLoopPoints = true;
           } else if (lowerName.includes('loop end') || lowerName.includes('end')) {
+            // Markers should be in sample frames - use position directly
             loopEnd = marker.position;
             foundLoopPoints = true;
           }
@@ -150,6 +160,8 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
       numSampleFrames = Math.max(...markersList.map(m => m.position));
     }
     
+    // Loop points are now used directly without Logic Pro scaling corrections
+    
     // Validate and set loop points only if they were found in the file
     if (foundLoopPoints) {
       // Validate loop points are within audio duration
@@ -186,12 +198,10 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
       const audioContext = await audioContextManager.getAudioContext();
       audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
     } catch (decodeError) {
-      console.warn(`[AIF PARSER] Failed to decode audio data for ${filename}:`, decodeError);
-      
-      // Manual AIF decoder fallback - extract raw PCM data and create AudioBuffer
+      // Browser decode failed, fall back to manual AIF decoder
       if (ssndOffset > 0 && ssndSize > 0) {
         try {
-          audioBuffer = await decodeAifManually(bufferCopy, ssndOffset, ssndSize, channels, bitDepth, sampleRate, numSampleFrames);
+          audioBuffer = await decodeAifManually(bufferCopy, ssndOffset, ssndSize, channels, bitDepth, sampleRate, numSampleFrames, isFloat);
         } catch (manualError) {
           console.error(`[AIF PARSER] Manual AIF decoder failed for ${filename}:`, manualError);
           // Continue with null audioBuffer - metadata is still valid
@@ -228,11 +238,12 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
       channels,
       duration,
       audioBuffer: audioBuffer as any, // Will be null if decoding failed
-      fileSize: arrayBuffer.byteLength,
+      fileSize: bufferCopy.byteLength,
       midiNote,
       loopStart: loopStartSeconds,
       loopEnd: loopEndSeconds,
       hasLoopData: foundLoopPoints,
+      isFloat,
       rootNote: finalRootNote
     };
   } catch (error) {
@@ -248,7 +259,8 @@ async function decodeAifManually(
   channels: number,
   bitDepth: number,
   sampleRate: number,
-  numSampleFrames: number
+  numSampleFrames: number,
+  isFloat: boolean = false
 ): Promise<AudioBuffer> {
   const dataView = new DataView(arrayBuffer);
   
@@ -278,35 +290,44 @@ async function decodeAifManually(
       if (sampleOffset + bytesPerSample <= arrayBuffer.byteLength) {
         let sample: number;
         
-        // Convert based on bit depth
-        switch (bitDepth) {
-          case 8:
-            // 8-bit unsigned
-            sample = (dataView.getUint8(sampleOffset) - 128) / 128;
-            break;
-          case 16:
-            // 16-bit signed, big-endian
-            sample = dataView.getInt16(sampleOffset, false) / 32768;
-            break;
-          case 24:
-            // 24-bit signed, big-endian
-            const b1 = dataView.getUint8(sampleOffset);
-            const b2 = dataView.getUint8(sampleOffset + 1);
-            const b3 = dataView.getUint8(sampleOffset + 2);
-            const signed = (b1 & 0x80) !== 0;
-            let value = (b1 << 16) | (b2 << 8) | b3;
-            if (signed) {
-              value = value - 0x1000000;
-            }
-            sample = value / 8388608;
-            break;
-          case 32:
-            // 32-bit signed, big-endian
-            sample = dataView.getInt32(sampleOffset, false) / 2147483648;
-            break;
-          default:
-            sample = 0;
-            console.warn(`Unsupported bit depth: ${bitDepth}`);
+        // Convert based on bit depth and format
+        if (isFloat && bitDepth === 32) {
+          // 32-bit float (big-endian)
+          sample = dataView.getFloat32(sampleOffset, false);
+        } else if (isFloat && bitDepth === 64) {
+          // 64-bit float (big-endian)
+          sample = dataView.getFloat64(sampleOffset, false);
+        } else {
+          // Integer formats
+          switch (bitDepth) {
+            case 8:
+              // 8-bit unsigned
+              sample = (dataView.getUint8(sampleOffset) - 128) / 128;
+              break;
+            case 16:
+              // 16-bit signed, big-endian
+              sample = dataView.getInt16(sampleOffset, false) / 32768;
+              break;
+            case 24:
+              // 24-bit signed, big-endian
+              const b1 = dataView.getUint8(sampleOffset);
+              const b2 = dataView.getUint8(sampleOffset + 1);
+              const b3 = dataView.getUint8(sampleOffset + 2);
+              const signed = (b1 & 0x80) !== 0;
+              let value = (b1 << 16) | (b2 << 8) | b3;
+              if (signed) {
+                value = value - 0x1000000;
+              }
+              sample = value / 8388608;
+              break;
+            case 32:
+              // 32-bit signed, big-endian
+              sample = dataView.getInt32(sampleOffset, false) / 2147483648;
+              break;
+            default:
+              sample = 0;
+              console.warn(`Unsupported bit depth: ${bitDepth}`);
+          }
         }
         
         channelData[frame] = sample;
@@ -352,7 +373,8 @@ async function parseMp3Metadata(
     midiNote,
     loopStart: audioBuffer.duration * 0.1,
     loopEnd: audioBuffer.duration * 0.9,
-    hasLoopData: false
+    hasLoopData: false,
+    isFloat: false // MP3 doesn't support float format
   };
 }
 
@@ -392,7 +414,8 @@ export async function readAudioMetadataFromArrayBuffer(
           midiNote: wavMetadata.midiNote,
           loopStart: wavMetadata.loopStart,
           loopEnd: wavMetadata.loopEnd,
-          hasLoopData: wavMetadata.hasLoopData
+          hasLoopData: wavMetadata.hasLoopData,
+          isFloat: false // WAV format in our implementation doesn't support float
         };
       case 'aif':
       case 'aiff':
@@ -454,7 +477,7 @@ export async function audioBufferToWavWithMetadata(
   metadata: AudioMetadata,
   bitDepth: number = 16
 ): Promise<Blob> {
-  const { audioBufferToWav } = await import('./audio');
+  const { audioBufferToWav } = await import('./wavExport');
   
   // Use metadata loop points if available
   // Convert from seconds to frames since audioBufferToWav expects frame indices
@@ -464,7 +487,7 @@ export async function audioBufferToWavWithMetadata(
     loopEnd: metadata.hasLoopData ? Math.floor(metadata.loopEnd * audioBuffer.sampleRate) : undefined
   };
   
-  return audioBufferToWav(audioBuffer, bitDepth, options);
+  return await audioBufferToWav(audioBuffer, bitDepth, options);
 }
 
 // Validate audio file format

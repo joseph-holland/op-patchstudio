@@ -107,6 +107,7 @@ const mockAppState: Partial<AppState> = {
     presetName: 'Test Drum Kit',
     normalize: false,
     normalizeLevel: -6.0,
+    autoZeroCrossing: true,
     presetSettings: {
       playmode: 'poly',
       transpose: 0,
@@ -115,7 +116,8 @@ const mockAppState: Partial<AppState> = {
       width: 0
     },
     renameFiles: false,
-    filenameSeparator: ' ' as ' '
+    filenameSeparator: ' ' as ' ',
+    audioFormat: 'wav' as const
   },
   multisampleSettings: createCompleteMultisampleSettings({
     presetName: 'Test Multisample',
@@ -135,6 +137,8 @@ const mockAppState: Partial<AppState> = {
       pan: 0,
       gain: 0,
       hasBeenEdited: false,
+      isAssigned: true,
+      assignedKey: 0,
       originalBitDepth: 16,
       originalSampleRate: 44100,
       originalChannels: 2,
@@ -398,6 +402,7 @@ describe('Drum Sample Index Preservation', () => {
         presetName: 'Test Drum Kit',
         normalize: false,
         normalizeLevel: -6.0,
+        autoZeroCrossing: true,
         presetSettings: {
           playmode: 'poly',
           transpose: 0,
@@ -406,13 +411,18 @@ describe('Drum Sample Index Preservation', () => {
           width: 0
         },
         renameFiles: false,
-        filenameSeparator: ' ' as ' '
+        filenameSeparator: ' ' as ' ',
+        audioFormat: 'wav' as const
       },
       multisampleSettings: createCompleteMultisampleSettings({
         presetName: 'Test Multisample',
         normalizeLevel: -6.0
       }),
-      drumSamples: mockDrumSamples,
+      drumSamples: mockDrumSamples.map(sample => ({
+        ...sample,
+        isAssigned: true,
+        assignedKey: 0
+      })),
       multisampleFiles: [],
       selectedMultisample: null,
       isLoading: false,
@@ -521,6 +531,7 @@ describe('Drum Sample Index Preservation', () => {
         presetName: 'Test Drum Kit',
         normalize: false,
         normalizeLevel: -6.0,
+        autoZeroCrossing: true,
         presetSettings: {
           playmode: 'poly',
           transpose: 0,
@@ -529,7 +540,8 @@ describe('Drum Sample Index Preservation', () => {
           width: 0
         },
         renameFiles: false,
-        filenameSeparator: ' ' as ' '
+        filenameSeparator: ' ' as ' ',
+        audioFormat: 'wav' as const
       },
       multisampleSettings: createCompleteMultisampleSettings({
         presetName: 'Test Multisample',
@@ -547,7 +559,9 @@ describe('Drum Sample Index Preservation', () => {
         tune: 0,
         pan: 0,
         gain: 0,
-        hasBeenEdited: false
+        hasBeenEdited: false,
+        isAssigned: false,
+        assignedKey: undefined
       })),
       multisampleFiles: [],
       selectedMultisample: null,
@@ -652,6 +666,7 @@ describe('Multisample Loop Points Preservation', () => {
          presetName: '',
          normalize: false,
          normalizeLevel: -6.0,
+         autoZeroCrossing: true,
          presetSettings: {
            playmode: 'poly' as const,
            transpose: 0,
@@ -660,7 +675,8 @@ describe('Multisample Loop Points Preservation', () => {
            width: 0
          },
          renameFiles: false,
-         filenameSeparator: ' ' as const
+         filenameSeparator: ' ' as const,
+        audioFormat: 'wav' as const
        },
               multisampleSettings: createCompleteMultisampleSettings({
           presetName: 'Test Multisample',

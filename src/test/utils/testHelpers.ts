@@ -8,13 +8,15 @@ export function createCompleteMultisampleSettings(overrides: Partial<AppState['m
     channels: 2,
     presetName: '',
     normalize: false,
-    normalizeLevel: -1.0,
+    normalizeLevel: -0.1, // Default to -0.1 dBFS for safety
+    autoZeroCrossing: true,
     cutAtLoopEnd: false,
     gain: 0,
     loopEnabled: true,
     loopOnRelease: true,
     renameFiles: false,
     filenameSeparator: ' ',
+    audioFormat: 'wav' as const,
     // Advanced settings
     playmode: 'poly',
     transpose: 0,

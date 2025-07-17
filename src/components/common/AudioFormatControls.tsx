@@ -108,6 +108,16 @@ export function AudioFormatControls({
       result.bitDepth['24'] = true;
     }
     
+    // Disable 16-bit if ALL samples are 12-bit or lower (no upsampling)
+    if (maxBitDepth <= 12) {
+      result.bitDepth['16'] = true;
+    }
+    
+    // Disable 12-bit if ALL samples are 8-bit or lower (no upsampling)
+    if (maxBitDepth <= 8) {
+      result.bitDepth['12'] = true;
+    }
+    
     // If all samples are the same bit depth, disable that conversion option
     if (allSameBitDepth && firstBitDepth) {
       result.bitDepth[firstBitDepth.toString()] = true;
@@ -155,9 +165,12 @@ export function AudioFormatControls({
         flex: isMobile ? 'none' : '1',
         width: isMobile ? '100%' : 'auto'
       }}>
+        <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
+          sample rate
+        </div>
         <Select
           id="sample-rate"
-          labelText="sample rate"
+          labelText=""
           value={sampleRate.toString()}
           onChange={(e) => onSampleRateChange(e.target.value)}
           size={size}
@@ -187,9 +200,12 @@ export function AudioFormatControls({
         flex: isMobile ? 'none' : '1',
         width: isMobile ? '100%' : 'auto'
       }}>
+        <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
+          bit depth
+        </div>
         <Select
           id="bit-depth"
-          labelText="bit depth"
+          labelText=""
           value={bitDepth.toString()}
           onChange={(e) => onBitDepthChange(e.target.value)}
           size={size}
@@ -207,6 +223,16 @@ export function AudioFormatControls({
             text="16-bit" 
             disabled={disabledOptions.bitDepth['16']}
           />
+          <SelectItem 
+            value="12" 
+            text="12-bit" 
+            disabled={disabledOptions.bitDepth['12']}
+          />
+          <SelectItem 
+            value="8" 
+            text="8-bit" 
+            disabled={disabledOptions.bitDepth['8']}
+          />
         </Select>
       </div>
 
@@ -214,9 +240,12 @@ export function AudioFormatControls({
         flex: isMobile ? 'none' : '1',
         width: isMobile ? '100%' : 'auto'
       }}>
+        <div style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
+          channels
+        </div>
         <Select
           id="channels"
-          labelText="channels"
+          labelText=""
           value={channels.toString()}
           onChange={(e) => onChannelsChange(e.target.value)}
           size={size}

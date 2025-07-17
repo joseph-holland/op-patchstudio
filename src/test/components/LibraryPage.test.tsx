@@ -47,7 +47,7 @@ vi.mock('../../context/AppContext', () => ({
         channels: 2,
         presetName: 'Test Drum Kit',
         normalize: false,
-        normalizeLevel: -1.0,
+        normalizeLevel: -0.1,
         presetSettings: {
           playmode: 'poly',
           transpose: 0,
@@ -64,7 +64,7 @@ vi.mock('../../context/AppContext', () => ({
         channels: 2,
         presetName: 'Test Multisample',
         normalize: false,
-        normalizeLevel: -1.0,
+        normalizeLevel: -0.1,
         cutAtLoopEnd: false,
         gain: 0,
         loopEnabled: true,
@@ -278,6 +278,16 @@ describe('LibraryPage', () => {
     });
 
     it('should sort presets by name', async () => {
+      // Wait for loading to complete and table to be rendered
+      await waitFor(() => {
+        expect(screen.queryByText('loading...')).not.toBeInTheDocument();
+      });
+      
+      // Wait for the table headers to be rendered
+      await waitFor(() => {
+        expect(screen.getByText('name')).toBeInTheDocument();
+      });
+      
       const nameHeader = screen.getByText('name');
       fireEvent.click(nameHeader);
 

@@ -336,6 +336,21 @@ export function MainTabs() {
             <div style={{ 
               padding: '2rem',
             }}>
+              {/* User note about checking GitHub issues first */}
+              <div style={{
+                marginBottom: '1.5rem',
+                background: 'var(--color-bg-secondary)',
+                border: '1px solid var(--color-border-light)',
+                borderRadius: '6px',
+                padding: '1rem',
+                color: 'var(--color-text-secondary)',
+                fontSize: '1rem',
+                textAlign: 'center',
+                lineHeight: 1.5
+              }}>
+                <i className="fas fa-info-circle" style={{ marginRight: '0.5rem', color: 'var(--color-text-secondary)' }}></i>
+                before submitting an issue,<br/>please <a href="https://github.com/joseph-holland/op-patchstudio/issues" target="_blank" rel="noopener" style={{ color: 'var(--color-text-secondary)', textDecoration: 'underline', wordBreak: 'break-all' }}>check if your bug or request has already been raised here</a>.
+              </div>
               <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
                 <iframe
                   src="https://docs.google.com/forms/d/e/1FAIpQLSdgfoCaXzmQL6iF4QR08owfFSAwH651jlGChzcnz-pqwsI4Gw/viewform?embedded=true"

@@ -393,7 +393,7 @@ export function DrumPresetSettings() {
               }}
             >
               <i className="fas fa-upload" style={{ fontSize: '1rem' }} />
-              import settings
+              import patch.json
             </button>
           </div>
           

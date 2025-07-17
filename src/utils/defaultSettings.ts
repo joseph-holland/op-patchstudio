@@ -8,9 +8,11 @@ export const defaultDrumSettings: AppState['drumSettings'] = {
   channels: 2,
   presetName: '',
   normalize: false,
-  normalizeLevel: -1.0,
+  normalizeLevel: -0.1, // Default to -0.1 dBFS for safety
+  autoZeroCrossing: false, // Disable automatic zero-crossing detection by default
   renameFiles: false,
   filenameSeparator: ' ',
+  audioFormat: 'wav', // Default to WAV format
   presetSettings: {
     playmode: 'poly',
     transpose: 0,
@@ -26,13 +28,15 @@ export const defaultMultisampleSettings: AppState['multisampleSettings'] = {
   channels: 2,
   presetName: '',
   normalize: false,
-  normalizeLevel: -1.0,
+  normalizeLevel: -0.1, // Default to -0.1 dBFS for safety
+  autoZeroCrossing: false, // Disable automatic zero-crossing detection by default
   cutAtLoopEnd: false,
   gain: 0,
   loopEnabled: true,
   loopOnRelease: true,
   renameFiles: false,
   filenameSeparator: ' ',
+  audioFormat: 'wav', // Default to WAV format
   // Advanced settings
   playmode: 'poly',
   transpose: 0,
@@ -79,8 +83,10 @@ export function saveDrumSettingsAsDefault(settings: AppState['drumSettings'], im
         presetName: settings.presetName,
         normalize: settings.normalize,
         normalizeLevel: settings.normalizeLevel,
+        autoZeroCrossing: settings.autoZeroCrossing, // Save the new setting
         renameFiles: settings.renameFiles,
         filenameSeparator: settings.filenameSeparator,
+        audioFormat: settings.audioFormat,
         presetSettings: {
           playmode: settings.presetSettings.playmode,
           transpose: settings.presetSettings.transpose,
@@ -109,12 +115,14 @@ export function saveMultisampleSettingsAsDefault(settings: AppState['multisample
         presetName: settings.presetName,
         normalize: settings.normalize,
         normalizeLevel: settings.normalizeLevel,
+        autoZeroCrossing: settings.autoZeroCrossing, // Save the new setting
         cutAtLoopEnd: settings.cutAtLoopEnd,
         gain: settings.gain,
         loopEnabled: settings.loopEnabled,
         loopOnRelease: settings.loopOnRelease,
         renameFiles: settings.renameFiles,
         filenameSeparator: settings.filenameSeparator,
+        audioFormat: settings.audioFormat,
         // Advanced settings
         playmode: settings.playmode,
         transpose: settings.transpose,

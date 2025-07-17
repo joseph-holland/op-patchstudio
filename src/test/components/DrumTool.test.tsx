@@ -154,7 +154,26 @@ describe('DrumTool', () => {
   
   const defaultState = {
     currentTab: 'drum' as const,
-    drumSamples: Array.from({ length: 24 }, () => ({
+    drumSettings: {
+      sampleRate: 0,
+      bitDepth: 0,
+      channels: 0,
+      presetName: '',
+      normalize: false,
+      normalizeLevel: 0.0,
+      autoZeroCrossing: false,
+      renameFiles: false, // always present
+      filenameSeparator: ' ', // always present
+      audioFormat: 'wav',
+      presetSettings: {
+        playmode: 'poly' as const,
+        transpose: 0,
+        velocity: 20,
+        volume: 69,
+        width: 0,
+      },
+    },
+    drumSamples: Array.from({ length: 24 }, (_, index) => ({
       file: null,
       audioBuffer: null,
       name: '',
@@ -167,36 +186,22 @@ describe('DrumTool', () => {
       pan: 0,
       gain: 0,
       hasBeenEdited: false,
+      isAssigned: true,
+      assignedKey: index,
       originalBitDepth: 16,
       originalSampleRate: 44100,
       originalChannels: 2,
-      fileSize: 1000,
-      duration: 1.5
+      fileSize: 0,
+      duration: 0,
+      isFloat: false
     })),
-    drumSettings: {
-      sampleRate: 0,
-      bitDepth: 0,
-      channels: 0,
-      presetName: '',
-      normalize: false,
-      normalizeLevel: 0.0,
-      renameFiles: false, // always present
-      filenameSeparator: ' ', // always present
-      presetSettings: {
-        playmode: 'poly' as const,
-        transpose: 0,
-        velocity: 20,
-        volume: 69,
-        width: 0,
-      },
-    },
     multisampleSettings: {
       sampleRate: 0,
       bitDepth: 0,
       channels: 0,
       presetName: '',
       normalize: false,
-      normalizeLevel: -6.0,
+      normalizeLevel: -0.1,
       cutAtLoopEnd: false,
       gain: 0,
       loopEnabled: true,

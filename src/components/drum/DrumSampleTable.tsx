@@ -50,6 +50,10 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
   const [selectedSampleIndex, setSelectedSampleIndex] = useState<number>(0);
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
   const [selectedSample, setSelectedSample] = useState<{ index: number; audioBuffer: AudioBuffer; inPoint: number; outPoint: number } | null>(null);
+  
+  // Drag and drop state for sample swapping (desktop only)
+  const [draggedItem, setDraggedItem] = useState<number | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   // Debug: Log state changes
   useEffect(() => {
@@ -114,6 +118,84 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
     if (audioFile) {
       handleFileSelect(index, audioFile);
     }
+  };
+
+  // Drag and drop handlers for sample swapping (desktop only)
+  const handleSampleDragStart = (e: React.DragEvent, index: number) => {
+    const sample = state.drumSamples[index];
+    if (!sample?.isLoaded) return; // Only allow dragging loaded samples
+    
+    setDraggedItem(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleSampleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setHoveredIndex(index);
+  };
+
+  const handleSampleDragLeave = () => {
+    setHoveredIndex(null);
+  };
+
+  const handleSampleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    
+    // Check if this is a file drop (external files)
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      const audioFile = files.find(file => 
+        file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
+      );
+      if (audioFile) {
+        // Always assign the file directly to the target index
+        handleFileSelect(targetIndex, audioFile);
+        return;
+      }
+    }
+    
+    // Handle sample assignment and swapping
+    if (draggedItem !== null && draggedItem !== targetIndex) {
+      const draggedSample = state.drumSamples[draggedItem];
+      
+      // If dropping an unassigned sample on a drum key (0-23), assign it
+      if (targetIndex < 24 && draggedSample && !draggedSample.isAssigned) {
+        dispatch({
+          type: 'ASSIGN_DRUM_SAMPLE',
+          payload: {
+            sampleIndex: draggedItem,
+            targetKeyIndex: targetIndex
+          }
+        });
+      } else if (draggedItem < 24 && targetIndex < 24) {
+        // Both are drum keys (0-23) - swap the samples while keeping key names fixed
+        dispatch({
+          type: 'SWAP_DRUM_SAMPLES',
+          payload: {
+            fromIndex: draggedItem,
+            toIndex: targetIndex
+          }
+        });
+      } else {
+        // Handle reordering of unassigned samples or mixed scenarios
+        dispatch({
+          type: 'REORDER_DRUM_SAMPLES',
+          payload: {
+            fromIndex: draggedItem,
+            toIndex: targetIndex
+          }
+        });
+      }
+    }
+    
+    setDraggedItem(null);
+    setHoveredIndex(null);
+  };
+
+  const handleSampleDragEnd = () => {
+    setDraggedItem(null);
+    setHoveredIndex(null);
   };
 
   const openSettingsModal = (index: number) => {
@@ -312,6 +394,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                           channels={sample.originalChannels}
                           bitDepth={sample.originalBitDepth}
                           sampleRate={sample.originalSampleRate}
+                          isFloat={sample.isFloat}
                         />
                       </div>
 
@@ -428,8 +511,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
         padding: 0,
         margin: 0
       }}>
-        {Array.from({ length: 24 }, (_, index) => {
-          const sample = state.drumSamples[index];
+        {state.drumSamples.map((sample, index) => {
           const isLoaded = sample?.isLoaded;
           
           return (
@@ -454,19 +536,29 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                   gridTemplateColumns: '120px minmax(200px, 1fr) minmax(200px, 1fr) 180px',
                   gap: '0.5rem',
                   padding: 0, // Remove row padding
-                  background: c.bg,
-                  borderBottom: index < 23 ? `1px solid ${c.border}` : 'none',
+                  background: isLoaded && hoveredIndex === index && draggedItem !== null && draggedItem !== index ? c.bgAlt : c.bg,
+                  borderBottom: index < state.drumSamples.length - 1 ? `1px solid ${c.border}` : 'none',
                   transition: 'background 0.2s ease',
                   alignItems: 'center',
-                  minHeight: '54px'
+                  minHeight: '54px',
+                  opacity: draggedItem === index ? 0.5 : 1,
+                  cursor: isLoaded ? 'move' : 'default'
                 }}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, index)}
+                draggable={isLoaded}
+                onDragStart={(e) => handleSampleDragStart(e, index)}
+                onDragOver={(e) => handleSampleDragOver(e, index)}
+                onDragLeave={handleSampleDragLeave}
+                onDrop={(e) => handleSampleDrop(e, index)}
+                onDragEnd={handleSampleDragEnd}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = c.bgAlt;
+                  if (!draggedItem) {
+                    e.currentTarget.style.background = c.bgAlt;
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = c.bg;
+                  if (!draggedItem) {
+                    e.currentTarget.style.background = c.bg;
+                  }
                 }}
               >
                 {/* Drum Name */}
@@ -480,7 +572,22 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                   gap: '0.5rem',
                   paddingLeft: '16px'
                 }}>
-                  {drumSampleNames[index]}
+                  {isLoaded && (
+                    <i 
+                      className="fas fa-grip-lines" 
+                      style={{ 
+                        fontSize: '12px', 
+                        color: c.textSecondary,
+                        opacity: 0.6,
+                        cursor: 'move'
+                      }}
+                      title="drag to reorder"
+                    ></i>
+                  )}
+                  {index < 24 
+                    ? drumSampleNames[index] 
+                    : 'unassigned'
+                  }
                   {sample?.hasBeenEdited && (
                     <i 
                       className="fas fa-pencil-alt" 
@@ -519,6 +626,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                         channels={sample.originalChannels}
                         bitDepth={sample.originalBitDepth}
                         sampleRate={sample.originalSampleRate}
+                        isFloat={sample.isFloat}
                       />
                     </div>
 

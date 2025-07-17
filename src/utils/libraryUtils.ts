@@ -4,11 +4,10 @@ import { sessionStorageIndexedDB } from './sessionStorageIndexedDB';
 
 // --- AudioBuffer <-> Blob utilities ---
 // You must have a utility to convert AudioBuffer to WAV ArrayBuffer
-import { audioBufferToWav } from './audio'; // adjust import if needed
+import { audioBufferToWav } from './wavExport';
 
 export async function audioBufferToWavBlob(audioBuffer: AudioBuffer): Promise<Blob> {
-  const wavArrayBuffer = audioBufferToWav(audioBuffer);
-  return new Blob([wavArrayBuffer], { type: 'audio/wav' });
+  return await audioBufferToWav(audioBuffer);
 }
 
 export async function blobToAudioBuffer(blob: Blob, audioContext: AudioContext): Promise<AudioBuffer> {

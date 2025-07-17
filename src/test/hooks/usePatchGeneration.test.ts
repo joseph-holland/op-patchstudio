@@ -81,6 +81,8 @@ describe('usePatchGeneration', () => {
           pan: 0,
           gain: 0,
           hasBeenEdited: false,
+          isAssigned: true,
+          assignedKey: 0,
           originalBitDepth: 16,
           originalSampleRate: 44100,
           originalChannels: 2,
@@ -125,6 +127,7 @@ describe('usePatchGeneration', () => {
         presetName: '',
         normalize: false,
         normalizeLevel: 0,
+        autoZeroCrossing: true,
         presetSettings: {
           playmode: 'poly' as const,
           transpose: 0,
@@ -133,7 +136,8 @@ describe('usePatchGeneration', () => {
           width: 100
         },
         renameFiles: false,
-        filenameSeparator: ' ' as const
+        filenameSeparator: ' ' as const,
+        audioFormat: 'wav' as const
       },
       multisampleSettings: createCompleteMultisampleSettings()
     },
@@ -234,6 +238,7 @@ describe('usePatchGeneration', () => {
           presetName: 'Test',
           normalize: false,
           normalizeLevel: -6.0,
+          autoZeroCrossing: true,
           presetSettings: {
             playmode: 'poly' as const,
             transpose: 0,
@@ -242,7 +247,8 @@ describe('usePatchGeneration', () => {
             width: 100
           },
           renameFiles: false,
-          filenameSeparator: ' ' as const
+          filenameSeparator: ' ' as const,
+          audioFormat: 'wav' as const
         },
         multisampleSettings: createCompleteMultisampleSettings({
           presetName: 'Test',

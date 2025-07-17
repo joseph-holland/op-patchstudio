@@ -4,10 +4,10 @@
 import { audioContextManager } from './audioContext';
 import { AUDIO_CONSTANTS } from './constants';
 import type { FilenameSeparator } from './constants';
+import { audioBufferToWav } from './wavExport';
 
 // Constants preserved from legacy for compatibility
 const HEADER_LENGTH = 44;
-const MAX_AMPLITUDE = 0x7fff;
 const PATCH_SIZE_LIMIT = 8 * 1024 * 1024; // 8mb limit for OP-XY
 
 // Audio processing constants
@@ -226,11 +226,12 @@ export interface ConversionOptions {
   bitDepth?: number;
   channels?: number;
   normalize?: boolean;
-  normalizeLevel?: number; // dB
-  gain?: number; // dB
+  normalizeLevel?: number; // dBFS
+  gain?: number; // dBFS
   cutAtLoopEnd?: boolean;
   loopEnd?: number; // Sample position to trim at (if cutAtLoopEnd is true)
   applyLimiter?: boolean; // Apply limiter to prevent clipping
+  sampleName?: string; // For logging purposes
 }
 
 /**
@@ -239,7 +240,7 @@ export interface ConversionOptions {
  * @param targetLevelDB - Target level in dBFS (default: -0.1)
  * @returns The normalized audio buffer
  */
-export async function normalizeAudioBuffer(audioBuffer: AudioBuffer, targetLevelDB: number = -1.0): Promise<AudioBuffer> {
+export async function normalizeAudioBuffer(audioBuffer: AudioBuffer, targetLevelDB: number = 0.0): Promise<AudioBuffer> {
   const normalizeGain = calculatePeakNormalizationGain(audioBuffer, targetLevelDB);
   
   // Create a new audio buffer with the same properties
@@ -266,10 +267,10 @@ export async function normalizeAudioBuffer(audioBuffer: AudioBuffer, targetLevel
 /**
  * Calculate peak normalization gain factor for an AudioBuffer
  * @param audioBuffer - The audio buffer to analyze
- * @param targetLevelDB - Target level in dBFS (default: -1.0)
+ * @param targetLevelDB - Target level in dBFS (default: 0.0)
  * @returns The gain factor to apply, or 1.0 if no normalization needed
  */
-export function calculatePeakNormalizationGain(audioBuffer: AudioBuffer, targetLevelDB: number = -1.0): number {
+export function calculatePeakNormalizationGain(audioBuffer: AudioBuffer, targetLevelDB: number = 0.0): number {
   // Find maximum amplitude across all channels
   let maxAmplitude = 0;
   for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
@@ -292,13 +293,14 @@ export function calculatePeakNormalizationGain(audioBuffer: AudioBuffer, targetL
 /**
  * Create a limiter for audio processing
  * @param audioContext - The audio context (can be AudioContext or OfflineAudioContext)
+ * @param threshold - Threshold in dBFS (default: -0.1dBFS for safety)
  * @returns A configured DynamicsCompressor node
  */
-export function createLimiter(audioContext: BaseAudioContext): DynamicsCompressorNode {
+export function createLimiter(audioContext: BaseAudioContext, threshold: number = -0.1): DynamicsCompressorNode {
   const limiter = audioContext.createDynamicsCompressor();
   
   // Professional limiter settings
-  limiter.threshold.setValueAtTime(-1, audioContext.currentTime);    // -1dB threshold
+  limiter.threshold.setValueAtTime(threshold, audioContext.currentTime);    // Configurable threshold
   limiter.knee.setValueAtTime(0, audioContext.currentTime);          // Hard knee
   limiter.ratio.setValueAtTime(20, audioContext.currentTime);        // 20:1 ratio
   limiter.attack.setValueAtTime(0.001, audioContext.currentTime);    // 1ms attack
@@ -310,9 +312,10 @@ export function createLimiter(audioContext: BaseAudioContext): DynamicsCompresso
 /**
  * Apply limiter to audio buffer
  * @param audioBuffer - The audio buffer to process
+ * @param threshold - Threshold in dBFS (default: -0.1dBFS for safety)
  * @returns The limited audio buffer
  */
-export async function applyLimiter(audioBuffer: AudioBuffer): Promise<AudioBuffer> {
+export async function applyLimiter(audioBuffer: AudioBuffer, threshold: number = -0.1): Promise<AudioBuffer> {
   // Create offline context for processing
   const offlineContext = audioContextManager.createOfflineContext(
     audioBuffer.numberOfChannels,
@@ -321,7 +324,7 @@ export async function applyLimiter(audioBuffer: AudioBuffer): Promise<AudioBuffe
   );
   
   // Create limiter from the offline context
-  const limiter = createLimiter(offlineContext);
+  const limiter = createLimiter(offlineContext, threshold);
   
   // Create buffer source
   const source = offlineContext.createBufferSource();
@@ -383,7 +386,7 @@ export async function convertAudioFormat(
   const targetSampleRate = options.sampleRate || audioBuffer.sampleRate;
   const targetChannels = options.channels || audioBuffer.numberOfChannels;
   const normalize = options.normalize || false;
-  const normalizeLevel = options.normalizeLevel || 0;
+  const normalizeLevel = options.normalizeLevel || -0.1; // Default to -0.1 dBFS for safety
   const gain = options.gain || 0;
   const shouldApplyLimiter = options.applyLimiter !== undefined ? options.applyLimiter : true;
   
@@ -414,9 +417,30 @@ export async function convertAudioFormat(
   }
 
   // Apply normalization if enabled
+  let normalizeGain = 1;
+  let originalPeakDB = 0;
   if (normalize) {
-    const normalizeGain = calculatePeakNormalizationGain(processedBuffer, normalizeLevel);
+    // Calculate original peak level in dBFS
+    let maxAmplitude = 0;
+    for (let ch = 0; ch < processedBuffer.numberOfChannels; ch++) {
+      const channelData = processedBuffer.getChannelData(ch);
+      for (let i = 0; i < channelData.length; i++) {
+        const amplitude = Math.abs(channelData[i]);
+        if (amplitude > maxAmplitude) {
+          maxAmplitude = amplitude;
+        }
+      }
+    }
+    originalPeakDB = maxAmplitude > 0 ? 20 * Math.log10(maxAmplitude) : -Infinity;
+    
+    normalizeGain = calculatePeakNormalizationGain(processedBuffer, normalizeLevel);
     gainValue *= normalizeGain;
+  }
+
+  // Debug logging for normalization and gain
+  if (normalize || gain !== 0) {
+    const sampleInfo = options.sampleName ? ` (${options.sampleName})` : '';
+    console.log(`[AUDIO PROCESSING]${sampleInfo} normalization: ${normalize}, target: ${normalizeLevel}dBFS, original peak: ${originalPeakDB.toFixed(1)}dBFS, normalizeGain: ${normalizeGain.toFixed(4)}, gain: ${gain}dBFS, final gainValue: ${gainValue.toFixed(4)}`);
   }
 
   gainNode.gain.value = gainValue;
@@ -469,7 +493,11 @@ export async function convertAudioFormat(
   
   // Apply limiter if enabled
   if (shouldApplyLimiter) {
-    result = await applyLimiter(result);
+    // Set limiter threshold based on normalization target
+    // Add small headroom (0.1dB) to prevent limiting normalized audio
+    // Ensure threshold is never positive to prevent clipping
+    const limiterThreshold = normalize ? Math.min(normalizeLevel + 0.1, 0.0) : -0.1;
+    result = await applyLimiter(result, limiterThreshold);
   }
   
   return result;
@@ -506,7 +534,8 @@ export function findNearestZeroCrossing(
   audioBuffer: AudioBuffer,
   framePosition: number,
   direction: 'forward' | 'backward' | 'both' = 'both',
-  maxDistance: number = 1000
+  maxDistance: number = 1000,
+  bounds?: { min?: number; max?: number }
 ): number {
   const channelData = audioBuffer.getChannelData(0);
   const length = channelData.length;
@@ -520,7 +549,11 @@ export function findNearestZeroCrossing(
   const searchStart = direction === 'forward' ? framePosition : Math.max(0, framePosition - maxDistance);
   const searchEnd = direction === 'backward' ? framePosition : Math.min(length - 1, framePosition + maxDistance);
   
-  for (let i = searchStart; i <= searchEnd; i++) {
+  // Apply bounds if provided
+  const boundedSearchStart = bounds?.min !== undefined ? Math.max(searchStart, bounds.min) : searchStart;
+  const boundedSearchEnd = bounds?.max !== undefined ? Math.min(searchEnd, bounds.max) : searchEnd;
+  
+  for (let i = boundedSearchStart; i <= boundedSearchEnd; i++) {
     const amplitude = Math.abs(channelData[i]);
     if (amplitude < minAmplitude) {
       minAmplitude = amplitude;
@@ -534,6 +567,109 @@ export function findNearestZeroCrossing(
   }
   
   return bestPosition;
+}
+
+// Apply zero-crossing detection to sample markers
+export function applyZeroCrossingToMarkers(
+  audioBuffer: AudioBuffer,
+  inPoint: number,
+  outPoint: number,
+  loopStart?: number,
+  loopEnd?: number,
+  maxSearchDistance: number = 500
+): {
+  inPoint: number;
+  outPoint: number;
+  loopStart?: number;
+  loopEnd?: number;
+  adjustments: { marker: string; original: number; adjusted: number }[];
+} {
+  const adjustments: { marker: string; original: number; adjusted: number }[] = [];
+  
+  // Convert time-based positions to frame positions
+  const inFrame = Math.floor(inPoint * audioBuffer.sampleRate);
+  const outFrame = Math.floor(outPoint * audioBuffer.sampleRate);
+  
+  // Apply zero-crossing detection to in point (search forward)
+  const adjustedInFrame = findNearestZeroCrossing(audioBuffer, inFrame, 'forward', maxSearchDistance);
+  if (adjustedInFrame !== inFrame) {
+    adjustments.push({
+      marker: 'inPoint',
+      original: inFrame,
+      adjusted: adjustedInFrame
+    });
+  }
+  
+  // Apply zero-crossing detection to out point (search backward)
+  const adjustedOutFrame = findNearestZeroCrossing(audioBuffer, outFrame, 'backward', maxSearchDistance);
+  if (adjustedOutFrame !== outFrame) {
+    adjustments.push({
+      marker: 'outPoint',
+      original: outFrame,
+      adjusted: adjustedOutFrame
+    });
+  }
+  
+  // Apply zero-crossing detection to loop points if they exist
+  let adjustedLoopStart: number | undefined;
+  let adjustedLoopEnd: number | undefined;
+  
+  if (loopStart !== undefined) {
+    const loopStartFrame = Math.floor(loopStart * audioBuffer.sampleRate);
+    const inFrame = Math.floor(inPoint * audioBuffer.sampleRate);
+    const outFrame = Math.floor(outPoint * audioBuffer.sampleRate);
+    
+    // Find zero crossing within the in/out point bounds
+    adjustedLoopStart = findNearestZeroCrossing(
+      audioBuffer, 
+      loopStartFrame, 
+      'both', 
+      maxSearchDistance,
+      { min: inFrame, max: outFrame }
+    );
+    
+    if (adjustedLoopStart !== loopStartFrame) {
+      adjustments.push({
+        marker: 'loopStart',
+        original: loopStartFrame,
+        adjusted: adjustedLoopStart
+      });
+    }
+  }
+  
+  if (loopEnd !== undefined) {
+    const loopEndFrame = Math.floor(loopEnd * audioBuffer.sampleRate);
+    const inFrame = Math.floor(inPoint * audioBuffer.sampleRate);
+    const outFrame = Math.floor(outPoint * audioBuffer.sampleRate);
+    
+    // Find zero crossing within the in/out point bounds
+    adjustedLoopEnd = findNearestZeroCrossing(
+      audioBuffer, 
+      loopEndFrame, 
+      'both', 
+      maxSearchDistance,
+      { min: inFrame, max: outFrame }
+    );
+    
+    if (adjustedLoopEnd !== loopEndFrame) {
+      adjustments.push({
+        marker: 'loopEnd',
+        original: loopEndFrame,
+        adjusted: adjustedLoopEnd
+      });
+    }
+  }
+  
+  // Convert frame positions back to time
+  const result = {
+    inPoint: adjustedInFrame / audioBuffer.sampleRate,
+    outPoint: adjustedOutFrame / audioBuffer.sampleRate,
+    loopStart: adjustedLoopStart !== undefined ? adjustedLoopStart / audioBuffer.sampleRate : undefined,
+    loopEnd: adjustedLoopEnd !== undefined ? adjustedLoopEnd / audioBuffer.sampleRate : undefined,
+    adjustments
+  };
+  
+  return result;
 }
 
 // Enhanced resample audio with better quality
@@ -550,155 +686,14 @@ export async function resampleAudio(file: File, targetSampleRate: number): Promi
     }
 
     const converted = await convertAudioFormat(audioBuffer, { sampleRate: targetSampleRate });
-    return audioBufferToWav(converted);
+    return await audioBufferToWav(converted);
   } catch (error) {
     console.error("Error during audio resampling:", error);
     throw error;
   }
 }
 
-// Enhanced AudioBuffer to WAV conversion with SMPL chunk support
-export function audioBufferToWav(
-  audioBuffer: AudioBuffer, 
-  bitDepth: number = 16,
-  options: {
-    rootNote?: number;
-    loopStart?: number;
-    loopEnd?: number;
-  } = {}
-): Blob {
-  const nChannels = audioBuffer.numberOfChannels;
-  if (nChannels !== 1 && nChannels !== 2) {
-    throw new Error("Expecting mono or stereo audioBuffer");
-  }
 
-  const bufferLength = audioBuffer.length;
-  const bytesPerSample = bitDepth / 8;
-  
-  // Calculate sizes
-  const audioDataSize = bufferLength * nChannels * bytesPerSample;
-  const fmtChunkSize = 16;
-  const smplChunkSize = 60; // Fixed size for SMPL chunk with one loop
-  
-  // Calculate total size - SMPL chunk goes before data chunk
-  const hasSmplChunk = options.rootNote !== undefined || options.loopStart !== undefined || options.loopEnd !== undefined;
-  const totalSize = 4 + (8 + fmtChunkSize) + (hasSmplChunk ? (8 + smplChunkSize) : 0) + (8 + audioDataSize);
-  
-  // Create buffer
-  const arrayBuffer = new ArrayBuffer(8 + totalSize);
-  const uint8 = new Uint8Array(arrayBuffer);
-  const dataView = new DataView(arrayBuffer);
-  
-  let offset = 0;
-  
-  // Write RIFF header
-  writeString(uint8, offset, "RIFF"); offset += 4;
-  dataView.setUint32(offset, totalSize, true); offset += 4;
-  writeString(uint8, offset, "WAVE"); offset += 4;
-  
-  // Write fmt chunk
-  writeString(uint8, offset, "fmt "); offset += 4;
-  dataView.setUint32(offset, fmtChunkSize, true); offset += 4;
-  dataView.setUint16(offset, 1, true); offset += 2; // PCM format
-  dataView.setUint16(offset, nChannels, true); offset += 2;
-  dataView.setUint32(offset, audioBuffer.sampleRate, true); offset += 4;
-  dataView.setUint32(offset, audioBuffer.sampleRate * nChannels * bytesPerSample, true); offset += 4; // byte rate
-  dataView.setUint16(offset, nChannels * bytesPerSample, true); offset += 2; // block align
-  dataView.setUint16(offset, bitDepth, true); offset += 2;
-  
-  // Write SMPL chunk BEFORE data chunk if we have metadata
-  if (hasSmplChunk) {
-    writeString(uint8, offset, "smpl"); offset += 4;
-    dataView.setUint32(offset, smplChunkSize, true); offset += 4;
-    
-    // SMPL chunk data (60 bytes total)
-    dataView.setUint32(offset, 0, true); offset += 4; // manufacturer
-    dataView.setUint32(offset, 0, true); offset += 4; // product
-    dataView.setUint32(offset, Math.round(1000000000 / audioBuffer.sampleRate), true); offset += 4; // sample period (nanoseconds)
-    dataView.setUint32(offset, options.rootNote ?? 60, true); offset += 4; // MIDI unity note
-    dataView.setUint32(offset, 0, true); offset += 4; // MIDI pitch fraction
-    dataView.setUint32(offset, 0, true); offset += 4; // SMPTE format
-    dataView.setUint32(offset, 0, true); offset += 4; // SMPTE offset
-    dataView.setUint32(offset, 1, true); offset += 4; // number of loops
-    dataView.setUint32(offset, 0, true); offset += 4; // sampler data
-    
-    // Loop data (24 bytes)
-    dataView.setUint32(offset, 0, true); offset += 4; // cue point ID
-    dataView.setUint32(offset, 0, true); offset += 4; // type (0 = forward loop)
-    dataView.setUint32(offset, options.loopStart ?? 0, true); offset += 4; // start
-    dataView.setUint32(offset, options.loopEnd ?? (bufferLength - 1), true); offset += 4; // end
-    dataView.setUint32(offset, 0, true); offset += 4; // fraction
-    dataView.setUint32(offset, 0, true); offset += 4; // play count
-  }
-  
-  // Write data chunk
-  writeString(uint8, offset, "data"); offset += 4;
-  dataView.setUint32(offset, audioDataSize, true); offset += 4;
-  
-  // Write audio data
-  if (bitDepth === 16) {
-    writeAudioData16(uint8, audioBuffer, offset);
-  } else if (bitDepth === 24) {
-    writeAudioData24(uint8, audioBuffer, offset);
-  } else {
-    throw new Error(`Unsupported bit depth: ${bitDepth}`);
-  }
-
-  return new Blob([uint8], { type: "audio/wav" });
-}
-
-// Helper function to write strings to Uint8Array
-function writeString(uint8: Uint8Array, offset: number, str: string): void {
-  for (let i = 0; i < str.length; i++) {
-    uint8[offset + i] = str.charCodeAt(i);
-  }
-}
-
-// Write 16-bit audio data
-function writeAudioData16(uint8: Uint8Array, audioBuffer: AudioBuffer, offset: number): void {
-  const int16 = new Int16Array(uint8.buffer, offset);
-  const channels = audioBuffer.numberOfChannels;
-  const length = audioBuffer.length;
-  
-  const buffers = [];
-  for (let ch = 0; ch < channels; ch++) {
-    buffers.push(audioBuffer.getChannelData(ch));
-  }
-
-  for (let i = 0, index = 0; i < length; i++) {
-    for (let ch = 0; ch < channels; ch++) {
-      let sample = buffers[ch][i];
-      sample = Math.min(1, Math.max(-1, sample));
-      int16[index++] = Math.round(sample * MAX_AMPLITUDE);
-    }
-  }
-}
-
-// Write 24-bit audio data
-function writeAudioData24(uint8: Uint8Array, audioBuffer: AudioBuffer, offset: number): void {
-  const channels = audioBuffer.numberOfChannels;
-  const length = audioBuffer.length;
-  const maxAmplitude = 0x7fffff; // 24-bit max
-  
-  const buffers = [];
-  for (let ch = 0; ch < channels; ch++) {
-    buffers.push(audioBuffer.getChannelData(ch));
-  }
-
-  let byteIndex = offset;
-  for (let i = 0; i < length; i++) {
-    for (let ch = 0; ch < channels; ch++) {
-      let sample = buffers[ch][i];
-      sample = Math.min(1, Math.max(-1, sample));
-      const intSample = Math.round(sample * maxAmplitude);
-      
-      // Write 24-bit little-endian
-      uint8[byteIndex++] = intSample & 0xff;
-      uint8[byteIndex++] = (intSample >> 8) & 0xff;
-      uint8[byteIndex++] = (intSample >> 16) & 0xff;
-    }
-  }
-}
 
 // Existing functions preserved for compatibility
 export function sanitizeName(name: string): string {
@@ -854,6 +849,7 @@ export function getPatchSizeWarning(sizeBytes: number): string | null {
  * @param index - The sample index (for drum) or note (for multisample)
  * @param originalName - The original filename (for extension)
  * @param mapping - The MIDI note mapping convention ('C3' or 'C4')
+ * @param extension - The file extension to use (defaults to 'wav')
  * @returns The new filename
  */
 export function generateFilename(
@@ -862,10 +858,9 @@ export function generateFilename(
   type: 'drum' | 'multisample', 
   index: number, 
   _originalName: string,
-  mapping: 'C3' | 'C4' = 'C3'
+  mapping: 'C3' | 'C4' = 'C3',
+  extension: string = 'wav'
 ): string {
-  // Always use .wav extension for exported presets since all files are converted to WAV
-  const extension = 'wav';
   
   // Normalize separators in preset name and trim leading/trailing separators
   const normalizedPresetName = presetName.replace(/[ _-]+/g, separator).replace(/^[ _-]+|[ _-]+$/g, '');

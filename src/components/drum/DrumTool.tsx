@@ -10,7 +10,8 @@ import { DrumPresetSettings } from './DrumPresetSettings';
 import { DrumBulkEditModal } from './DrumBulkEditModal';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { usePatchGeneration } from '../../hooks/usePatchGeneration';
-import { audioBufferToWav } from '../../utils/audio';
+import { audioBufferToWav } from '../../utils/wavExport';
+import { readAudioMetadata } from '../../utils/audioFormats';
 import { DrumKeyboardContainer } from './DrumKeyboardContainer';
 import { savePresetToLibrary } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
@@ -129,9 +130,9 @@ export function DrumTool() {
       const preset = await parseOP1DrumPreset(arrayBuffer, file.name);
       
       // Convert samples to the format expected by the app context
-      const samples = preset.samples.map(sample => {
+      const samples = await Promise.all(preset.samples.map(async sample => {
         // Convert AudioBuffer to WAV blob for file creation
-        const wavBlob = audioBufferToWav(sample.audioBuffer);
+        const wavBlob = await audioBufferToWav(sample.audioBuffer);
         const file = new File([wavBlob], `${sample.name}.wav`, { type: 'audio/wav' });
         
         return {
@@ -141,7 +142,7 @@ export function DrumTool() {
           metadata: sample.metadata,
           name: sample.name
         };
-      });
+      }));
 
       // Import the preset into the app state
       dispatch({
@@ -188,6 +189,48 @@ export function DrumTool() {
         setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
+  };
+
+  const handleAddUnassignedSample = async (file: File) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      dispatch({ type: 'SET_ERROR', payload: null });
+
+      const metadata = await readAudioMetadata(file, state.midiNoteMapping);
+
+      dispatch({
+        type: 'ADD_UNASSIGNED_DRUM_SAMPLE',
+        payload: {
+          file,
+          audioBuffer: metadata.audioBuffer,
+          metadata
+        }
+      });
+
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'success',
+          title: 'sample added',
+          message: `"${file.name}" added as unassigned sample`
+        }
+      });
+
+    } catch (error) {
+      console.error('Error adding unassigned sample:', error);
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now().toString(),
+          type: 'error',
+          title: 'upload failed',
+          message: error instanceof Error ? error.message : 'failed to add sample'
+        }
+      });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
   };
 
 
@@ -273,9 +316,8 @@ export function DrumTool() {
       isOpen: true,
       message: 'are you sure you want to clear all loaded samples?',
       onConfirm: async () => {
-        for (let i = 0; i < 24; i++) {
-          clearDrumSample(i);
-        }
+        // Clear all samples and reset to 24 slots
+        dispatch({ type: 'CLEAR_ALL_DRUM_SAMPLES' });
         // Reset saved to library flag since we're starting fresh
         await sessionStorageIndexedDB.resetSavedToLibraryFlag();
         setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
@@ -288,10 +330,8 @@ export function DrumTool() {
       isOpen: true,
       message: 'are you sure you want to reset everything to defaults? this will clear all samples, reset preset name, audio settings and preset settings.',
       onConfirm: async () => {
-        // Clear all samples
-        for (let i = 0; i < 24; i++) {
-          clearDrumSample(i);
-        }
+        // Clear all samples and reset to 24 slots
+        dispatch({ type: 'CLEAR_ALL_DRUM_SAMPLES' });
         
         // Reset preset name
         dispatch({ type: 'SET_DRUM_PRESET_NAME', payload: '' });
@@ -303,7 +343,7 @@ export function DrumTool() {
         
         // Reset normalize settings
         dispatch({ type: 'SET_DRUM_NORMALIZE', payload: false });
-        dispatch({ type: 'SET_DRUM_NORMALIZE_LEVEL', payload: 0.0 });
+        dispatch({ type: 'SET_DRUM_NORMALIZE_LEVEL', payload: -0.1 });
         
         // Reset file renaming settings to defaults
         dispatch({ type: 'SET_DRUM_RENAME_FILES', payload: false });
@@ -349,7 +389,7 @@ export function DrumTool() {
       const renderedBuffer = await offlineContext.startRendering();
       
       // Create a File-like object from the buffer with metadata
-      const wavData = audioBufferToWav(renderedBuffer, 16, {
+      const wavData = await audioBufferToWav(renderedBuffer, 16, {
         rootNote: 60, // Default to C4 for recorded samples
         loopStart: 0,
         loopEnd: renderedBuffer.length - 1
@@ -456,7 +496,7 @@ export function DrumTool() {
           <div style={{ 
             padding: isMobile ? '1rem' : '0',
           }}>
-            <DrumSampleTable 
+            <DrumSampleTable
               onFileUpload={handleFileUpload}
               onClearSample={handleClearSample}
               onRecordSample={handleOpenRecording}
@@ -487,6 +527,25 @@ export function DrumTool() {
                 ref={(input) => {
                   if (input) {
                     (window as any).op1PresetInput = input;
+                  }
+                }}
+              />
+              {/* Hidden file input for unassigned samples */}
+              <input
+                type="file"
+                accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.ogg,.flac"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleAddUnassignedSample(file);
+                  }
+                  // Reset the input
+                  e.target.value = '';
+                }}
+                ref={(input) => {
+                  if (input) {
+                    (window as any).unassignedSampleInput = input;
                   }
                 }}
               />
@@ -599,6 +658,37 @@ export function DrumTool() {
                 <i className="fas fa-pencil" style={{ fontSize: '1rem' }}></i>
                 bulk edit
               </button>
+              <button
+                onClick={() => (window as any).unassignedSampleInput?.click()}
+                style={{
+                  minHeight: '44px',
+                  minWidth: '44px',
+                  padding: '0.75rem 1.5rem',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--color-interactive-focus)',
+                  color: 'var(--color-white)',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.75rem',
+                  width: isMobile ? '100%' : 'auto',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-dark)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-interactive-focus)';
+                }}
+              >
+                <i className="fas fa-folder-open" style={{ fontSize: '1rem' }}></i>
+                browse
+              </button>
             </div>
           </div>
         </div>
@@ -630,6 +720,10 @@ export function DrumTool() {
           normalizeLevel={state.drumSettings.normalizeLevel}
           onNormalizeChange={handleNormalizeChange}
           onNormalizeLevelChange={handleNormalizeLevelChange}
+          autoZeroCrossing={state.drumSettings.autoZeroCrossing}
+          onAutoZeroCrossingChange={() => {
+            dispatch({ type: 'APPLY_ZERO_CROSSING_TO_ALL_DRUM_SAMPLES' });
+          }}
           onResetAudioSettingsConfirm={handleResetAudioSettingsConfirm}
         />
       </div>
@@ -658,6 +752,8 @@ export function DrumTool() {
           onRenameFilesChange={(enabled) => dispatch({ type: 'SET_DRUM_RENAME_FILES', payload: enabled })}
           filenameSeparator={state.drumSettings.filenameSeparator}
           onFilenameSeparatorChange={(separator) => dispatch({ type: 'SET_DRUM_FILENAME_SEPARATOR', payload: separator })}
+          audioFormat={state.drumSettings.audioFormat}
+          onAudioFormatChange={(format) => dispatch({ type: 'SET_DRUM_AUDIO_FORMAT', payload: format })}
         />
       </div>
 

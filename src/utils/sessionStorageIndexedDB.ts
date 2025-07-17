@@ -114,6 +114,8 @@ export class SessionStorageManagerIndexedDB {
             return {
               originalIndex: index,
               sampleId,
+              isAssigned: sample.isAssigned,
+              assignedKey: sample.assignedKey,
               settings: {
                 inPoint: sample.inPoint,
                 outPoint: sample.outPoint,

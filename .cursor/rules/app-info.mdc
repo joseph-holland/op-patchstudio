@@ -1,11 +1,12 @@
 ---
 description: general info on OP-PatchStudio app
-globs:  ["**/*.ts", "**/*.tsx", "**/*.scss"]
+globs:  ["**/*.ts", "**/*.tsx", "**/*.scss", "**/*.md", "**/*.mdc"]
 alwaysApply: true
 ---
-- app name: op-xy drum & multisample tool
-- purpose: load wav samples, edit settingsand generate `.preset.zip` files compatible with teenage engineering op-1 field/op-z (op-xy firmware)
+- app name: OP-XY drum & multisample tool
+- purpose: load wav samples, edit settingsand generate `.preset.zip` files compatible with teenage engineering OP-1 field/OP-Z (OP-XY firmware)
 - two main modes: `drum` (24 slots) and `multisample` (up to 24 zones)
-- output must follow op-xy json schema (see `baseDrumJson.ts` and `baseMultisampleJson.ts`)
+- output must follow OP-XY json schema (see `baseDrumJson.ts` and `baseMultisampleJson.ts`)
 - target users: musicians wanting quick desktop workflow to prepare patches for hardware
 - priority: accuracy of exported preset files, fast drag-&-drop ui, faithful visual mimic of op-xy hardware
+- OP-XY, OP-1 and OP-Z are always CAPS

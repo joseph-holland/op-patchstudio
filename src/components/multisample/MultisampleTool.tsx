@@ -11,7 +11,7 @@ import { VirtualMidiKeyboard } from './VirtualMidiKeyboard';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { usePatchGeneration } from '../../hooks/usePatchGeneration';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
-import { audioBufferToWav } from '../../utils/audio';
+import { audioBufferToWav } from '../../utils/wavExport';
 import { cookieUtils, COOKIE_KEYS } from '../../utils/cookies';
 import { savePresetToLibrary } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
@@ -713,6 +713,10 @@ export function MultisampleTool() {
           normalizeLevel={state.multisampleSettings.normalizeLevel}
           onNormalizeChange={handleNormalizeChange}
           onNormalizeLevelChange={handleNormalizeLevelChange}
+          autoZeroCrossing={state.multisampleSettings.autoZeroCrossing}
+          onAutoZeroCrossingChange={() => {
+            dispatch({ type: 'APPLY_ZERO_CROSSING_TO_ALL_MULTISAMPLE_FILES' });
+          }}
           gain={state.multisampleSettings.gain}
           onGainChange={handleGainChange}
           cutAtLoopEnd={state.multisampleSettings.cutAtLoopEnd}
@@ -745,6 +749,8 @@ export function MultisampleTool() {
           onRenameFilesChange={(enabled) => dispatch({ type: 'SET_MULTISAMPLE_RENAME_FILES', payload: enabled })}
           filenameSeparator={state.multisampleSettings.filenameSeparator}
           onFilenameSeparatorChange={(separator) => dispatch({ type: 'SET_MULTISAMPLE_FILENAME_SEPARATOR', payload: separator })}
+          audioFormat={state.multisampleSettings.audioFormat}
+          onAudioFormatChange={(format) => dispatch({ type: 'SET_MULTISAMPLE_AUDIO_FORMAT', payload: format })}
         />
       </div>
 

@@ -87,6 +87,7 @@ export function validateSampleRate(sampleRate: number): number {
 /**
  * Parse COMM chunk from AIF file
  * Extracts channels, numSampleFrames, bitDepth, and sampleRate
+ * Improved based on ConvertWithMoss approach with better AIFC support
  */
 export function parseCommChunk(
   dataView: DataView, 
@@ -100,6 +101,8 @@ export function parseCommChunk(
   bitDepth: number;
   sampleRate: number;
   isLittleEndian: boolean;
+  isFloat: boolean;
+  compressionType?: string;
 } {
   if (chunkSize < 18) {
     throw new Error('COMM chunk too small');
@@ -112,23 +115,58 @@ export function parseCommChunk(
   // For AIFC: 26-29: compression type (4 bytes)
   const channels = dataView.getUint16(chunkDataOffset, false);
   const numSampleFrames = dataView.getUint32(chunkDataOffset + 2, false);
-  const bitDepth = dataView.getUint16(chunkDataOffset + 6, false);
+  let bitDepth = dataView.getUint16(chunkDataOffset + 6, false);
   
   // Parse IEEE 80-bit float sample rate
   const sampleRate = readExtendedFloat80(new Uint8Array(arrayBuffer), chunkDataOffset + 8);
   const validatedSampleRate = validateSampleRate(sampleRate);
   
   let isLittleEndian = false;
+  let isFloat = false;
+  let compressionType: string | undefined;
   
-  // Check for AIFC compression type
+  // Check for AIFC compression type (ConvertWithMoss style)
   if (formatId === 'AIFC' && chunkSize >= 22) {
     // AIFC has compression type after sample rate
     const textDecoder = new TextDecoder('ascii');
-    const compressionType = textDecoder.decode(new Uint8Array(arrayBuffer, chunkDataOffset + 18, 4));
+    compressionType = textDecoder.decode(new Uint8Array(arrayBuffer, chunkDataOffset + 18, 4));
     
-    if (compressionType === 'sowt') {
-      // 'sowt' means signed 16-bit little-endian (reverse of 'twos')
-      isLittleEndian = true;
+    // Handle different compression types based on ConvertWithMoss implementation
+    switch (compressionType) {
+      case 'NONE':
+        // Uncompressed PCM data (standard AIFF)
+        break;
+      case 'twos':
+        // Signed 16-bit big-endian (standard AIFF)
+        break;
+      case 'sowt':
+        // Signed 16-bit little-endian (reverse of 'twos')
+        isLittleEndian = true;
+        bitDepth = 16;
+        console.log('[AIF PARSER] Detected little-endian 16-bit AIFC file (sowt)');
+        break;
+      case 'fl32':
+        // 32-bit floating point
+        isFloat = true;
+        bitDepth = 32;
+        console.log('[AIF PARSER] Detected 32-bit float AIFC file (fl32)');
+        break;
+      case 'fl64':
+        // 64-bit floating point (rare but supported)
+        isFloat = true;
+        bitDepth = 64;
+        console.log('[AIF PARSER] Detected 64-bit float AIFC file (fl64)');
+        break;
+      case 'ulaw':
+        // μ-law compression (rare)
+        console.warn('[AIF PARSER] μ-law compression detected, may not decode correctly');
+        break;
+      case 'alaw':
+        // A-law compression (rare)
+        console.warn('[AIF PARSER] A-law compression detected, may not decode correctly');
+        break;
+      default:
+        console.warn(`[AIF PARSER] Unknown compression type: ${compressionType}, treating as uncompressed PCM`);
     }
   }
 
@@ -137,13 +175,16 @@ export function parseCommChunk(
     numSampleFrames,
     bitDepth,
     sampleRate: validatedSampleRate,
-    isLittleEndian
+    isLittleEndian,
+    isFloat,
+    compressionType
   };
 }
 
 /**
  * Parse MARK chunk from AIF file
  * Extracts marker positions and names
+ * Improved error handling and validation
  */
 export function parseMarkChunk(
   dataView: DataView,
@@ -161,9 +202,27 @@ export function parseMarkChunk(
   let markerOffset = chunkDataOffset + 2;
   
   for (let i = 0; i < numMarkers; i++) {
+    // Validate we have enough data for this marker
+    if (markerOffset + 7 > arrayBuffer.byteLength) {
+      console.warn(`[AIF PARSER] MARK chunk truncated at marker ${i}`);
+      break;
+    }
+    
     const markerId = dataView.getUint16(markerOffset, false);
     const markerPosition = dataView.getUint32(markerOffset + 2, false);
     const markerNameLength = dataView.getUint8(markerOffset + 6);
+    
+    // Validate marker name length
+    if (markerNameLength > 255) {
+      console.warn(`[AIF PARSER] Invalid marker name length: ${markerNameLength}`);
+      break;
+    }
+    
+    // Check if we have enough data for the marker name
+    if (markerOffset + 7 + markerNameLength > arrayBuffer.byteLength) {
+      console.warn(`[AIF PARSER] MARK chunk truncated during marker name read`);
+      break;
+    }
     
     // Parse marker name (Pascal string)
     const markerNameBytes = new Uint8Array(arrayBuffer, markerOffset + 7, markerNameLength);
@@ -175,6 +234,7 @@ export function parseMarkChunk(
       name: markerName
     });
     
+    // Move to next marker (account for padding)
     markerOffset += 7 + markerNameLength + (markerNameLength % 2 === 0 ? 1 : 0);
   }
   
@@ -184,6 +244,7 @@ export function parseMarkChunk(
 /**
  * Parse INST chunk from AIF file
  * Extracts root note and loop marker references
+ * Simplified without Logic Pro quirk detection
  */
 export function parseInstChunk(
   dataView: DataView,
@@ -245,6 +306,7 @@ export function parseInstChunk(
 
 /**
  * Find loop points from marker names (fallback when no INST chunk is present)
+ * Improved with better marker name matching
  */
 export function findLoopPointsFromMarkers(
   markers: Array<{ id: number; position: number; name: string }>
@@ -259,10 +321,18 @@ export function findLoopPointsFromMarkers(
   
   for (const marker of markers) {
     const lowerName = marker.name.toLowerCase();
-    if (lowerName.includes('loop start') || lowerName.includes('start')) {
+    
+    // More comprehensive loop point detection
+    if (lowerName.includes('loop start') || 
+        lowerName.includes('start') || 
+        lowerName.includes('loopstart') ||
+        lowerName.includes('loop_start')) {
       loopStart = marker.position;
       foundLoopPoints = true;
-    } else if (lowerName.includes('loop end') || lowerName.includes('end')) {
+    } else if (lowerName.includes('loop end') || 
+               lowerName.includes('end') || 
+               lowerName.includes('loopend') ||
+               lowerName.includes('loop_end')) {
       loopEnd = marker.position;
       foundLoopPoints = true;
     }

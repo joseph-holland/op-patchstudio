@@ -57,7 +57,7 @@ const handlePlayWithEffects = async () => {
   if (audioBuffer) {
     await playAudioBuffer(audioBuffer, {
       playbackRate: 2.0,    // Play at 2x speed
-      gain: -6,             // -6dB volume reduction
+      gain: -6,             // -6dBFS volume reduction
       pan: 50,              // 50% right pan
       reverse: true,        // Reverse the audio
       startTime: 1.0,       // Start at 1 second
@@ -79,7 +79,7 @@ Plays an AudioBuffer with optional effects.
   - `startTime`: Start time in seconds (default: 0)
   - `duration`: Duration to play in seconds (default: full buffer)
   - `playbackRate`: Playback speed multiplier (default: 1.0)
-  - `gain`: Volume in dB (default: 0)
+  - `gain`: Volume in dBFS (default: 0)
   - `pan`: Stereo pan position -100 to 100 (default: 0)
   - `reverse`: Reverse the audio (default: false)
 

@@ -44,7 +44,7 @@ export async function scrapePatreonPosts(): Promise<PatreonPost[]> {
     for (const proxy of corsProxies) {
       try {
         console.log(`Trying CORS proxy: ${proxy}`);
-        const apiUrlWithParams = `${apiUrl}?filter[campaign_id]=${campaignId}&sort=-published_at&page[size]=3`;
+        const apiUrlWithParams = `${apiUrl}?filter[campaign_id]=${campaignId}&sort=-published_at&page[size]=5`;
         console.log('API URL:', apiUrlWithParams);
         
         apiResponse = await axios.get<PatreonApiResponse>(proxy + encodeURIComponent(apiUrlWithParams), {

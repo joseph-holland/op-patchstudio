@@ -385,6 +385,30 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               >
                 <i className="fa fa-search-plus" />
               </button>
+              {state.drumSettings.autoZeroCrossing && (
+                <button
+                  type="button"
+                  style={{
+                    marginTop: '0.5rem',
+                    padding: '0.5rem 1.25rem',
+                    border: 'none',
+                    borderRadius: '6px',
+                    background: c.action,
+                    color: c.white,
+                    fontSize: '0.9rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    minHeight: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                  onClick={() => dispatch({ type: 'APPLY_ZERO_CROSSING_TO_DRUM_SAMPLE', payload: sampleIndex })}
+                >
+                  <i className="fas fa-wave-square" style={{ fontSize: '1rem' }}></i>
+                  apply zero crossing
+                </button>
+              )}
               {showZoomModal && (
                 <WaveformZoomModal
                   isOpen={showZoomModal}
@@ -435,7 +459,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               marginBottom: '0.5rem',
               textTransform: 'lowercase',
             }}>
-              gain: {settings.gain} db
+              gain: {settings.gain} dbfs
             </div>
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: 0, margin: 0 }}>
               <Slider

@@ -400,14 +400,14 @@ export function MultisamplePresetSettings() {
                   display: 'grid', 
                   gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', 
                   gap: isMobile ? '1.5rem' : '2rem',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                  alignItems: 'start',
+                  justifyContent: isMobile ? 'center' : 'start'
                 }}>
                   <div style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
-                    alignItems: 'center',
-                    textAlign: 'center'
+                    alignItems: isMobile ? 'center' : 'flex-start',
+                    textAlign: isMobile ? 'center' : 'left'
                   }}>
                     <label style={{ 
                       display: 'block',
@@ -436,8 +436,8 @@ export function MultisamplePresetSettings() {
                   <div style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
-                    alignItems: 'center',
-                    textAlign: 'center'
+                    alignItems: isMobile ? 'center' : 'flex-start',
+                    textAlign: isMobile ? 'center' : 'left'
                   }}>
                     <label style={{ 
                       display: 'block',
@@ -448,21 +448,23 @@ export function MultisamplePresetSettings() {
                     }}>
                       loop enabled
                     </label>
-                    <Toggle
-                      id="multisample-loop-enabled"
-                      labelA="off"
-                      labelB="on"
-                      toggled={settings.loopEnabled}
-                      onToggle={(checked) => updateSetting('loopEnabled', checked)}
-                      size="sm"
-                    />
+                    <div style={{ padding: '4px' }}>
+                      <Toggle
+                        id="multisample-loop-enabled"
+                        labelA="off"
+                        labelB="on"
+                        toggled={settings.loopEnabled}
+                        onToggle={(checked) => updateSetting('loopEnabled', checked)}
+                        size="sm"
+                      />
+                    </div>
                   </div>
 
                   <div style={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
-                    alignItems: 'center',
-                    textAlign: 'center'
+                    alignItems: isMobile ? 'center' : 'flex-start',
+                    textAlign: isMobile ? 'center' : 'left'
                   }}>
                     <label style={{ 
                       display: 'block',
@@ -473,14 +475,16 @@ export function MultisamplePresetSettings() {
                     }}>
                       loop on release
                     </label>
-                    <Toggle
-                      id="multisample-loop-onrelease"
-                      labelA="off"
-                      labelB="on"
-                      toggled={settings.loopOnRelease}
-                      onToggle={(checked) => updateSetting('loopOnRelease', checked)}
-                      size="sm"
-                    />
+                    <div style={{ padding: '4px' }}>
+                      <Toggle
+                        id="multisample-loop-onrelease"
+                        labelA="off"
+                        labelB="on"
+                        toggled={settings.loopOnRelease}
+                        onToggle={(checked) => updateSetting('loopOnRelease', checked)}
+                        size="sm"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -843,7 +847,7 @@ export function MultisamplePresetSettings() {
             }}
           >
             <i className="fas fa-upload" style={{ fontSize: '1rem' }}></i>
-            import settings
+            import patch.json
           </button>
         </div>
 

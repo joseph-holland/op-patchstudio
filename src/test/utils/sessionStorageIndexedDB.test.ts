@@ -133,6 +133,7 @@ describe('sessionStorageIndexedDB', () => {
           presetName: '',
           normalize: false,
           normalizeLevel: 0,
+          autoZeroCrossing: true,
           presetSettings: {
             playmode: 'poly' as const,
             transpose: 0,
@@ -141,7 +142,8 @@ describe('sessionStorageIndexedDB', () => {
             width: 100
           },
           renameFiles: false,
-          filenameSeparator: ' ' as const
+          filenameSeparator: ' ' as const,
+          audioFormat: 'wav' as const
         },
         multisampleSettings: createCompleteMultisampleSettings()
       };

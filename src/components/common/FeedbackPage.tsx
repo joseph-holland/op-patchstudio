@@ -23,6 +23,7 @@ export function FeedbackPage() {
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
           border: '1px solid var(--color-border-light)'
         }}>
+
           <div style={{
             display: 'flex',
             justifyContent: 'center',

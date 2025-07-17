@@ -7,7 +7,6 @@ import {
   parseFilename,
   isPatchSizeValid,
   readWavMetadata,
-  audioBufferToWav,
   findNearestZeroCrossing,
   NOTE_NAMES,
   NOTE_OFFSET,
@@ -16,8 +15,10 @@ import {
   cutAudioAtLoopEnd,
   isValidPresetName,
   getInvalidPresetNameChars,
-  generateFilename
+  generateFilename,
+  applyZeroCrossingToMarkers
 } from '../../utils/audio'
+import { audioBufferToWav } from '../../utils/wavExport'
 
 // Mock AudioParam with required properties
 const mockAudioParam = {
@@ -120,6 +121,8 @@ vi.mock('../../utils/audioContext', () => ({
                   data.fill(0.5); // Normalize to -6dB: 0.25 -> 0.5
                 } else if (currentTestContext === 'both') {
                   data.fill(1.0); // Normalize then gain: 0.25 -> 0.5 -> 1.0
+                } else if (currentTestContext === 'normalize_to_zero') {
+                  data.fill(1.0); // Normalize to 0dBFS: 0.5 -> 1.0 (without limiter interference)
                 } else {
                   // Default fallback
                   data.fill(0.5);
@@ -588,19 +591,19 @@ describe('audio utilities', () => {
   })
 
   describe('audioBufferToWav', () => {
-    it('should create a WAV blob from audio buffer', () => {
+    it('should create a WAV blob from audio buffer', async () => {
       const mockBuffer = createMockAudioBuffer(1000, 44100)
-      const result = audioBufferToWav(mockBuffer)
+      const result = await audioBufferToWav(mockBuffer)
       
       expect(result).toBeInstanceOf(Blob)
       expect(result.type).toBe('audio/wav')
     })
 
-    it('should handle different bit depths', () => {
+    it('should handle different bit depths', async () => {
       const mockBuffer = createMockAudioBuffer(1000, 44100)
       
-      const result16 = audioBufferToWav(mockBuffer, 16)
-      const result24 = audioBufferToWav(mockBuffer, 24)
+      const result16 = await audioBufferToWav(mockBuffer, 16)
+      const result24 = await audioBufferToWav(mockBuffer, 24)
       
       expect(result16).toBeInstanceOf(Blob)
       expect(result24).toBeInstanceOf(Blob)
@@ -610,7 +613,7 @@ describe('audio utilities', () => {
     it('should create WAV with SMPL chunk when metadata provided', async () => {
       const mockBuffer = createMockAudioBuffer(1000, 44100)
       
-      const result = audioBufferToWav(mockBuffer, 16, {
+      const result = await audioBufferToWav(mockBuffer, 16, {
         rootNote: 60,
         loopStart: 100,
         loopEnd: 900
@@ -651,19 +654,19 @@ describe('audio utilities', () => {
       expect(foundSmpl).toBe(true)
     })
 
-    it('should throw error for unsupported channels', () => {
+    it('should throw error for unsupported channels', async () => {
       const mockBuffer = {
         ...createMockAudioBuffer(1000, 44100),
         numberOfChannels: 3
       }
       
-      expect(() => audioBufferToWav(mockBuffer)).toThrow('Expecting mono or stereo audioBuffer')
+      await expect(audioBufferToWav(mockBuffer)).rejects.toThrow('Expecting mono or stereo audioBuffer')
     })
 
-    it('should throw error for unsupported bit depth', () => {
+    it('should throw error for unsupported bit depth', async () => {
       const mockBuffer = createMockAudioBuffer(1000, 44100)
       
-      expect(() => audioBufferToWav(mockBuffer, 32)).toThrow('Unsupported bit depth: 32')
+      await expect(audioBufferToWav(mockBuffer, 32)).rejects.toThrow('Unsupported bit depth: 32')
     })
   })
 
@@ -762,6 +765,24 @@ describe('audio utilities', () => {
       // Should normalize 0.25 to 0.5, then apply +6dB to get 1.0
       const resultData = result.getChannelData(0);
       expect(resultData[0]).toBeCloseTo(1.0, 2);
+    });
+
+    it('should normalize to 0 dBFS without limiter interference', async () => {
+      currentTestContext = 'normalize_to_zero';
+      const mockBuffer = createMockAudioBuffer(1000, 44100);
+      const mockChannelData = new Float32Array(1000);
+      mockChannelData.fill(0.5); // Set all samples to 0.5 (-6dBFS)
+      mockBuffer.getChannelData = vi.fn().mockReturnValue(mockChannelData);
+
+      const result = await convertAudioFormat(mockBuffer, { 
+        normalize: true, 
+        normalizeLevel: 0, // Normalize to 0dBFS (1.0)
+        applyLimiter: true // Limiter should not interfere
+      });
+      
+      // Should normalize to exactly 1.0 (0dBFS) without limiter reduction
+      const resultData = result.getChannelData(0);
+      expect(resultData[0]).toBeCloseTo(1.0, 3);
     });
   })
 
@@ -905,4 +926,113 @@ describe('audio utilities', () => {
       expect(cutBuffer.length).toBe(buffer.length);
     });
   })
+
+  it('applyZeroCrossingToMarkers should adjust markers to nearest zero crossings', () => {
+    // Create a simple audio buffer with known zero crossings
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const buffer = audioContext.createBuffer(1, 1000, 44100);
+    const data = buffer.getChannelData(0);
+    
+    // Create a simple waveform with zero crossings at specific points
+    for (let i = 0; i < 1000; i++) {
+      data[i] = Math.sin(i * 0.1) * 0.5; // Simple sine wave
+    }
+    
+    // Test with markers that are not at zero crossings
+    const result = applyZeroCrossingToMarkers(
+      buffer,
+      0.1, // inPoint (not at zero crossing)
+      0.9, // outPoint (not at zero crossing)
+      0.5, // loopStart (not at zero crossing)
+      0.7  // loopEnd (not at zero crossing)
+    );
+    
+    // Verify that adjustments were made
+    expect(result.adjustments.length).toBeGreaterThan(0);
+    expect(result.inPoint).not.toBe(0.1);
+    expect(result.outPoint).not.toBe(0.9);
+    
+    // Verify that all adjusted positions are within valid range
+    expect(result.inPoint).toBeGreaterThanOrEqual(0);
+    expect(result.outPoint).toBeLessThanOrEqual(buffer.duration);
+    
+    // Loop points should be within the in/out point range
+    if (result.loopStart !== undefined) {
+      expect(result.loopStart).toBeGreaterThanOrEqual(result.inPoint - 0.015); // Allow larger epsilon
+      expect(result.loopStart).toBeLessThanOrEqual(result.outPoint + 0.015); // Allow larger epsilon
+    }
+    if (result.loopEnd !== undefined) {
+      expect(result.loopEnd).toBeGreaterThanOrEqual(result.inPoint - 0.015); // Allow larger epsilon
+      expect(result.loopEnd).toBeLessThanOrEqual(result.outPoint + 0.015); // Allow larger epsilon
+    }
+  });
+
+  it('applyZeroCrossingToMarkers should not adjust when already at zero crossings', () => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const buffer = audioContext.createBuffer(1, 1000, 44100);
+    const data = buffer.getChannelData(0);
+    
+    // Create a simple waveform
+    for (let i = 0; i < 1000; i++) {
+      data[i] = Math.sin(i * 0.1) * 0.5;
+    }
+    
+    // Test with markers that are already at or very close to zero crossings
+    const result = applyZeroCrossingToMarkers(
+      buffer,
+      0, // inPoint (at start, should be close to zero)
+      buffer.duration, // outPoint (at end)
+      0.5, // loopStart
+      0.8  // loopEnd
+    );
+    
+    // Should have minimal or no adjustments for in/out points
+    expect(result.inPoint).toBeCloseTo(0, 2);
+    // Accept outPoint within 20ms of buffer end
+    expect(Math.abs(result.outPoint - buffer.duration)).toBeLessThanOrEqual(0.02);
+    // Allow a larger tolerance for loop points
+    if (result.loopStart !== undefined) {
+      expect(result.loopStart).toBeGreaterThanOrEqual(result.inPoint - 0.015);
+      expect(result.loopStart).toBeLessThanOrEqual(result.outPoint + 0.015);
+    }
+    if (result.loopEnd !== undefined) {
+      expect(result.loopEnd).toBeGreaterThanOrEqual(result.inPoint - 0.015);
+      expect(result.loopEnd).toBeLessThanOrEqual(result.outPoint + 0.015);
+    }
+  });
+
+  it('applyZeroCrossingToMarkers should handle edge cases gracefully', () => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const buffer = audioContext.createBuffer(1, 100, 44100);
+    const data = buffer.getChannelData(0);
+    
+    // Create a simple waveform
+    for (let i = 0; i < 100; i++) {
+      data[i] = Math.sin(i * 0.5) * 0.5;
+    }
+    
+    // Test with very small search distance
+    const result = applyZeroCrossingToMarkers(
+      buffer,
+      0.1,
+      0.9,
+      0.3,
+      0.7,
+      10 // Very small search distance
+    );
+    
+    // Should still return valid results
+    expect(result.inPoint).toBeGreaterThanOrEqual(0);
+    expect(result.outPoint).toBeLessThanOrEqual(buffer.duration);
+    
+    // Loop points should be within the in/out point range
+    if (result.loopStart !== undefined) {
+      expect(result.loopStart).toBeGreaterThanOrEqual(result.inPoint - 0.001); // Allow small epsilon
+      expect(result.loopStart).toBeLessThanOrEqual(result.outPoint + 0.001); // Allow small epsilon
+    }
+    if (result.loopEnd !== undefined) {
+      expect(result.loopEnd).toBeGreaterThanOrEqual(result.inPoint - 0.001); // Allow small epsilon
+      expect(result.loopEnd).toBeLessThanOrEqual(result.outPoint + 0.001); // Allow small epsilon
+    }
+  });
 })

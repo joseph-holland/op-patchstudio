@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { Toggle } from '@carbon/react';
 import { PatchSizeIndicator } from './PatchSizeIndicator';
 import { PresetNameInput } from '../library/PresetNameInput';
+import { ToggleSwitch } from './ToggleSwitch';
 import type { FilenameSeparator } from '../../utils/constants';
+import type { AudioFormat } from '../../utils/audioExport';
 
 interface GeneratePresetSectionProps {
   type: 'drum' | 'multisample';
@@ -22,6 +25,8 @@ interface GeneratePresetSectionProps {
   onRenameFilesChange: (enabled: boolean) => void;
   filenameSeparator: FilenameSeparator;
   onFilenameSeparatorChange: (separator: FilenameSeparator) => void;
+  audioFormat: AudioFormat;
+  onAudioFormatChange: (format: AudioFormat) => void;
 }
 
 export function GeneratePresetSection({
@@ -42,7 +47,9 @@ export function GeneratePresetSection({
   renameFiles,
   onRenameFilesChange,
   filenameSeparator,
-  onFilenameSeparatorChange
+  onFilenameSeparatorChange,
+  audioFormat,
+  onAudioFormatChange
 }: GeneratePresetSectionProps) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -96,122 +103,140 @@ export function GeneratePresetSection({
           style={{
             display: 'flex',
             flexDirection: isMobile ? 'column' : 'row',
-            alignItems: isMobile ? 'stretch' : 'center',
-            gap: isMobile ? '1.5rem' : 0,
+            alignItems: isMobile ? 'stretch' : 'flex-start',
+            gap: isMobile ? '1.5rem' : '3rem',
             marginBottom: '2rem',
             paddingBottom: '1.5rem',
             borderBottom: '1px solid var(--color-border-light)'
           }}
         >
           {/* Preset Name Input */}
-          <div style={{ width: isMobile ? '100%' : '50%', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
-            <div style={{ width: isMobile ? '100%' : '80%' }}>
-              <PresetNameInput
-                id={inputId}
-                labelText="preset name"
-                value={presetName}
-                onChange={(value: string) => {
-                  // Create a proper synthetic event that matches React.ChangeEvent<HTMLInputElement>
-                  const syntheticEvent = {
-                    target: { value },
-                    currentTarget: { value },
-                    preventDefault: () => {},
-                    stopPropagation: () => {},
-                    nativeEvent: new Event('change'),
-                    type: 'change',
-                    bubbles: true,
-                    cancelable: true,
-                    defaultPrevented: false,
-                    eventPhase: 0,
-                    isTrusted: true,
-                    timeStamp: Date.now(),
-                    isDefaultPrevented: () => false,
-                    isPropagationStopped: () => false,
-                    persist: () => {}
-                  } as React.ChangeEvent<HTMLInputElement>;
-                  onPresetNameChange(syntheticEvent);
-                }}
-                placeholder="enter preset name..."
-                className="preset-name-input-wide"
-              />
-              <style>{`
-                .preset-name-input-wide input.cds--text-input {
-                  width: 100% !important;
-                  min-width: 0 !important;
-                  max-width: none !important;
-                  box-sizing: border-box;
-                }
-                @media (min-width: 769px) {
-                  .preset-name-input-wide {
-                    width: 100%;
-                  }
-                }
-                @media (max-width: 768px) {
-                  .preset-name-input-wide {
-                    width: 100%;
-                  }
-                }
-              `}</style>
-            </div>
+          <div style={{ 
+            width: isMobile ? '100%' : '40%', 
+            minWidth: 0 
+          }}>
+            <PresetNameInput
+              id={inputId}
+              labelText="preset name"
+              value={presetName}
+              onChange={(value: string) => {
+                // Create a proper synthetic event that matches React.ChangeEvent<HTMLInputElement>
+                const syntheticEvent = {
+                  target: { value },
+                  currentTarget: { value },
+                  preventDefault: () => {},
+                  stopPropagation: () => {},
+                  nativeEvent: new Event('change'),
+                  type: 'change',
+                  bubbles: true,
+                  cancelable: true,
+                  defaultPrevented: false,
+                  eventPhase: 0,
+                  isTrusted: true,
+                  timeStamp: Date.now(),
+                  isDefaultPrevented: () => false,
+                  isPropagationStopped: () => false,
+                  persist: () => {}
+                } as React.ChangeEvent<HTMLInputElement>;
+                onPresetNameChange(syntheticEvent);
+              }}
+              placeholder="enter preset name..."
+              className="preset-name-input-wide"
+            />
+            <style>{`
+              .preset-name-input-wide input.cds--text-input {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                box-sizing: border-box;
+              }
+            `}</style>
           </div>
 
           {/* File Renaming Controls */}
           <div
             style={{
-              width: isMobile ? '100%' : '50%',
+              width: isMobile ? '100%' : '60%',
               minWidth: 0,
               display: 'flex',
               flexDirection: 'column',
-              gap: '1rem',
-              marginTop: isMobile ? '1.5rem' : 0,
-              alignItems: isMobile ? 'center' : 'flex-start',
-              justifyContent: 'flex-start',
-              boxSizing: 'border-box',
-              paddingLeft: isMobile ? 0 : '2rem',
-              textAlign: isMobile ? 'center' : 'left',
+              gap: '1.5rem'
             }}
           >
             {/* Rename Files Toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
-              <input
-                type="checkbox"
-                id={`rename-files-${inputId}`}
-                checked={renameFiles}
-                onChange={(e) => onRenameFilesChange(e.target.checked)}
-                style={{
-                  width: '16px',
-                  height: '16px',
-                  accentColor: 'var(--color-interactive-focus)'
-                }}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.75rem' 
+            }}>
+              <Toggle
+                id={`rename-files-toggle-${inputId}`}
+                labelText="rename files with preset name"
+                toggled={renameFiles}
+                onToggle={onRenameFilesChange}
+                size="sm"
+                className="rename-files-toggle"
               />
-              <label
-                htmlFor={`rename-files-${inputId}`}
-                style={{
-                  fontSize: '0.9rem',
-                  color: 'var(--color-text-primary)',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  width: isMobile ? 'auto' : undefined,
-                  textAlign: isMobile ? 'center' : 'left',
-                }}
-              >
-                rename files with preset name
-              </label>
+              <style>{`
+                .rename-files-toggle .cds--toggle-input__appearance {
+                  background-color: var(--color-bg-slider-track) !important;
+                }
+                .rename-files-toggle .cds--toggle-input__appearance:before {
+                  background-color: var(--color-interactive-secondary) !important;
+                }
+                .rename-files-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance {
+                  background-color: var(--color-interactive-dark) !important;
+                }
+                .rename-files-toggle .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
+                  background-color: var(--color-bg-primary) !important;
+                }
+                .rename-files-toggle .cds--toggle__text,
+                .rename-files-toggle .cds--toggle__text--off,
+                .rename-files-toggle .cds--toggle__text--on,
+                .rename-files-toggle label,
+                .rename-files-toggle span {
+                  color: var(--color-text-primary) !important;
+                  font-size: 0.9rem !important;
+                  font-weight: 500 !important;
+                  line-height: 1.2 !important;
+                }
+                .rename-files-toggle .cds--toggle {
+                  font-size: 0.9rem !important;
+                  font-weight: 500 !important;
+                }
+                .rename-files-toggle .cds--toggle * {
+                  font-size: 0.9rem !important;
+                  font-weight: 500 !important;
+                }
+              `}</style>
             </div>
 
-            {/* Filename Separator Options */}
-            {renameFiles && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
+            {/* Filename Separator and Export Format Row */}
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? '1rem' : '2rem',
+              alignItems: isMobile ? 'center' : 'flex-start'
+            }}>
+              {/* Filename Separator Options */}
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '0.5rem',
+                alignItems: isMobile ? 'center' : 'flex-start'
+              }}>
                 <div style={{
-                  fontSize: '0.8rem',
-                  color: 'var(--color-text-secondary)',
-                  marginBottom: '0.25rem',
-                  textAlign: isMobile ? 'center' : 'left',
-                  width: isMobile ? '100%' : 'auto',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  color: 'var(--color-text-primary)',
+                  marginBottom: '0.25rem'
                 }}>
-                  filename separator:
+                  filename separator
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '1rem'
+                }}>
                   {([' ', '-'] as const).map((separator) => (
                     <label
                       key={separator}
@@ -222,8 +247,7 @@ export function GeneratePresetSection({
                         cursor: 'pointer',
                         fontSize: '0.9rem',
                         color: 'var(--color-text-primary)',
-                        userSelect: 'none',
-                        textAlign: isMobile ? 'center' : 'left',
+                        userSelect: 'none'
                       }}
                     >
                       <input
@@ -241,7 +265,34 @@ export function GeneratePresetSection({
                   ))}
                 </div>
               </div>
-            )}
+
+              {/* Audio Format Toggle */}
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '0.5rem',
+                alignItems: isMobile ? 'center' : 'flex-start'
+              }}>
+                <div style={{
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  color: 'var(--color-text-primary)',
+                  marginBottom: '0.25rem'
+                }}>
+                  export format
+                </div>
+                <div>
+                  <ToggleSwitch
+                    leftLabel="wav"
+                    rightLabel="aiff"
+                    isRight={audioFormat === 'aiff'}
+                    onToggle={() => {
+                      onAudioFormatChange(audioFormat === 'wav' ? 'aiff' : 'wav');
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         
