@@ -278,4 +278,133 @@ describe('AppContext - SWAP_DRUM_SAMPLES', () => {
     expect(newState.drumSamples[0].assignedKey).toBeUndefined();
     expect(newState.drumSamples[1].assignedKey).toBe(1);
   });
-}); 
+});
+
+describe('AppContext - RESTORE_SESSION', () => {
+  it('should restore session with proper isFloat property and assignment state', () => {
+    const mockFile = new File(['test'], 'test.wav', { type: 'audio/wav' });
+    const mockAudioBuffer = new AudioContext().createBuffer(1, 44100, 44100);
+    
+    const action = {
+      type: 'RESTORE_SESSION' as const,
+      payload: {
+        drumSettings: initialState.drumSettings,
+        multisampleSettings: initialState.multisampleSettings,
+        drumSamples: [
+          {
+            originalIndex: 0,
+            isAssigned: true,
+            assignedKey: 0,
+            file: mockFile,
+            audioBuffer: mockAudioBuffer,
+            name: 'Restored Sample 1',
+            isLoaded: true,
+            inPoint: 0,
+            outPoint: 1.0,
+            playmode: 'oneshot' as const,
+            reverse: false,
+            tune: 0,
+            pan: 0,
+            gain: 0,
+            hasBeenEdited: false,
+            originalBitDepth: 24,
+            originalSampleRate: 44100,
+            originalChannels: 2,
+            fileSize: 1024,
+            duration: 1.0,
+            isFloat: true // Test the isFloat property
+          },
+          {
+            originalIndex: 25, // Beyond the first 24 slots
+            isAssigned: false,
+            assignedKey: undefined,
+            file: mockFile,
+            audioBuffer: mockAudioBuffer,
+            name: 'Unassigned Sample',
+            isLoaded: true,
+            inPoint: 0,
+            outPoint: 1.0,
+            playmode: 'oneshot' as const,
+            reverse: false,
+            tune: 0,
+            pan: 0,
+            gain: 0,
+            hasBeenEdited: false,
+            originalBitDepth: 16,
+            originalSampleRate: 44100,
+            originalChannels: 1,
+            fileSize: 512,
+            duration: 1.0,
+            isFloat: false
+          }
+        ],
+        multisampleFiles: [],
+        selectedMultisample: null,
+        isDrumKeyboardPinned: false,
+        isMultisampleKeyboardPinned: false
+      }
+    };
+
+    const newState = appReducer(initialState, action);
+
+    // Verify the restored samples have the correct properties
+    const restoredSample1 = newState.drumSamples[0];
+    expect(restoredSample1.isLoaded).toBe(true);
+    expect(restoredSample1.name).toBe('Restored Sample 1');
+    expect(restoredSample1.isAssigned).toBe(true);
+    expect(restoredSample1.assignedKey).toBe(0);
+    expect(restoredSample1.isFloat).toBe(true); // Verify isFloat is preserved
+    expect(restoredSample1.originalBitDepth).toBe(24);
+    expect(restoredSample1.originalSampleRate).toBe(44100);
+    expect(restoredSample1.originalChannels).toBe(2);
+
+    // Verify the unassigned sample is properly restored
+    const unassignedSample = newState.drumSamples[25];
+    expect(unassignedSample.isLoaded).toBe(true);
+    expect(unassignedSample.name).toBe('Unassigned Sample');
+    expect(unassignedSample.isAssigned).toBe(false);
+    expect(unassignedSample.assignedKey).toBeUndefined();
+    expect(unassignedSample.isFloat).toBe(false); // Verify isFloat is preserved
+    expect(unassignedSample.originalBitDepth).toBe(16);
+    expect(unassignedSample.originalSampleRate).toBe(44100);
+    expect(unassignedSample.originalChannels).toBe(1);
+
+    // Verify empty slots in the first 24 are properly assigned
+    for (let i = 1; i < 24; i++) {
+      if (!newState.drumSamples[i].isLoaded) {
+        expect(newState.drumSamples[i].isAssigned).toBe(true);
+        expect(newState.drumSamples[i].assignedKey).toBe(i);
+      }
+    }
+
+    // Verify the array size accommodates all samples
+    expect(newState.drumSamples.length).toBe(26); // 0-25 inclusive
+  });
+
+  it('should handle empty slots with proper assignment state', () => {
+    const action = {
+      type: 'RESTORE_SESSION' as const,
+      payload: {
+        drumSettings: initialState.drumSettings,
+        multisampleSettings: initialState.multisampleSettings,
+        drumSamples: [], // No samples to restore
+        multisampleFiles: [],
+        selectedMultisample: null,
+        isDrumKeyboardPinned: false,
+        isMultisampleKeyboardPinned: false
+      }
+    };
+
+    const newState = appReducer(initialState, action);
+
+    // Verify we have at least 24 slots
+    expect(newState.drumSamples.length).toBe(24);
+
+    // Verify all slots 0-23 are assigned to their respective keys
+    for (let i = 0; i < 24; i++) {
+      expect(newState.drumSamples[i].isAssigned).toBe(true);
+      expect(newState.drumSamples[i].assignedKey).toBe(i);
+      expect(newState.drumSamples[i].isLoaded).toBe(false);
+    }
+  });
+});

@@ -220,7 +220,7 @@ export type AppAction =
   | { type: 'SET_IMPORTED_MULTISAMPLE_PRESET'; payload: any | null }
   | { type: 'TOGGLE_DRUM_KEYBOARD_PIN' }
   | { type: 'TOGGLE_MULTISAMPLE_KEYBOARD_PIN' }
-  | { type: 'RESTORE_SESSION'; payload: { drumSettings: AppState['drumSettings']; multisampleSettings: AppState['multisampleSettings']; drumSamples: Array<{ originalIndex: number; isAssigned: boolean; assignedKey?: number; file: File; audioBuffer: AudioBuffer; name: string; isLoaded: boolean; inPoint: number; outPoint: number; playmode: 'oneshot' | 'group' | 'loop' | 'gate'; reverse: boolean; tune: number; pan: number; gain: number; hasBeenEdited: boolean; originalBitDepth: number; originalSampleRate: number; originalChannels: number; fileSize: number; duration: number }>; multisampleFiles: MultisampleFile[]; selectedMultisample: number | null; isDrumKeyboardPinned: boolean; isMultisampleKeyboardPinned: boolean } }
+  | { type: 'RESTORE_SESSION'; payload: { drumSettings: AppState['drumSettings']; multisampleSettings: AppState['multisampleSettings']; drumSamples: Array<{ originalIndex: number; isAssigned: boolean; assignedKey?: number; file: File; audioBuffer: AudioBuffer; name: string; isLoaded: boolean; inPoint: number; outPoint: number; playmode: 'oneshot' | 'group' | 'loop' | 'gate'; reverse: boolean; tune: number; pan: number; gain: number; hasBeenEdited: boolean; originalBitDepth: number; originalSampleRate: number; originalChannels: number; fileSize: number; duration: number; isFloat?: boolean }>; multisampleFiles: MultisampleFile[]; selectedMultisample: number | null; isDrumKeyboardPinned: boolean; isMultisampleKeyboardPinned: boolean } }
   | { type: 'SET_SESSION_RESTORATION_MODAL_OPEN'; payload: boolean }
   | { type: 'SET_SESSION_INFO'; payload: { timestamp: number; drumSamplesCount: number; multisampleFilesCount: number } | null }
   | { type: 'SET_MIDI_NOTE_MAPPING'; payload: 'C3' | 'C4' }
@@ -1222,7 +1222,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
       // Find the highest originalIndex to determine the array size
       const maxIndex = Math.max(...action.payload.drumSamples.map(s => s.originalIndex), 23); // At least 24 slots
       const restoredDrumSamples = Array.from({ length: maxIndex + 1 }, (_, index) => {
-        // If there's a restored sample at this index, use it; otherwise use initial state
+        // If there's a restored sample at this index, use it; otherwise create proper initial state
         const restoredSample = action.payload.drumSamples.find(s => s.originalIndex === index);
         if (restoredSample) {
           return {
@@ -1244,10 +1244,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
             originalSampleRate: restoredSample.originalSampleRate,
             originalChannels: restoredSample.originalChannels,
             fileSize: restoredSample.fileSize,
-            duration: restoredSample.duration
+            duration: restoredSample.duration,
+            isFloat: restoredSample.isFloat
           };
         }
-        return { ...initialDrumSample };
+        // For empty slots, create proper initial state with correct assignment
+        // Slots 0-23 should be assigned to their respective keys by default
+        const isInFirst24Slots = index < 24;
+        return createDrumSample(index, isInFirst24Slots);
       });
       
       const newState = {

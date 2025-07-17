@@ -4,6 +4,15 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.14.0] - 2025-07-17
+
+### added
+- 12 and 8-bit export options
+- aiff file export
+
+### fixed
+- fixed clicks on loops
+
 ## [0.13.3] - 2025-07-16
 
 ### added
@@ -28,8 +37,8 @@ the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.13.0] - 2025-07-15
 
 ### added
-- import op-1 and op-1 field drum presets (.preset.zip files) with automatic parsing and sample extraction
-- new op1DrumPresetParser utility for reading and parsing op-1/op-1 field preset files
+- import OP-1 and OP-1 field drum presets (.preset.zip files) with automatic parsing and sample extraction
+- new op1DrumPresetParser utility for reading and parsing OP-1/OP-1 field preset files
 - support for importing existing drum presets to use as starting points for new patches
 
 ### fixed
@@ -96,11 +105,11 @@ the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 ### added
 - file renaming feature for generated presets: users can now choose to rename all exported sample files with the preset name
 - filename separator options: choose between space ' ' or hyphen '-' for generated filenames
-- drum sample filenames now use short drum key labels (e.g., kd1, clp, tri) for op-xy compatibility
+- drum sample filenames now use short drum key labels (e.g., kd1, clp, tri) for OP-XY compatibility
 - ui controls for file renaming and separator selection, with responsive layout for desktop and mobile
 
 ### changed
-- all generated filenames are now fully op-xy compliant: only a-z, 0-9, space, #, -, (, ), and dot are allowed; underscores are no longer supported
+- all generated filenames are now fully OP-XY compliant: only a-z, 0-9, space, #, -, (, ), and dot are allowed; underscores are no longer supported
 - all internal separators in preset names are normalized to the selected separator
 - improved layout and alignment of the "generate preset" section for better usability
 
@@ -257,7 +266,7 @@ the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 - basic drum preset creation tool (24 slots)
 - basic multisample preset creation tool
 - drag-and-drop sample loading
-- op-xy preset generation (.opxydrum and .opxymulti files)
+- OP-XY preset generation (.opxydrum and .opxymulti files)
 - advanced preset settings and configuration
 
 ### changed
