@@ -8,6 +8,8 @@ export interface AiffExportOptions {
   loopEnd?: number;
   bitDepth?: number;
   isFloat?: boolean;
+  sampleRate?: number; // Target sample rate (11025, 22050, 44100)
+  channels?: number;   // Target channel count (1 for mono, 2 for stereo)
 }
 
 export type AiffCompressionType = 'NONE' | 'fl32' | 'fl64' | 'sowt';
@@ -135,23 +137,89 @@ function writeID(dataView: DataView, offset: number, id: string): void {
 }
 
 /**
+ * Resample audio buffer to target sample rate
+ */
+async function resampleAudioBuffer(audioBuffer: AudioBuffer, targetSampleRate: number): Promise<AudioBuffer> {
+  const audioContext = new OfflineAudioContext(
+    audioBuffer.numberOfChannels,
+    Math.ceil(audioBuffer.length * targetSampleRate / audioBuffer.sampleRate),
+    targetSampleRate
+  );
+  
+  const source = audioContext.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(audioContext.destination);
+  source.start();
+  
+  return await audioContext.startRendering();
+}
+
+/**
+ * Convert audio buffer to target channel count
+ */
+async function convertChannels(audioBuffer: AudioBuffer, targetChannels: number): Promise<AudioBuffer> {
+  const audioContext = new OfflineAudioContext(
+    targetChannels,
+    audioBuffer.length,
+    audioBuffer.sampleRate
+  );
+  
+  const source = audioContext.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(audioContext.destination);
+  source.start();
+  
+  return await audioContext.startRendering();
+}
+
+/**
  * Convert AudioBuffer to AIFF file with comprehensive chunk support
  */
-export function audioBufferToAiff(
+export async function audioBufferToAiff(
   audioBuffer: AudioBuffer,
   options: AiffExportOptions = {}
-): Blob {
+): Promise<Blob> {
   const {
     rootNote,
     loopStart,
     loopEnd,
     bitDepth = 16,
-    isFloat = false
+    isFloat = false,
+    sampleRate: targetSampleRate,
+    channels: targetChannels
   } = options;
 
-  const nChannels = audioBuffer.numberOfChannels;
-  const numSampleFrames = audioBuffer.length;
-  const sampleRate = audioBuffer.sampleRate;
+  // Validate bit depth
+  if (![8, 12, 16, 24, 32, 64].includes(bitDepth)) {
+    throw new Error(`Unsupported bit depth: ${bitDepth}. Supported: 8, 12, 16, 24, 32, 64`);
+  }
+
+  // Validate sample rate if provided
+  if (targetSampleRate && ![11025, 22050, 44100].includes(targetSampleRate)) {
+    throw new Error(`Unsupported sample rate: ${targetSampleRate}. Supported: 11025, 22050, 44100`);
+  }
+
+  // Validate channels if provided
+  if (targetChannels && ![1, 2].includes(targetChannels)) {
+    throw new Error(`Unsupported channel count: ${targetChannels}. Supported: 1 (mono), 2 (stereo)`);
+  }
+
+  // Convert audio buffer if needed
+  let processedBuffer = audioBuffer;
+  
+  // Handle sample rate conversion
+  if (targetSampleRate && targetSampleRate !== audioBuffer.sampleRate) {
+    processedBuffer = await resampleAudioBuffer(audioBuffer, targetSampleRate);
+  }
+  
+  // Handle channel conversion
+  if (targetChannels && targetChannels !== audioBuffer.numberOfChannels) {
+    processedBuffer = await convertChannels(processedBuffer, targetChannels);
+  }
+
+  const nChannels = processedBuffer.numberOfChannels;
+  const numSampleFrames = processedBuffer.length;
+  const sampleRate = processedBuffer.sampleRate;
   
   if (nChannels !== 1 && nChannels !== 2) {
     throw new Error("AIFF export supports only mono or stereo audio");
@@ -280,7 +348,7 @@ export function audioBufferToAiff(
   dataView.setUint32(offset, 0, false); offset += 4; // blockSize
   
   // Write audio data
-  writeAudioData(uint8, offset, audioBuffer, compressionInfo, bitDepth);
+  writeAudioData(uint8, offset, processedBuffer, compressionInfo, bitDepth);
   
   return new Blob([arrayBuffer], { type: 'audio/aiff' });
 }

@@ -477,7 +477,7 @@ export async function audioBufferToWavWithMetadata(
   metadata: AudioMetadata,
   bitDepth: number = 16
 ): Promise<Blob> {
-  const { audioBufferToWav } = await import('./audio');
+  const { audioBufferToWav } = await import('./wavExport');
   
   // Use metadata loop points if available
   // Convert from seconds to frames since audioBufferToWav expects frame indices
@@ -487,7 +487,7 @@ export async function audioBufferToWavWithMetadata(
     loopEnd: metadata.hasLoopData ? Math.floor(metadata.loopEnd * audioBuffer.sampleRate) : undefined
   };
   
-  return audioBufferToWav(audioBuffer, bitDepth, options);
+  return await audioBufferToWav(audioBuffer, bitDepth, options);
 }
 
 // Validate audio file format

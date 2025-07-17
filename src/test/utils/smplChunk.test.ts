@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { audioBufferToWav } from '../../utils/audio';
+import { audioBufferToWav } from '../../utils/wavExport';
 
 // Mock AudioBuffer for testing
 function createMockAudioBuffer(length = 1000, sampleRate = 44100, channels = 1) {
@@ -33,7 +33,7 @@ describe('SMPL Chunk Functionality', () => {
 
   describe('audioBufferToWav with SMPL metadata', () => {
     it('should create WAV without SMPL chunk when no metadata provided', async () => {
-      const result = audioBufferToWav(mockBuffer, 16);
+      const result = await audioBufferToWav(mockBuffer, 16);
       
       expect(result).toBeInstanceOf(Blob);
       expect(result.type).toBe('audio/wav');
@@ -71,7 +71,7 @@ describe('SMPL Chunk Functionality', () => {
     });
 
     it('should create WAV with SMPL chunk when root note provided', async () => {
-      const result = audioBufferToWav(mockBuffer, 16, {
+      const result = await audioBufferToWav(mockBuffer, 16, {
         rootNote: 60
       });
       
@@ -111,7 +111,7 @@ describe('SMPL Chunk Functionality', () => {
     });
 
     it('should create WAV with SMPL chunk when loop points provided', async () => {
-      const result = audioBufferToWav(mockBuffer, 16, {
+      const result = await audioBufferToWav(mockBuffer, 16, {
         loopStart: 100,
         loopEnd: 900
       });
@@ -152,7 +152,7 @@ describe('SMPL Chunk Functionality', () => {
     });
 
     it('should create WAV with complete SMPL metadata', async () => {
-      const result = audioBufferToWav(mockBuffer, 16, {
+      const result = await audioBufferToWav(mockBuffer, 16, {
         rootNote: 72, // C4
         loopStart: 200,
         loopEnd: 800
@@ -213,14 +213,14 @@ describe('SMPL Chunk Functionality', () => {
       expect(loopEnd).toBe(799); // 800 - 1 (subtract 1 frame from end marker)
     });
 
-    it('should handle different bit depths with SMPL metadata', () => {
-      const result16 = audioBufferToWav(mockBuffer, 16, {
+    it('should handle different bit depths with SMPL metadata', async () => {
+      const result16 = await audioBufferToWav(mockBuffer, 16, {
         rootNote: 60,
         loopStart: 100,
         loopEnd: 900
       });
       
-      const result24 = audioBufferToWav(mockBuffer, 24, {
+      const result24 = await audioBufferToWav(mockBuffer, 24, {
         rootNote: 60,
         loopStart: 100,
         loopEnd: 900
@@ -235,10 +235,10 @@ describe('SMPL Chunk Functionality', () => {
       expect(result24.size).toBeGreaterThan(result16.size);
     });
 
-    it('should handle stereo audio with SMPL metadata', () => {
+    it('should handle stereo audio with SMPL metadata', async () => {
       const stereoBuffer = createMockAudioBuffer(1000, 44100, 2);
       
-      const result = audioBufferToWav(stereoBuffer, 16, {
+      const result = await audioBufferToWav(stereoBuffer, 16, {
         rootNote: 60,
         loopStart: 100,
         loopEnd: 900
@@ -249,7 +249,7 @@ describe('SMPL Chunk Functionality', () => {
     });
 
     it('should use default values when metadata is partially provided', async () => {
-      const result = audioBufferToWav(mockBuffer, 16, {
+      const result = await audioBufferToWav(mockBuffer, 16, {
         rootNote: 60
         // loopStart and loopEnd not provided
       });
@@ -302,7 +302,7 @@ describe('SMPL Chunk Functionality', () => {
 
   describe('SMPL chunk structure validation', () => {
     it('should have correct SMPL chunk size', async () => {
-      const result = audioBufferToWav(mockBuffer, 16, {
+      const result = await audioBufferToWav(mockBuffer, 16, {
         rootNote: 60,
         loopStart: 100,
         loopEnd: 900
@@ -345,7 +345,7 @@ describe('SMPL Chunk Functionality', () => {
     });
 
     it('should have correct sample period calculation', async () => {
-      const result = audioBufferToWav(mockBuffer, 16, {
+      const result = await audioBufferToWav(mockBuffer, 16, {
         rootNote: 60
       });
       

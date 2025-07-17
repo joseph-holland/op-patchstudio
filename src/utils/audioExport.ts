@@ -13,6 +13,8 @@ export interface AudioExportOptions {
   rootNote?: number;
   loopStart?: number;
   loopEnd?: number;
+  sampleRate?: number; // Target sample rate (11025, 22050, 44100)
+  channels?: number;   // Target channel count (1 for mono, 2 for stereo)
 }
 
 export interface AudioExportMetadata {
@@ -27,31 +29,35 @@ export interface AudioExportMetadata {
  * @param options - Export options including format, bit depth, and metadata
  * @returns Exported audio file as Blob
  */
-export function exportAudioBuffer(
+export async function exportAudioBuffer(
   audioBuffer: AudioBuffer,
   options: AudioExportOptions
-): Blob {
+): Promise<Blob> {
   const {
     format,
     bitDepth = 16,
     isFloat = false,
     rootNote,
     loopStart,
-    loopEnd
+    loopEnd,
+    sampleRate,
+    channels
   } = options;
 
   const metadata = {
     rootNote,
     loopStart,
-    loopEnd
+    loopEnd,
+    sampleRate,
+    channels
   };
 
   switch (format) {
     case 'wav':
-      return audioBufferToWav(audioBuffer, bitDepth, metadata);
+      return await audioBufferToWav(audioBuffer, bitDepth, metadata);
     
     case 'aiff':
-      return audioBufferToAiff(audioBuffer, {
+      return await audioBufferToAiff(audioBuffer, {
         ...metadata,
         bitDepth,
         isFloat

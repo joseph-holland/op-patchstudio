@@ -103,83 +103,72 @@ export function GeneratePresetSection({
           style={{
             display: 'flex',
             flexDirection: isMobile ? 'column' : 'row',
-            alignItems: isMobile ? 'stretch' : 'center',
-            gap: isMobile ? '1.5rem' : 0,
+            alignItems: isMobile ? 'stretch' : 'flex-start',
+            gap: isMobile ? '1.5rem' : '3rem',
             marginBottom: '2rem',
             paddingBottom: '1.5rem',
             borderBottom: '1px solid var(--color-border-light)'
           }}
         >
           {/* Preset Name Input */}
-          <div style={{ width: isMobile ? '100%' : '50%', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
-            <div style={{ width: isMobile ? '100%' : '80%' }}>
-              <PresetNameInput
-                id={inputId}
-                labelText="preset name"
-                value={presetName}
-                onChange={(value: string) => {
-                  // Create a proper synthetic event that matches React.ChangeEvent<HTMLInputElement>
-                  const syntheticEvent = {
-                    target: { value },
-                    currentTarget: { value },
-                    preventDefault: () => {},
-                    stopPropagation: () => {},
-                    nativeEvent: new Event('change'),
-                    type: 'change',
-                    bubbles: true,
-                    cancelable: true,
-                    defaultPrevented: false,
-                    eventPhase: 0,
-                    isTrusted: true,
-                    timeStamp: Date.now(),
-                    isDefaultPrevented: () => false,
-                    isPropagationStopped: () => false,
-                    persist: () => {}
-                  } as React.ChangeEvent<HTMLInputElement>;
-                  onPresetNameChange(syntheticEvent);
-                }}
-                placeholder="enter preset name..."
-                className="preset-name-input-wide"
-              />
-              <style>{`
-                .preset-name-input-wide input.cds--text-input {
-                  width: 100% !important;
-                  min-width: 0 !important;
-                  max-width: none !important;
-                  box-sizing: border-box;
-                }
-                @media (min-width: 769px) {
-                  .preset-name-input-wide {
-                    width: 100%;
-                  }
-                }
-                @media (max-width: 768px) {
-                  .preset-name-input-wide {
-                    width: 100%;
-                  }
-                }
-              `}</style>
-            </div>
+          <div style={{ 
+            width: isMobile ? '100%' : '40%', 
+            minWidth: 0 
+          }}>
+            <PresetNameInput
+              id={inputId}
+              labelText="preset name"
+              value={presetName}
+              onChange={(value: string) => {
+                // Create a proper synthetic event that matches React.ChangeEvent<HTMLInputElement>
+                const syntheticEvent = {
+                  target: { value },
+                  currentTarget: { value },
+                  preventDefault: () => {},
+                  stopPropagation: () => {},
+                  nativeEvent: new Event('change'),
+                  type: 'change',
+                  bubbles: true,
+                  cancelable: true,
+                  defaultPrevented: false,
+                  eventPhase: 0,
+                  isTrusted: true,
+                  timeStamp: Date.now(),
+                  isDefaultPrevented: () => false,
+                  isPropagationStopped: () => false,
+                  persist: () => {}
+                } as React.ChangeEvent<HTMLInputElement>;
+                onPresetNameChange(syntheticEvent);
+              }}
+              placeholder="enter preset name..."
+              className="preset-name-input-wide"
+            />
+            <style>{`
+              .preset-name-input-wide input.cds--text-input {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                box-sizing: border-box;
+              }
+            `}</style>
           </div>
 
           {/* File Renaming Controls */}
           <div
             style={{
-              width: isMobile ? '100%' : '50%',
+              width: isMobile ? '100%' : '60%',
               minWidth: 0,
               display: 'flex',
               flexDirection: 'column',
-              gap: '1rem',
-              marginTop: isMobile ? '1.5rem' : 0,
-              alignItems: isMobile ? 'center' : 'flex-start',
-              justifyContent: 'flex-start',
-              boxSizing: 'border-box',
-              paddingLeft: isMobile ? 0 : '2rem',
-              textAlign: isMobile ? 'center' : 'left',
+              gap: '1.5rem'
             }}
           >
             {/* Rename Files Toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.75rem' 
+            }}>
               <Toggle
                 id={`rename-files-toggle-${inputId}`}
                 labelText="rename files with preset name"
@@ -222,70 +211,86 @@ export function GeneratePresetSection({
               `}</style>
             </div>
 
-            {/* Filename Separator Options */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
-              <div style={{
-                fontSize: '0.9rem',
-                fontWeight: '500',
-                color: 'var(--color-text-primary)',
-                marginBottom: '0.25rem',
-                textAlign: isMobile ? 'center' : 'left',
-                width: isMobile ? '100%' : 'auto',
+            {/* Filename Separator and Export Format Row */}
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? '1rem' : '2rem',
+              alignItems: isMobile ? 'center' : 'flex-start'
+            }}>
+              {/* Filename Separator Options */}
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '0.5rem',
+                alignItems: isMobile ? 'center' : 'flex-start'
               }}>
-                filename separator
+                <div style={{
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  color: 'var(--color-text-primary)',
+                  marginBottom: '0.25rem'
+                }}>
+                  filename separator
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '1rem'
+                }}>
+                  {([' ', '-'] as const).map((separator) => (
+                    <label
+                      key={separator}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        color: 'var(--color-text-primary)',
+                        userSelect: 'none'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name={`filename-separator-${inputId}`}
+                        value={separator}
+                        checked={filenameSeparator === separator}
+                        onChange={() => onFilenameSeparatorChange(separator)}
+                        style={{ accentColor: 'var(--color-interactive-focus)' }}
+                      />
+                      <span>
+                        {separator === ' ' ? "space ' '" : "hyphen '-'"}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
-                {([' ', '-'] as const).map((separator) => (
-                  <label
-                    key={separator}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.9rem',
-                      color: 'var(--color-text-primary)',
-                      userSelect: 'none',
-                      textAlign: isMobile ? 'center' : 'left',
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name={`filename-separator-${inputId}`}
-                      value={separator}
-                      checked={filenameSeparator === separator}
-                      onChange={() => onFilenameSeparatorChange(separator)}
-                      style={{ accentColor: 'var(--color-interactive-focus)' }}
-                    />
-                    <span>
-                      {separator === ' ' ? "space ' '" : "hyphen '-'"}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
 
-            {/* Audio Format Toggle */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
-              <div style={{
-                fontSize: '0.9rem',
-                fontWeight: '500',
-                color: 'var(--color-text-primary)',
-                marginBottom: '0.25rem',
-                textAlign: isMobile ? 'center' : 'left',
-                width: isMobile ? '100%' : 'auto',
+              {/* Audio Format Toggle */}
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '0.5rem',
+                alignItems: isMobile ? 'center' : 'flex-start'
               }}>
-                export format
-              </div>
-              <div style={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
-                <ToggleSwitch
-                  leftLabel="wav"
-                  rightLabel="aiff"
-                  isRight={audioFormat === 'aiff'}
-                  onToggle={() => {
-                    onAudioFormatChange(audioFormat === 'wav' ? 'aiff' : 'wav');
-                  }}
-                />
+                <div style={{
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  color: 'var(--color-text-primary)',
+                  marginBottom: '0.25rem'
+                }}>
+                  export format
+                </div>
+                <div>
+                  <ToggleSwitch
+                    leftLabel="wav"
+                    rightLabel="aiff"
+                    isRight={audioFormat === 'aiff'}
+                    onToggle={() => {
+                      onAudioFormatChange(audioFormat === 'wav' ? 'aiff' : 'wav');
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>

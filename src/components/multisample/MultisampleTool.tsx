@@ -11,7 +11,7 @@ import { VirtualMidiKeyboard } from './VirtualMidiKeyboard';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { usePatchGeneration } from '../../hooks/usePatchGeneration';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
-import { audioBufferToWav } from '../../utils/audio';
+import { audioBufferToWav } from '../../utils/wavExport';
 import { cookieUtils, COOKIE_KEYS } from '../../utils/cookies';
 import { savePresetToLibrary } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';

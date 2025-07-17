@@ -3,10 +3,48 @@
 
 const MAX_AMPLITUDE = 0x7fff;
 
+/**
+ * Resample audio buffer to target sample rate
+ */
+async function resampleAudioBuffer(audioBuffer: AudioBuffer, targetSampleRate: number): Promise<AudioBuffer> {
+  const audioContext = new OfflineAudioContext(
+    audioBuffer.numberOfChannels,
+    Math.ceil(audioBuffer.length * targetSampleRate / audioBuffer.sampleRate),
+    targetSampleRate
+  );
+  
+  const source = audioContext.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(audioContext.destination);
+  source.start();
+  
+  return await audioContext.startRendering();
+}
+
+/**
+ * Convert audio buffer to target channel count
+ */
+async function convertChannels(audioBuffer: AudioBuffer, targetChannels: number): Promise<AudioBuffer> {
+  const audioContext = new OfflineAudioContext(
+    targetChannels,
+    audioBuffer.length,
+    audioBuffer.sampleRate
+  );
+  
+  const source = audioContext.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(audioContext.destination);
+  source.start();
+  
+  return await audioContext.startRendering();
+}
+
 export interface WavExportOptions {
   rootNote?: number;
   loopStart?: number;
   loopEnd?: number;
+  sampleRate?: number; // Target sample rate (11025, 22050, 44100)
+  channels?: number;   // Target channel count (1 for mono, 2 for stereo)
 }
 
 /**
@@ -16,17 +54,46 @@ export interface WavExportOptions {
  * @param options - Optional metadata for SMPL chunk
  * @returns WAV file as Blob
  */
-export function audioBufferToWav(
+export async function audioBufferToWav(
   audioBuffer: AudioBuffer, 
   bitDepth: number = 16,
   options: WavExportOptions = {}
-): Blob {
-  const nChannels = audioBuffer.numberOfChannels;
-  if (nChannels !== 1 && nChannels !== 2) {
-    throw new Error("Expecting mono or stereo audioBuffer");
+): Promise<Blob> {
+  // Validate bit depth
+  if (![8, 12, 16, 24].includes(bitDepth)) {
+    throw new Error(`Unsupported bit depth: ${bitDepth}. Supported: 8, 12, 16, 24`);
   }
 
-  const bufferLength = audioBuffer.length;
+  // Validate sample rate if provided
+  if (options.sampleRate && ![11025, 22050, 44100].includes(options.sampleRate)) {
+    throw new Error(`Unsupported sample rate: ${options.sampleRate}. Supported: 11025, 22050, 44100`);
+  }
+
+  // Validate input audio buffer channels
+  if (audioBuffer.numberOfChannels !== 1 && audioBuffer.numberOfChannels !== 2) {
+    throw new Error(`Expecting mono or stereo audioBuffer`);
+  }
+
+  // Validate channels if provided
+  if (options.channels && ![1, 2].includes(options.channels)) {
+    throw new Error(`Unsupported channel count: ${options.channels}. Supported: 1 (mono), 2 (stereo)`);
+  }
+
+  // Convert audio buffer if needed
+  let processedBuffer = audioBuffer;
+  
+  // Handle sample rate conversion
+  if (options.sampleRate && options.sampleRate !== audioBuffer.sampleRate) {
+    processedBuffer = await resampleAudioBuffer(audioBuffer, options.sampleRate);
+  }
+  
+  // Handle channel conversion
+  if (options.channels && options.channels !== audioBuffer.numberOfChannels) {
+    processedBuffer = await convertChannels(processedBuffer, options.channels);
+  }
+
+  const nChannels = processedBuffer.numberOfChannels;
+  const bufferLength = processedBuffer.length;
   const bytesPerSample = bitDepth / 8;
   
   // Calculate sizes
@@ -55,8 +122,8 @@ export function audioBufferToWav(
   dataView.setUint32(offset, fmtChunkSize, true); offset += 4;
   dataView.setUint16(offset, 1, true); offset += 2; // PCM format
   dataView.setUint16(offset, nChannels, true); offset += 2;
-  dataView.setUint32(offset, audioBuffer.sampleRate, true); offset += 4;
-  dataView.setUint32(offset, audioBuffer.sampleRate * nChannels * bytesPerSample, true); offset += 4; // byte rate
+  dataView.setUint32(offset, processedBuffer.sampleRate, true); offset += 4;
+  dataView.setUint32(offset, processedBuffer.sampleRate * nChannels * bytesPerSample, true); offset += 4; // byte rate
   dataView.setUint16(offset, nChannels * bytesPerSample, true); offset += 2; // block align
   dataView.setUint16(offset, bitDepth, true); offset += 2;
   
@@ -68,7 +135,7 @@ export function audioBufferToWav(
     // SMPL chunk data (60 bytes total)
     dataView.setUint32(offset, 0, true); offset += 4; // manufacturer
     dataView.setUint32(offset, 0, true); offset += 4; // product
-    dataView.setUint32(offset, Math.round(1000000000 / audioBuffer.sampleRate), true); offset += 4; // sample period (nanoseconds)
+    dataView.setUint32(offset, Math.round(1000000000 / processedBuffer.sampleRate), true); offset += 4; // sample period (nanoseconds)
     dataView.setUint32(offset, options.rootNote ?? 60, true); offset += 4; // MIDI unity note
     dataView.setUint32(offset, 0, true); offset += 4; // MIDI pitch fraction
     dataView.setUint32(offset, 0, true); offset += 4; // SMPTE format
@@ -91,13 +158,13 @@ export function audioBufferToWav(
   
   // Write audio data
   if (bitDepth === 8) {
-    writeAudioData8(uint8, audioBuffer, offset);
+    writeAudioData8(uint8, processedBuffer, offset);
   } else if (bitDepth === 12) {
-    writeAudioData12(uint8, audioBuffer, offset);
+    writeAudioData12(uint8, processedBuffer, offset);
   } else if (bitDepth === 16) {
-    writeAudioData16(uint8, audioBuffer, offset);
+    writeAudioData16(uint8, processedBuffer, offset);
   } else if (bitDepth === 24) {
-    writeAudioData24(uint8, audioBuffer, offset);
+    writeAudioData24(uint8, processedBuffer, offset);
   } else {
     throw new Error(`Unsupported bit depth: ${bitDepth}`);
   }

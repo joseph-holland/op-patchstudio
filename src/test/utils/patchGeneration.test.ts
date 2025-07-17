@@ -12,7 +12,7 @@ vi.mock('jszip', () => ({
 
 // Mock audio utilities
 vi.mock('../../utils/audio', () => ({
-  audioBufferToWav: vi.fn().mockReturnValue(new Blob(['mock wav'], { type: 'audio/wav' })),
+  audioBufferToWav: vi.fn().mockResolvedValue(new Blob(['mock wav'], { type: 'audio/wav' })),
   sanitizeName: vi.fn().mockImplementation((name) => name.replace(/[^a-zA-Z0-9.]/g, ''))
 }));
 
@@ -186,9 +186,9 @@ describe('patchGeneration', () => {
       await generateDrumPatch(mockState, 'Test Kit');
 
       // Verify that all samples (assigned and unassigned) were added to the ZIP
-      expect(mockZip.file).toHaveBeenCalledWith('assigned1.wav', expect.any(Blob));
-      expect(mockZip.file).toHaveBeenCalledWith('unassigned1.wav', expect.any(Blob));
-      expect(mockZip.file).toHaveBeenCalledWith('assigned2.wav', expect.any(Blob));
+      expect(mockZip.file).toHaveBeenCalledWith('assigned1.wav', expect.any(Promise));
+      expect(mockZip.file).toHaveBeenCalledWith('unassigned1.wav', expect.any(Promise));
+      expect(mockZip.file).toHaveBeenCalledWith('assigned2.wav', expect.any(Promise));
 
       // Verify that patch.json was added to the ZIP
       expect(mockZip.file).toHaveBeenCalledWith('patch.json', expect.any(String));

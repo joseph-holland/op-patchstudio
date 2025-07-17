@@ -7,7 +7,6 @@ import {
   parseFilename,
   isPatchSizeValid,
   readWavMetadata,
-  audioBufferToWav,
   findNearestZeroCrossing,
   NOTE_NAMES,
   NOTE_OFFSET,
@@ -19,6 +18,7 @@ import {
   generateFilename,
   applyZeroCrossingToMarkers
 } from '../../utils/audio'
+import { audioBufferToWav } from '../../utils/wavExport'
 
 // Mock AudioParam with required properties
 const mockAudioParam = {
@@ -591,19 +591,19 @@ describe('audio utilities', () => {
   })
 
   describe('audioBufferToWav', () => {
-    it('should create a WAV blob from audio buffer', () => {
+    it('should create a WAV blob from audio buffer', async () => {
       const mockBuffer = createMockAudioBuffer(1000, 44100)
-      const result = audioBufferToWav(mockBuffer)
+      const result = await audioBufferToWav(mockBuffer)
       
       expect(result).toBeInstanceOf(Blob)
       expect(result.type).toBe('audio/wav')
     })
 
-    it('should handle different bit depths', () => {
+    it('should handle different bit depths', async () => {
       const mockBuffer = createMockAudioBuffer(1000, 44100)
       
-      const result16 = audioBufferToWav(mockBuffer, 16)
-      const result24 = audioBufferToWav(mockBuffer, 24)
+      const result16 = await audioBufferToWav(mockBuffer, 16)
+      const result24 = await audioBufferToWav(mockBuffer, 24)
       
       expect(result16).toBeInstanceOf(Blob)
       expect(result24).toBeInstanceOf(Blob)
@@ -613,7 +613,7 @@ describe('audio utilities', () => {
     it('should create WAV with SMPL chunk when metadata provided', async () => {
       const mockBuffer = createMockAudioBuffer(1000, 44100)
       
-      const result = audioBufferToWav(mockBuffer, 16, {
+      const result = await audioBufferToWav(mockBuffer, 16, {
         rootNote: 60,
         loopStart: 100,
         loopEnd: 900
@@ -654,19 +654,19 @@ describe('audio utilities', () => {
       expect(foundSmpl).toBe(true)
     })
 
-    it('should throw error for unsupported channels', () => {
+    it('should throw error for unsupported channels', async () => {
       const mockBuffer = {
         ...createMockAudioBuffer(1000, 44100),
         numberOfChannels: 3
       }
       
-      expect(() => audioBufferToWav(mockBuffer)).toThrow('Expecting mono or stereo audioBuffer')
+      await expect(audioBufferToWav(mockBuffer)).rejects.toThrow('Expecting mono or stereo audioBuffer')
     })
 
-    it('should throw error for unsupported bit depth', () => {
+    it('should throw error for unsupported bit depth', async () => {
       const mockBuffer = createMockAudioBuffer(1000, 44100)
       
-      expect(() => audioBufferToWav(mockBuffer, 32)).toThrow('Unsupported bit depth: 32')
+      await expect(audioBufferToWav(mockBuffer, 32)).rejects.toThrow('Unsupported bit depth: 32')
     })
   })
 

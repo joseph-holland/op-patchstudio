@@ -10,7 +10,7 @@ import { DrumPresetSettings } from './DrumPresetSettings';
 import { DrumBulkEditModal } from './DrumBulkEditModal';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { usePatchGeneration } from '../../hooks/usePatchGeneration';
-import { audioBufferToWav } from '../../utils/audio';
+import { audioBufferToWav } from '../../utils/wavExport';
 import { readAudioMetadata } from '../../utils/audioFormats';
 import { DrumKeyboardContainer } from './DrumKeyboardContainer';
 import { savePresetToLibrary } from '../../utils/libraryUtils';
@@ -130,9 +130,9 @@ export function DrumTool() {
       const preset = await parseOP1DrumPreset(arrayBuffer, file.name);
       
       // Convert samples to the format expected by the app context
-      const samples = preset.samples.map(sample => {
+      const samples = await Promise.all(preset.samples.map(async sample => {
         // Convert AudioBuffer to WAV blob for file creation
-        const wavBlob = audioBufferToWav(sample.audioBuffer);
+        const wavBlob = await audioBufferToWav(sample.audioBuffer);
         const file = new File([wavBlob], `${sample.name}.wav`, { type: 'audio/wav' });
         
         return {
@@ -142,7 +142,7 @@ export function DrumTool() {
           metadata: sample.metadata,
           name: sample.name
         };
-      });
+      }));
 
       // Import the preset into the app state
       dispatch({
@@ -389,7 +389,7 @@ export function DrumTool() {
       const renderedBuffer = await offlineContext.startRendering();
       
       // Create a File-like object from the buffer with metadata
-      const wavData = audioBufferToWav(renderedBuffer, 16, {
+      const wavData = await audioBufferToWav(renderedBuffer, 16, {
         rootNote: 60, // Default to C4 for recorded samples
         loopStart: 0,
         loopEnd: renderedBuffer.length - 1
