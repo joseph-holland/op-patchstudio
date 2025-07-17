@@ -761,7 +761,7 @@ export function audioBufferToWav(
     dataView.setUint32(offset, 0, true); offset += 4; // cue point ID
     dataView.setUint32(offset, 0, true); offset += 4; // type (0 = forward loop)
     dataView.setUint32(offset, options.loopStart ?? 0, true); offset += 4; // start
-    dataView.setUint32(offset, options.loopEnd ?? (bufferLength - 1), true); offset += 4; // end
+    dataView.setUint32(offset, (options.loopEnd ?? (bufferLength - 1)) - 1, true); offset += 4; // end (subtract 1 frame)
     dataView.setUint32(offset, 0, true); offset += 4; // fraction
     dataView.setUint32(offset, 0, true); offset += 4; // play count
   }

@@ -244,7 +244,7 @@ export function audioBufferToAiff(
     
     // End marker
     dataView.setUint16(offset, 2, false); offset += 2; // ID
-    dataView.setUint32(offset, loopEnd ?? (numSampleFrames - 1), false); offset += 4; // Position
+    dataView.setUint32(offset, (loopEnd ?? (numSampleFrames - 1)) - 1, false); offset += 4; // Position (subtract 1 frame)
     offset += writePString(dataView, offset, 'end');
   }
   

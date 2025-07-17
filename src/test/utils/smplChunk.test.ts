@@ -210,7 +210,7 @@ describe('SMPL Chunk Functionality', () => {
       const loopStart = dataView.getUint32(smplDataOffset + 36 + 8, true);
       const loopEnd = dataView.getUint32(smplDataOffset + 36 + 12, true);
       expect(loopStart).toBe(200);
-      expect(loopEnd).toBe(800);
+      expect(loopEnd).toBe(799); // 800 - 1 (subtract 1 frame from end marker)
     });
 
     it('should handle different bit depths with SMPL metadata', () => {
@@ -294,9 +294,9 @@ describe('SMPL Chunk Functionality', () => {
       const midiNote = dataView.getUint32(smplDataOffset + 12, true);
       expect(midiNote).toBe(60);
       
-      // Default loop end should be buffer length - 1
+      // Default loop end should be buffer length - 2 (subtract 1 frame from end marker)
       const loopEnd = dataView.getUint32(smplDataOffset + 36 + 12, true);
-      expect(loopEnd).toBe(mockBuffer.length - 1);
+      expect(loopEnd).toBe(mockBuffer.length - 2);
     });
   });
 
