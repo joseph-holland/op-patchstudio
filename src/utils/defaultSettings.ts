@@ -12,6 +12,7 @@ export const defaultDrumSettings: AppState['drumSettings'] = {
   autoZeroCrossing: false, // Disable automatic zero-crossing detection by default
   renameFiles: false,
   filenameSeparator: ' ',
+  audioFormat: 'wav', // Default to WAV format
   presetSettings: {
     playmode: 'poly',
     transpose: 0,
@@ -35,6 +36,7 @@ export const defaultMultisampleSettings: AppState['multisampleSettings'] = {
   loopOnRelease: true,
   renameFiles: false,
   filenameSeparator: ' ',
+  audioFormat: 'wav', // Default to WAV format
   // Advanced settings
   playmode: 'poly',
   transpose: 0,
@@ -84,6 +86,7 @@ export function saveDrumSettingsAsDefault(settings: AppState['drumSettings'], im
         autoZeroCrossing: settings.autoZeroCrossing, // Save the new setting
         renameFiles: settings.renameFiles,
         filenameSeparator: settings.filenameSeparator,
+        audioFormat: settings.audioFormat,
         presetSettings: {
           playmode: settings.presetSettings.playmode,
           transpose: settings.presetSettings.transpose,
@@ -119,6 +122,7 @@ export function saveMultisampleSettingsAsDefault(settings: AppState['multisample
         loopOnRelease: settings.loopOnRelease,
         renameFiles: settings.renameFiles,
         filenameSeparator: settings.filenameSeparator,
+        audioFormat: settings.audioFormat,
         // Advanced settings
         playmode: settings.playmode,
         transpose: settings.transpose,

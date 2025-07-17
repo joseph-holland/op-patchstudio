@@ -755,6 +755,8 @@ export function DrumTool() {
           onRenameFilesChange={(enabled) => dispatch({ type: 'SET_DRUM_RENAME_FILES', payload: enabled })}
           filenameSeparator={state.drumSettings.filenameSeparator}
           onFilenameSeparatorChange={(separator) => dispatch({ type: 'SET_DRUM_FILENAME_SEPARATOR', payload: separator })}
+          audioFormat={state.drumSettings.audioFormat}
+          onAudioFormatChange={(format) => dispatch({ type: 'SET_DRUM_AUDIO_FORMAT', payload: format })}
         />
       </div>
 

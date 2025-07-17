@@ -989,6 +989,7 @@ export function getPatchSizeWarning(sizeBytes: number): string | null {
  * @param index - The sample index (for drum) or note (for multisample)
  * @param originalName - The original filename (for extension)
  * @param mapping - The MIDI note mapping convention ('C3' or 'C4')
+ * @param extension - The file extension to use (defaults to 'wav')
  * @returns The new filename
  */
 export function generateFilename(
@@ -997,10 +998,9 @@ export function generateFilename(
   type: 'drum' | 'multisample', 
   index: number, 
   _originalName: string,
-  mapping: 'C3' | 'C4' = 'C3'
+  mapping: 'C3' | 'C4' = 'C3',
+  extension: string = 'wav'
 ): string {
-  // Always use .wav extension for exported presets since all files are converted to WAV
-  const extension = 'wav';
   
   // Normalize separators in preset name and trim leading/trailing separators
   const normalizedPresetName = presetName.replace(/[ _-]+/g, separator).replace(/^[ _-]+|[ _-]+$/g, '');

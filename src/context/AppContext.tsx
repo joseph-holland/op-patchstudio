@@ -22,6 +22,7 @@ export interface DrumSample {
   originalChannels?: number;
   fileSize?: number;
   duration?: number;
+  isFloat?: boolean; // Whether sample is 32-bit float format
   // Sample settings
   playmode: 'oneshot' | 'group' | 'loop' | 'gate';
   reverse: boolean;
@@ -54,6 +55,7 @@ export interface MultisampleFile {
   originalChannels?: number;
   fileSize?: number;
   duration?: number;
+  isFloat?: boolean; // Whether sample is 32-bit float format
 }
 
 export interface AppState {
@@ -71,6 +73,7 @@ export interface AppState {
     autoZeroCrossing: boolean; // Enable automatic zero-crossing detection
     renameFiles: boolean; // Whether to rename files with preset name
     filenameSeparator: FilenameSeparator; // Separator for filename parts
+    audioFormat: 'wav' | 'aiff'; // Audio export format
     presetSettings: {
       playmode: 'poly' | 'mono' | 'legato';
       transpose: number; // -36 to +36
@@ -95,6 +98,7 @@ export interface AppState {
     loopOnRelease: boolean;
     renameFiles: boolean; // Whether to rename files with preset name
     filenameSeparator: FilenameSeparator; // Separator for filename parts
+    audioFormat: 'wav' | 'aiff'; // Audio export format
     // Advanced settings
     playmode: 'poly' | 'mono' | 'legato';
     transpose: number; // -36 to +36
@@ -159,6 +163,7 @@ export type AppAction =
   | { type: 'SET_DRUM_AUTO_ZERO_CROSSING'; payload: boolean }
   | { type: 'SET_DRUM_RENAME_FILES'; payload: boolean }
   | { type: 'SET_DRUM_FILENAME_SEPARATOR'; payload: FilenameSeparator }
+  | { type: 'SET_DRUM_AUDIO_FORMAT'; payload: 'wav' | 'aiff' }
   | { type: 'SET_DRUM_PRESET_PLAYMODE'; payload: 'poly' | 'mono' | 'legato' }
   | { type: 'SET_DRUM_PRESET_TRANSPOSE'; payload: number }
   | { type: 'SET_DRUM_PRESET_VELOCITY'; payload: number }
@@ -173,6 +178,7 @@ export type AppAction =
   | { type: 'SET_MULTISAMPLE_AUTO_ZERO_CROSSING'; payload: boolean }
   | { type: 'SET_MULTISAMPLE_RENAME_FILES'; payload: boolean }
   | { type: 'SET_MULTISAMPLE_FILENAME_SEPARATOR'; payload: FilenameSeparator }
+  | { type: 'SET_MULTISAMPLE_AUDIO_FORMAT'; payload: 'wav' | 'aiff' }
   | { type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END'; payload: boolean }
   | { type: 'SET_MULTISAMPLE_GAIN'; payload: number }
   | { type: 'SET_MULTISAMPLE_LOOP_ENABLED'; payload: boolean }
@@ -254,7 +260,14 @@ const initialMultisampleFile: MultisampleFile = {
   inPoint: 0,
   outPoint: 0,
   loopStart: 0,
-  loopEnd: 0
+  loopEnd: 0,
+  // Metadata fields with default values
+  originalBitDepth: 16,
+  originalSampleRate: 44100,
+  originalChannels: 2,
+  fileSize: 0,
+  duration: 0,
+  isFloat: false
 };
 
 // Function to get initial tab from cookie
@@ -379,6 +392,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         drumSettings: { ...state.drumSettings, filenameSeparator: action.payload }
       };
       
+    case 'SET_DRUM_AUDIO_FORMAT':
+      return { 
+        ...state, 
+        drumSettings: { ...state.drumSettings, audioFormat: action.payload }
+      };
+      
     case 'SET_DRUM_PRESET_PLAYMODE':
       return { 
         ...state, 
@@ -476,6 +495,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { 
         ...state, 
         multisampleSettings: { ...state.multisampleSettings, filenameSeparator: action.payload }
+      };
+      
+    case 'SET_MULTISAMPLE_AUDIO_FORMAT':
+      return { 
+        ...state, 
+        multisampleSettings: { ...state.multisampleSettings, audioFormat: action.payload }
       };
       
     case 'SET_MULTISAMPLE_CUT_AT_LOOP_END':
@@ -782,6 +807,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         originalChannels: action.payload.metadata.channels,
         fileSize: action.payload.file.size,
         duration: action.payload.audioBuffer.duration,
+        isFloat: action.payload.metadata.isFloat,
         hasBeenEdited: false,
         isAssigned: true, // Assigned to the specific drum key (0-23)
         assignedKey: action.payload.index
@@ -872,6 +898,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         originalChannels: action.payload.metadata.channels,
         fileSize: action.payload.file.size,
         duration: action.payload.audioBuffer.duration,
+        isFloat: action.payload.metadata.isFloat,
         hasBeenEdited: false
       };
       
@@ -990,6 +1017,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
             originalChannels: sample.metadata.channels,
             fileSize: sample.file.size,
             duration: sample.audioBuffer.duration,
+            isFloat: sample.metadata.isFloat,
             hasBeenEdited: false
           };
         } else {
@@ -1114,7 +1142,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
         originalSampleRate: action.payload.metadata.sampleRate,
         originalChannels: action.payload.metadata.channels,
         fileSize: action.payload.metadata.fileSize,
-        duration: action.payload.metadata.duration // Use calculated duration from metadata
+        duration: action.payload.metadata.duration, // Use calculated duration from metadata
+        isFloat: action.payload.metadata.isFloat
       };
       
       const updatedFiles = [...state.multisampleFiles, newMultisampleFile];

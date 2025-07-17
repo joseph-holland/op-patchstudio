@@ -213,7 +213,8 @@ export async function parseOP1DrumPreset(arrayBuffer: ArrayBuffer, filename: str
     let ssndDataLength = 0;
     if (ssndOffset > 0) {
       // SSND chunk: offset (4 bytes) + blockSize (4 bytes) + audio data
-      ssndDataStart = ssndOffset + 8 + dataView.getUint32(ssndOffset + 8, false);
+      const ssndOffsetField = dataView.getUint32(ssndOffset, false);
+      ssndDataStart = ssndOffset + 8 + ssndOffsetField;
       ssndDataLength = arrayBuffer.byteLength - ssndDataStart;
     }
     const bytesPerSample = channels * (bitDepth / 8);

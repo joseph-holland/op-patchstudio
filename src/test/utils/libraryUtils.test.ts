@@ -116,7 +116,8 @@ const mockAppState: Partial<AppState> = {
       width: 0
     },
     renameFiles: false,
-    filenameSeparator: ' ' as ' '
+    filenameSeparator: ' ' as ' ',
+    audioFormat: 'wav' as const
   },
   multisampleSettings: createCompleteMultisampleSettings({
     presetName: 'Test Multisample',
@@ -410,7 +411,8 @@ describe('Drum Sample Index Preservation', () => {
           width: 0
         },
         renameFiles: false,
-        filenameSeparator: ' ' as ' '
+        filenameSeparator: ' ' as ' ',
+        audioFormat: 'wav' as const
       },
       multisampleSettings: createCompleteMultisampleSettings({
         presetName: 'Test Multisample',
@@ -538,7 +540,8 @@ describe('Drum Sample Index Preservation', () => {
           width: 0
         },
         renameFiles: false,
-        filenameSeparator: ' ' as ' '
+        filenameSeparator: ' ' as ' ',
+        audioFormat: 'wav' as const
       },
       multisampleSettings: createCompleteMultisampleSettings({
         presetName: 'Test Multisample',
@@ -672,7 +675,8 @@ describe('Multisample Loop Points Preservation', () => {
            width: 0
          },
          renameFiles: false,
-         filenameSeparator: ' ' as const
+         filenameSeparator: ' ' as const,
+        audioFormat: 'wav' as const
        },
               multisampleSettings: createCompleteMultisampleSettings({
           presetName: 'Test Multisample',

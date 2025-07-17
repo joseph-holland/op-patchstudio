@@ -1,6 +1,7 @@
 // Patch generation utilities for OP-XY drum and multisample presets
 import JSZip from 'jszip';
 import { convertAudioFormat, sanitizeName, LOOP_END_PADDING, generateFilename } from './audio';
+import { exportAudioBuffer, getAudioFileExtension, type AudioFormat } from './audioExport';
 import { baseDrumJson } from '../components/drum/baseDrumJson';
 import { baseMultisampleJson } from '../components/multisample/baseMultisampleJson';
 import { percentToInternal } from './valueConversions';
@@ -104,7 +105,8 @@ export async function generateDrumPatch(
   patchName: string = 'drum_patch',
   targetSampleRate?: number,
   targetBitDepth?: number,
-  targetChannels?: string
+  targetChannels?: string,
+  audioFormat: AudioFormat = 'wav'
 ): Promise<Blob> {
   const zip = new JSZip();
   const sanitizedName = sanitizeName(patchName);
@@ -163,9 +165,10 @@ export async function generateDrumPatch(
   for (let i = 0; i < assignedSamples.length; i++) {
     const sample = assignedSamples[i];
     const sampleKey = sample.assignedKey ?? sample.originalIndex;
+    const fileExtension = getAudioFileExtension(audioFormat);
     const outputName = state.drumSettings.renameFiles 
-      ? generateFilename(state.drumSettings.presetName, state.drumSettings.filenameSeparator, 'drum', sampleKey, sample.file!.name)
-      : sanitizeName(sample.file!.name).replace(/\.[^/.]+$/, '.wav');
+      ? generateFilename(state.drumSettings.presetName, state.drumSettings.filenameSeparator, 'drum', sampleKey, sample.file!.name, state.midiNoteMapping, fileExtension)
+      : sanitizeName(sample.file!.name).replace(/\.[^/.]+$/, `.${fileExtension}`);
     const originalSampleRate = sample.originalSampleRate || sample.audioBuffer!.sampleRate;
     const duration = sample.audioBuffer!.duration;
     const midiNote = midiNoteCounter++;
@@ -197,9 +200,10 @@ export async function generateDrumPatch(
   for (let i = 0; i < state.drumSamples.length; i++) {
     const sample = state.drumSamples[i];
     if (!sample.isLoaded || !sample.file || !sample.audioBuffer) continue;
+    const fileExtension = getAudioFileExtension(audioFormat);
     const outputName = state.drumSettings.renameFiles 
-      ? generateFilename(state.drumSettings.presetName, state.drumSettings.filenameSeparator, 'drum', sample.assignedKey ?? i, sample.file.name)
-      : sanitizeName(sample.file.name).replace(/\.[^/.]+$/, '.wav');
+      ? generateFilename(state.drumSettings.presetName, state.drumSettings.filenameSeparator, 'drum', sample.assignedKey ?? i, sample.file.name, state.midiNoteMapping, fileExtension)
+      : sanitizeName(sample.file.name).replace(/\.[^/.]+$/, `.${fileExtension}`);
     const originalSampleRate = sample.originalSampleRate || sample.audioBuffer.sampleRate;
     const duration = sample.audioBuffer.duration;
     const needsConversion = 
@@ -219,13 +223,15 @@ export async function generateDrumPatch(
               normalizeLevel: state.drumSettings.normalizeLevel,
               sampleName: sample.name
             });
-            const { audioBufferToWav } = await import('./audio');
-            const wavBlob = audioBufferToWav(convertedBuffer, targetBitDepth || 16, {
+            const audioBlob = exportAudioBuffer(convertedBuffer, {
+              format: audioFormat,
+              bitDepth: targetBitDepth || 16,
+              isFloat: audioFormat === 'aiff' && targetBitDepth === 32,
               rootNote: 60, // Not used for ZIP-only samples
               loopStart: 0,
               loopEnd: Math.floor(duration * (targetSampleRate || originalSampleRate)) - 1
             });
-            zip.file(outputName, wavBlob);
+            zip.file(outputName, audioBlob);
           } catch (error) {
             console.error(`Failed to convert sample ${sample.name}:`, error);
           }
@@ -235,15 +241,17 @@ export async function generateDrumPatch(
       fileReadPromises.push(
         (async () => {
           try {
-            const { audioBufferToWav } = await import('./audio');
-            const wavBlob = audioBufferToWav(sample.audioBuffer!, targetBitDepth || sample.originalBitDepth || 16, {
+            const audioBlob = exportAudioBuffer(sample.audioBuffer!, {
+              format: audioFormat,
+              bitDepth: targetBitDepth || sample.originalBitDepth || 16,
+              isFloat: audioFormat === 'aiff' && (targetBitDepth === 32 || sample.originalBitDepth === 32),
               rootNote: 60,
               loopStart: 0,
               loopEnd: Math.floor(duration * originalSampleRate) - 1
             });
-            zip.file(outputName, wavBlob);
+            zip.file(outputName, audioBlob);
           } catch (error) {
-            throw new Error(`Failed to create WAV with metadata for ${sample.name}: ${error instanceof Error ? error.message : error}`);
+            throw new Error(`Failed to create audio file with metadata for ${sample.name}: ${error instanceof Error ? error.message : error}`);
           }
         })()
       );
@@ -266,7 +274,8 @@ export async function generateMultisamplePatch(
   targetSampleRate?: number,
   targetBitDepth?: number,
   targetChannels?: string,
-  multisampleGain: number = 0
+  multisampleGain: number = 0,
+  audioFormat: AudioFormat = 'wav'
 ): Promise<Blob> {
   const zip = new JSZip();
   const sanitizedName = sanitizeName(patchName);
@@ -304,9 +313,10 @@ export async function generateMultisamplePatch(
     const sample = validSamples[i];
     if (!sample.file || !sample.audioBuffer) continue;
 
+    const fileExtension = getAudioFileExtension(audioFormat);
     const outputName = state.multisampleSettings.renameFiles 
-      ? generateFilename(state.multisampleSettings.presetName, state.multisampleSettings.filenameSeparator, 'multisample', sample.rootNote, sample.file.name, state.midiNoteMapping)
-      : sanitizeName(sample.file.name).replace(/\.[^/.]+$/, '.wav');
+      ? generateFilename(state.multisampleSettings.presetName, state.multisampleSettings.filenameSeparator, 'multisample', sample.rootNote, sample.file.name, state.midiNoteMapping, fileExtension)
+      : sanitizeName(sample.file.name).replace(/\.[^/.]+$/, `.${fileExtension}`);
     const originalSampleRate = sample.originalSampleRate || sample.audioBuffer.sampleRate;
     const duration = sample.audioBuffer.duration;
     const sampleNote = sample.rootNote >= 0 ? sample.rootNote : 60 + sample.originalIndex;
@@ -327,7 +337,7 @@ export async function generateMultisamplePatch(
     const originalFramecount = Math.floor(originalDuration * originalSampleRate);
     
     // Calculate loop points - convert from seconds to frames
-    // sample.loopStart and sample.loopEnd are already in seconds, so multiply by sample rate to get frames
+    // sample.loopStart and sample.loopEnd are in seconds, so multiply by sample rate to get frames
     const loopStartFrames = prop(sample.loopStart, originalDuration * 0.1) * originalSampleRate;
     const loopEndFrames = prop(sample.loopEnd, originalDuration * 0.9) * originalSampleRate;
     
@@ -387,7 +397,7 @@ export async function generateMultisamplePatch(
               normalizeLevel: state.multisampleSettings.normalizeLevel,
               gain: multisampleGain,
               cutAtLoopEnd: state.multisampleSettings.cutAtLoopEnd,
-              loopEnd: scaledLoopEnd,
+              loopEnd: loopEnd, // Use original loop end in frames at original sample rate
               sampleName: sample.name
             });
             // Validate that converted buffer frame count matches our calculation
@@ -395,17 +405,19 @@ export async function generateMultisamplePatch(
               ? scaledLoopEnd + LOOP_END_PADDING 
               : Math.floor(duration * effectiveSampleRate);
             validateFrameCount(sample.name, expectedFramecount, convertedBuffer.length, region);
-            // Convert to WAV blob with metadata
-            const { audioBufferToWav } = await import('./audio');
-            const wavBlob = audioBufferToWav(convertedBuffer, targetBitDepth || 16, {
+            // Convert to audio blob with metadata
+            const audioBlob = exportAudioBuffer(convertedBuffer, {
+              format: audioFormat,
+              bitDepth: targetBitDepth || 16,
+              isFloat: audioFormat === 'aiff' && targetBitDepth === 32,
               rootNote: sampleNote,
               loopStart: scaledLoopStart,
               loopEnd: scaledLoopEnd
             });
-            zip.file(outputName, wavBlob);
+            zip.file(outputName, audioBlob);
             regionsInOrder[i] = region;
           } catch (error) {
-            throw new Error(`Failed to convert sample ${sample.name} to WAV: ${error instanceof Error ? error.message : error}`);
+            throw new Error(`Failed to convert sample ${sample.name} to audio file: ${error instanceof Error ? error.message : error}`);
           }
         })()
       );
@@ -414,13 +426,15 @@ export async function generateMultisamplePatch(
       fileReadPromises.push(
         (async () => {
           try {
-            const { audioBufferToWav } = await import('./audio');
-            const wavBlob = audioBufferToWav(sample.audioBuffer!, targetBitDepth || sample.originalBitDepth || 16, {
+            const audioBlob = exportAudioBuffer(sample.audioBuffer!, {
+              format: audioFormat,
+              bitDepth: targetBitDepth || sample.originalBitDepth || 16,
+              isFloat: audioFormat === 'aiff' && (targetBitDepth === 32 || sample.originalBitDepth === 32),
               rootNote: sampleNote,
               loopStart: scaledLoopStart,
               loopEnd: scaledLoopEnd
             });
-            zip.file(outputName, wavBlob);
+            zip.file(outputName, audioBlob);
             regionsInOrder[i] = region;
           } catch (error) {
             throw new Error(`Failed to create WAV with metadata for ${sample.name}: ${error instanceof Error ? error.message : error}`);

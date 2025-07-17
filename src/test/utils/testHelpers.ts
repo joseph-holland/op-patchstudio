@@ -16,6 +16,7 @@ export function createCompleteMultisampleSettings(overrides: Partial<AppState['m
     loopOnRelease: true,
     renameFiles: false,
     filenameSeparator: ' ',
+    audioFormat: 'wav' as const,
     // Advanced settings
     playmode: 'poly',
     transpose: 0,

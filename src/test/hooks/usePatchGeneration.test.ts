@@ -136,7 +136,8 @@ describe('usePatchGeneration', () => {
           width: 100
         },
         renameFiles: false,
-        filenameSeparator: ' ' as const
+        filenameSeparator: ' ' as const,
+        audioFormat: 'wav' as const
       },
       multisampleSettings: createCompleteMultisampleSettings()
     },
@@ -246,7 +247,8 @@ describe('usePatchGeneration', () => {
             width: 100
           },
           renameFiles: false,
-          filenameSeparator: ' ' as const
+          filenameSeparator: ' ' as const,
+          audioFormat: 'wav' as const
         },
         multisampleSettings: createCompleteMultisampleSettings({
           presetName: 'Test',

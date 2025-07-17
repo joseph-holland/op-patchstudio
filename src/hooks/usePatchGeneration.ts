@@ -27,7 +27,8 @@ export function usePatchGeneration() {
         finalPatchName,
         targetSampleRate,
         targetBitDepth,
-        targetChannels
+        targetChannels,
+        state.drumSettings.audioFormat
       );
       
       downloadBlob(patchBlob, `${finalPatchName}.preset.zip`);
@@ -69,7 +70,8 @@ export function usePatchGeneration() {
         targetSampleRate,
         targetBitDepth,
         targetChannels,
-        multisampleGain
+        multisampleGain,
+        state.multisampleSettings.audioFormat
       );
       
       downloadBlob(patchBlob, `${finalPatchName}.preset.zip`);

@@ -52,6 +52,7 @@ describe('defaultSettings', () => {
         autoZeroCrossing: true,
         renameFiles: true,
         filenameSeparator: '-' as const,
+        audioFormat: 'wav' as const,
         presetSettings: {
           playmode: 'mono' as const,
           transpose: 12,
@@ -76,6 +77,7 @@ describe('defaultSettings', () => {
             autoZeroCrossing: true,
             renameFiles: true,
             filenameSeparator: '-',
+            audioFormat: 'wav',
             presetSettings: {
               playmode: 'mono',
               transpose: 12,
@@ -101,6 +103,7 @@ describe('defaultSettings', () => {
         autoZeroCrossing: true,
         renameFiles: true,
         filenameSeparator: '-' as const,
+        audioFormat: 'wav' as const,
         presetSettings: {
           playmode: 'mono' as const,
           transpose: 12,
@@ -135,6 +138,7 @@ describe('defaultSettings', () => {
             autoZeroCrossing: true,
             renameFiles: true,
             filenameSeparator: '-',
+            audioFormat: 'wav',
             presetSettings: {
               playmode: 'mono',
               transpose: 12,
@@ -285,6 +289,7 @@ describe('defaultSettings', () => {
             loopOnRelease: true,
             renameFiles: false,
             filenameSeparator: ' ',
+            audioFormat: 'wav',
             playmode: 'poly',
             transpose: 0,
             velocitySensitivity: 20,
@@ -379,6 +384,7 @@ describe('defaultSettings', () => {
             loopOnRelease: false,
             renameFiles: true,
             filenameSeparator: ' ',
+            audioFormat: 'wav',
             playmode: 'poly',
             transpose: 0,
             velocitySensitivity: 20,
@@ -435,6 +441,7 @@ describe('defaultSettings', () => {
         normalizeLevel: -3.0,
         renameFiles: true,
         filenameSeparator: '-',
+        audioFormat: 'wav',
         presetSettings: {
           playmode: 'mono' as const,
           transpose: 12,

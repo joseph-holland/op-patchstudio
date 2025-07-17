@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Toggle } from '@carbon/react';
 import { PatchSizeIndicator } from './PatchSizeIndicator';
 import { PresetNameInput } from '../library/PresetNameInput';
+import { ToggleSwitch } from './ToggleSwitch';
 import type { FilenameSeparator } from '../../utils/constants';
+import type { AudioFormat } from '../../utils/audioExport';
 
 interface GeneratePresetSectionProps {
   type: 'drum' | 'multisample';
@@ -23,6 +25,8 @@ interface GeneratePresetSectionProps {
   onRenameFilesChange: (enabled: boolean) => void;
   filenameSeparator: FilenameSeparator;
   onFilenameSeparatorChange: (separator: FilenameSeparator) => void;
+  audioFormat: AudioFormat;
+  onAudioFormatChange: (format: AudioFormat) => void;
 }
 
 export function GeneratePresetSection({
@@ -43,7 +47,9 @@ export function GeneratePresetSection({
   renameFiles,
   onRenameFilesChange,
   filenameSeparator,
-  onFilenameSeparatorChange
+  onFilenameSeparatorChange,
+  audioFormat,
+  onAudioFormatChange
 }: GeneratePresetSectionProps) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -256,6 +262,30 @@ export function GeneratePresetSection({
                     </span>
                   </label>
                 ))}
+              </div>
+            </div>
+
+            {/* Audio Format Toggle */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
+              <div style={{
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                color: 'var(--color-text-primary)',
+                marginBottom: '0.25rem',
+                textAlign: isMobile ? 'center' : 'left',
+                width: isMobile ? '100%' : 'auto',
+              }}>
+                export format
+              </div>
+              <div style={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start', width: isMobile ? '100%' : 'auto' }}>
+                <ToggleSwitch
+                  leftLabel="wav"
+                  rightLabel="aiff"
+                  isRight={audioFormat === 'aiff'}
+                  onToggle={() => {
+                    onAudioFormatChange(audioFormat === 'wav' ? 'aiff' : 'wav');
+                  }}
+                />
               </div>
             </div>
           </div>

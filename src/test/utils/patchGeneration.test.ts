@@ -61,7 +61,8 @@ describe('patchGeneration', () => {
             width: 100
           },
           renameFiles: false,
-          filenameSeparator: ' '
+          filenameSeparator: ' ',
+          audioFormat: 'wav' as const
         },
                  multisampleSettings: {
            sampleRate: 44100,
@@ -73,6 +74,7 @@ describe('patchGeneration', () => {
            autoZeroCrossing: true,
            renameFiles: false,
            filenameSeparator: ' ',
+           audioFormat: 'wav' as const,
            cutAtLoopEnd: false,
            gain: 0,
            loopEnabled: true,

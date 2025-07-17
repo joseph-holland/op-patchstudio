@@ -67,7 +67,8 @@ describe('useFileUpload', () => {
             width: 100
           },
           renameFiles: false,
-          filenameSeparator: ' ' as const
+          filenameSeparator: ' ' as const,
+        audioFormat: 'wav' as const
         },
         multisampleSettings: createCompleteMultisampleSettings()
       },

@@ -394,6 +394,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                           channels={sample.originalChannels}
                           bitDepth={sample.originalBitDepth}
                           sampleRate={sample.originalSampleRate}
+                          isFloat={sample.isFloat}
                         />
                       </div>
 
@@ -625,6 +626,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                         channels={sample.originalChannels}
                         bitDepth={sample.originalBitDepth}
                         sampleRate={sample.originalSampleRate}
+                        isFloat={sample.isFloat}
                       />
                     </div>
 

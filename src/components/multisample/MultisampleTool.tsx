@@ -752,6 +752,8 @@ export function MultisampleTool() {
           onRenameFilesChange={(enabled) => dispatch({ type: 'SET_MULTISAMPLE_RENAME_FILES', payload: enabled })}
           filenameSeparator={state.multisampleSettings.filenameSeparator}
           onFilenameSeparatorChange={(separator) => dispatch({ type: 'SET_MULTISAMPLE_FILENAME_SEPARATOR', payload: separator })}
+          audioFormat={state.multisampleSettings.audioFormat}
+          onAudioFormatChange={(format) => dispatch({ type: 'SET_MULTISAMPLE_AUDIO_FORMAT', payload: format })}
         />
       </div>
 
