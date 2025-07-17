@@ -343,7 +343,7 @@ export function DrumTool() {
         
         // Reset normalize settings
         dispatch({ type: 'SET_DRUM_NORMALIZE', payload: false });
-        dispatch({ type: 'SET_DRUM_NORMALIZE_LEVEL', payload: 0.0 });
+        dispatch({ type: 'SET_DRUM_NORMALIZE_LEVEL', payload: -0.1 });
         
         // Reset file renaming settings to defaults
         dispatch({ type: 'SET_DRUM_RENAME_FILES', payload: false });

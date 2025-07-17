@@ -47,7 +47,7 @@ vi.mock('../../context/AppContext', () => ({
         channels: 2,
         presetName: 'Test Drum Kit',
         normalize: false,
-        normalizeLevel: 0.0,
+        normalizeLevel: -0.1,
         presetSettings: {
           playmode: 'poly',
           transpose: 0,
@@ -64,7 +64,7 @@ vi.mock('../../context/AppContext', () => ({
         channels: 2,
         presetName: 'Test Multisample',
         normalize: false,
-        normalizeLevel: 0.0,
+        normalizeLevel: -0.1,
         cutAtLoopEnd: false,
         gain: 0,
         loopEnabled: true,

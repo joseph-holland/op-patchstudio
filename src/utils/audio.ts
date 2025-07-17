@@ -386,7 +386,7 @@ export async function convertAudioFormat(
   const targetSampleRate = options.sampleRate || audioBuffer.sampleRate;
   const targetChannels = options.channels || audioBuffer.numberOfChannels;
   const normalize = options.normalize || false;
-  const normalizeLevel = options.normalizeLevel || 0;
+  const normalizeLevel = options.normalizeLevel || -0.1; // Default to -0.1 dBFS for safety
   const gain = options.gain || 0;
   const shouldApplyLimiter = options.applyLimiter !== undefined ? options.applyLimiter : true;
   
@@ -495,7 +495,8 @@ export async function convertAudioFormat(
   if (shouldApplyLimiter) {
     // Set limiter threshold based on normalization target
     // Add small headroom (0.1dB) to prevent limiting normalized audio
-    const limiterThreshold = normalize ? normalizeLevel + 0.1 : -0.1;
+    // Ensure threshold is never positive to prevent clipping
+    const limiterThreshold = normalize ? Math.min(normalizeLevel + 0.1, 0.0) : -0.1;
     result = await applyLimiter(result, limiterThreshold);
   }
   
@@ -550,7 +551,7 @@ export function findNearestZeroCrossing(
   
   // Apply bounds if provided
   const boundedSearchStart = bounds?.min !== undefined ? Math.max(searchStart, bounds.min) : searchStart;
-  const boundedSearchEnd = bounds?.max !== undefined ? Math.min(searchEnd, bounds.max) : boundedSearchStart;
+  const boundedSearchEnd = bounds?.max !== undefined ? Math.min(searchEnd, bounds.max) : searchEnd;
   
   for (let i = boundedSearchStart; i <= boundedSearchEnd; i++) {
     const amplitude = Math.abs(channelData[i]);

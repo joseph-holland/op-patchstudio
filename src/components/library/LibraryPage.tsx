@@ -18,7 +18,7 @@ const defaultDrumSettings = {
   channels: 2,
   presetName: '',
   normalize: false,
-  normalizeLevel: 0.0,
+  normalizeLevel: -0.1, // Default to -0.1 dBFS for safety
   presetSettings: {
     playmode: 'poly' as const,
     transpose: 0,
@@ -34,7 +34,7 @@ const defaultMultisampleSettings = {
   channels: 2,
   presetName: '',
   normalize: false,
-  normalizeLevel: 0.0,
+  normalizeLevel: -0.1, // Default to -0.1 dBFS for safety
   cutAtLoopEnd: false,
   gain: 0,
   loopEnabled: true,
