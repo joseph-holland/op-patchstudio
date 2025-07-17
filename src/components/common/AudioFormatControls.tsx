@@ -108,6 +108,16 @@ export function AudioFormatControls({
       result.bitDepth['24'] = true;
     }
     
+    // Disable 16-bit if ALL samples are 12-bit or lower (no upsampling)
+    if (maxBitDepth <= 12) {
+      result.bitDepth['16'] = true;
+    }
+    
+    // Disable 12-bit if ALL samples are 8-bit or lower (no upsampling)
+    if (maxBitDepth <= 8) {
+      result.bitDepth['12'] = true;
+    }
+    
     // If all samples are the same bit depth, disable that conversion option
     if (allSameBitDepth && firstBitDepth) {
       result.bitDepth[firstBitDepth.toString()] = true;
@@ -212,6 +222,16 @@ export function AudioFormatControls({
             value="16" 
             text="16-bit" 
             disabled={disabledOptions.bitDepth['16']}
+          />
+          <SelectItem 
+            value="12" 
+            text="12-bit" 
+            disabled={disabledOptions.bitDepth['12']}
+          />
+          <SelectItem 
+            value="8" 
+            text="8-bit" 
+            disabled={disabledOptions.bitDepth['8']}
           />
         </Select>
       </div>

@@ -45,12 +45,13 @@ function getCompressionInfo(bitDepth: number, isFloat: boolean): AiffCompression
   }
   
   // PCM formats
+  const bytesPerSample = bitDepth === 12 ? 2 : Math.ceil(bitDepth / 8); // 12-bit stored as 16-bit
   return {
     type: 'NONE',
     name: 'not compressed',
     isFloat: false,
     isLittleEndian: false,
-    bytesPerSample: Math.ceil(bitDepth / 8)
+    bytesPerSample
   };
 }
 
@@ -279,7 +280,7 @@ export function audioBufferToAiff(
   dataView.setUint32(offset, 0, false); offset += 4; // blockSize
   
   // Write audio data
-  writeAudioData(uint8, offset, audioBuffer, compressionInfo);
+  writeAudioData(uint8, offset, audioBuffer, compressionInfo, bitDepth);
   
   return new Blob([arrayBuffer], { type: 'audio/aiff' });
 }
@@ -291,7 +292,8 @@ function writeAudioData(
   uint8: Uint8Array,
   offset: number,
   audioBuffer: AudioBuffer,
-  compressionInfo: AiffCompressionInfo
+  compressionInfo: AiffCompressionInfo,
+  bitDepth: number
 ): void {
   const channels = audioBuffer.numberOfChannels;
   const length = audioBuffer.length;
@@ -339,8 +341,15 @@ function writeAudioData(
           dataView.setUint8(byteIndex, intSample);
           byteIndex += 1;
         } else if (bytesPerSample === 2) {
-          // 16-bit signed, big-endian
-          const intSample = Math.round(sample * 0x7FFF);
+          // 16-bit signed, big-endian (or 12-bit stored as 16-bit)
+          let intSample: number;
+          if (bitDepth === 12) {
+            // 12-bit: use 12-bit range and store as 16-bit with 4 LSBs set to 0
+            intSample = Math.round(sample * 0x7FF) << 4;
+          } else {
+            // 16-bit: use full 16-bit range
+            intSample = Math.round(sample * 0x7FFF);
+          }
           dataView.setInt16(byteIndex, intSample, false);
           byteIndex += 2;
         } else if (bytesPerSample === 3) {

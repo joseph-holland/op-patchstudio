@@ -110,12 +110,12 @@ export function supportsFloatingPoint(format: AudioFormat): boolean {
 export function getSupportedBitDepths(format: AudioFormat, isFloat: boolean = false): number[] {
   switch (format) {
     case 'wav':
-      return [16, 24];
+      return [8, 12, 16, 24];
     case 'aiff':
       if (isFloat) {
         return [32, 64];
       }
-      return [8, 16, 24, 32];
+      return [8, 12, 16, 24, 32];
     default:
       return [16];
   }

@@ -90,7 +90,11 @@ export function audioBufferToWav(
   dataView.setUint32(offset, audioDataSize, true); offset += 4;
   
   // Write audio data
-  if (bitDepth === 16) {
+  if (bitDepth === 8) {
+    writeAudioData8(uint8, audioBuffer, offset);
+  } else if (bitDepth === 12) {
+    writeAudioData12(uint8, audioBuffer, offset);
+  } else if (bitDepth === 16) {
     writeAudioData16(uint8, audioBuffer, offset);
   } else if (bitDepth === 24) {
     writeAudioData24(uint8, audioBuffer, offset);
@@ -128,6 +132,60 @@ function writeAudioData16(uint8: Uint8Array, audioBuffer: AudioBuffer, offset: n
       let sample = buffers[ch][i];
       sample = Math.min(1, Math.max(-1, sample));
       int16[index++] = Math.round(sample * MAX_AMPLITUDE);
+    }
+  }
+}
+
+/**
+ * Write 8-bit audio data to Uint8Array
+ */
+function writeAudioData8(uint8: Uint8Array, audioBuffer: AudioBuffer, offset: number): void {
+  const channels = audioBuffer.numberOfChannels;
+  const length = audioBuffer.length;
+  const maxAmplitude = 0x7f; // 8-bit max (signed)
+  
+  const buffers = [];
+  for (let ch = 0; ch < channels; ch++) {
+    buffers.push(audioBuffer.getChannelData(ch));
+  }
+
+  let byteIndex = offset;
+  for (let i = 0; i < length; i++) {
+    for (let ch = 0; ch < channels; ch++) {
+      let sample = buffers[ch][i];
+      sample = Math.min(1, Math.max(-1, sample));
+      const intSample = Math.round(sample * maxAmplitude);
+      
+      // Convert to unsigned 8-bit (0-255) for WAV format
+      const unsignedSample = intSample + 128;
+      uint8[byteIndex++] = Math.max(0, Math.min(255, unsignedSample));
+    }
+  }
+}
+
+/**
+ * Write 12-bit audio data to Uint8Array
+ * Note: 12-bit audio is stored as 16-bit with the 4 least significant bits set to 0
+ */
+function writeAudioData12(uint8: Uint8Array, audioBuffer: AudioBuffer, offset: number): void {
+  const int16 = new Int16Array(uint8.buffer, offset);
+  const channels = audioBuffer.numberOfChannels;
+  const length = audioBuffer.length;
+  const maxAmplitude = 0x7ff; // 12-bit max (signed)
+  
+  const buffers = [];
+  for (let ch = 0; ch < channels; ch++) {
+    buffers.push(audioBuffer.getChannelData(ch));
+  }
+
+  for (let i = 0, index = 0; i < length; i++) {
+    for (let ch = 0; ch < channels; ch++) {
+      let sample = buffers[ch][i];
+      sample = Math.min(1, Math.max(-1, sample));
+      const intSample = Math.round(sample * maxAmplitude);
+      
+      // Store as 16-bit with 4 LSBs set to 0 (effectively 12-bit)
+      int16[index++] = intSample << 4;
     }
   }
 }
