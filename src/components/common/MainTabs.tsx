@@ -11,6 +11,17 @@ export function MainTabs() {
   const { state, dispatch } = useAppContext();
   const [patreonPosts, setPatreonPosts] = useState<PatreonPost[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleTabChange = (tabName: 'drum' | 'multisample' | 'feedback' | 'library' | 'donate') => {
     dispatch({ type: 'SET_TAB', payload: tabName });
@@ -132,8 +143,8 @@ export function MainTabs() {
         display: 'flex',
         marginBottom: '0',
         borderBottom: '1px solid var(--color-border-subtle)',
-        marginLeft: '16px',
-        marginRight: '16px'
+        marginLeft: isMobile ? '8px' : '16px',
+        marginRight: isMobile ? '8px' : '16px'
         }}
       >
         <button
@@ -309,7 +320,7 @@ export function MainTabs() {
             border: '1px solid var(--color-border-subtle)',
             overflow: 'hidden',
             marginBottom: '1rem',
-            margin: '2rem'
+            margin: isMobile ? '0.5rem' : '2rem'
           }}>
             {/* Header */}
             <div style={{
@@ -334,7 +345,7 @@ export function MainTabs() {
 
             {/* Content */}
             <div style={{ 
-              padding: '2rem',
+              padding: isMobile ? '1rem' : '2rem',
             }}>
               {/* User note about checking GitHub issues first */}
               <div style={{
@@ -397,7 +408,7 @@ export function MainTabs() {
             border: '1px solid var(--color-border-subtle)',
             overflow: 'hidden',
             marginBottom: '1rem',
-            margin: '2rem'
+            margin: isMobile ? '0.5rem' : '2rem'
           }}>
             {/* Header */}
             <div style={{
@@ -422,7 +433,7 @@ export function MainTabs() {
 
             {/* Content */}
             <div style={{ 
-              padding: '2rem',
+              padding: isMobile ? '1rem' : '2rem',
             }}>
               <div style={{
                 textAlign: 'center',
@@ -521,7 +532,7 @@ export function MainTabs() {
             border: '1px solid var(--color-border-subtle)',
             overflow: 'hidden',
             marginBottom: '1rem',
-            margin: '2rem'
+            margin: isMobile ? '0.5rem' : '2rem'
           }}>
             {/* Header */}
             <div style={{
@@ -546,7 +557,7 @@ export function MainTabs() {
 
             {/* Content */}
             <div style={{ 
-              padding: '2rem',
+              padding: isMobile ? '1rem' : '2rem',
             }}>
               {isLoadingPosts ? (
                 <div style={{
