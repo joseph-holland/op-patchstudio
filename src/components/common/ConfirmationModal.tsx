@@ -148,6 +148,7 @@ export function ConfirmationModal({
               opacity: isLoading ? 0.6 : 1,
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '0.5rem'
             }}
             onMouseEnter={(e) => {

@@ -264,7 +264,7 @@ export function MultisampleTool() {
   const handleResetAll = async () => {
     setConfirmDialog({
       isOpen: true,
-      message: 'are you sure you want to reset everything to defaults? this will clear all samples, reset preset name, and audio settings.',
+      message: 'are you sure you want to reset everything to defaults? this will clear all samples, reset preset name and audio settings.',
       onConfirm: async () => {
         // Clear all samples
         for (let i = state.multisampleFiles.length - 1; i >= 0; i--) {
