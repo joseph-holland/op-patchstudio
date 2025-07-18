@@ -4,6 +4,11 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.14.1] - 2025-07-18
+
+### fixed
+- fixed some small ui issues
+
 ## [0.14.0] - 2025-07-17
 
 ### added

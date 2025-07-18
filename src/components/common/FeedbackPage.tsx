@@ -18,10 +18,10 @@ export function FeedbackPage() {
         <div style={{
           backgroundColor: 'var(--color-bg-primary)',
           borderRadius: '15px',
-          padding: '1rem',
-          marginTop: '2rem',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-          border: '1px solid var(--color-border-light)'
+          padding: window.innerWidth < 768 ? '0.5rem' : '1rem',
+          marginTop: '1rem',
+          boxShadow: '0 2px 8px var(--color-shadow-primary)',
+          border: '1px solid var(--color-border-subtle)'
         }}>
 
           <div style={{

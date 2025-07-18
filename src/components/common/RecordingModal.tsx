@@ -542,7 +542,7 @@ export function RecordingModal({
                   gap: '0.5rem'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e63939';
+                  e.currentTarget.style.backgroundColor = 'var(--color-accent-primary)';
                   e.currentTarget.style.transform = 'translateY(-1px)';
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
                 }}

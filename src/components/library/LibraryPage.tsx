@@ -744,7 +744,7 @@ export function LibraryPage() {
       <div style={{ 
         minHeight: '100vh', 
         backgroundColor: 'var(--color-bg-primary)',
-        padding: window.innerWidth < 768 ? '1rem' : '1.25rem 2rem',
+        padding: window.innerWidth < 768 ? '0.5rem' : '1.25rem 2rem',
         maxWidth: '1400px',
         margin: '0 auto',
         marginTop: '0.7rem',
