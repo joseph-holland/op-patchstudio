@@ -4,6 +4,13 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.14.2] - 2025-07-19
+
+### fixed
+- fixed some duplicate page issues
+- additional accessibility for main tabs
+- css fixes
+
 ## [0.14.1] - 2025-07-18
 
 ### fixed
