@@ -1,212 +1,141 @@
-# OP-PatchStudio
+# op-patchstudio companion app
 
-**free & open source preset creator for OP synthesizers. upload samples, edit waveforms, adjust settings and generate patches instantly.**
+a native desktop companion app for op-patchstudio that enables system audio recording and op-xy device management.
 
-![op-patchstudio preview](public/assets/preview-image.png)
+## overview
 
-![OP-PatchStudio preview](public/assets/preview-image-2.png)
+this companion app extends the op-patchstudio web application with native desktop capabilities:
 
-- **live demo:** [OP-PatchStudio](https://op-patch.studio/)
-- **github:** [github.com/joseph-holland/op-patchstudio](https://github.com/joseph-holland/op-patchstudio)
+- **system audio recording**: capture audio from any application (daws, virtual instruments, youtube, etc.)
+- **op-xy device management**: browse, backup, and restore op-xy devices via mtp
+- **seamless integration**: communicate with the web app via local http/websocket
 
-## features
+## architecture
 
-### core functionality
-- **comprehensive preset generation** for OP synthesizers (currently OP-XY, more devices coming soon)
-- **modern, responsive ui** built with react, typescript, and carbon design system  
-- **drag-and-drop sample assignment** for drum and multisample presets
-- **real-time audio processing** with sample rate conversion (44/22/11khz) and format optimization
-- **accessibility-compliant interface** with wcag aa touch targets and keyboard navigation
-- **live patch size monitoring** with optimization recommendations
+the project uses a clean architecture pattern with platform-specific implementations:
 
-### drum tool (24 slots)
-- **virtual drum keyboard** with OP-XY key mapping (w, e, r, y, u, a, s, d, f, g, h, j)
-- **bulk operations** for editing and clearing multiple samples at once
-- **individual sample settings** including playmode, reverse, tune, pan, and gain
-- **waveform editing** with in/out point markers and snap-to-zero-crossing
-- **sample recording** with device selection and real-time waveform visualization
-- **OP-1 preset import** support for loading existing drum presets
-- **unassigned sample management** for samples beyond the 24 drum keys
+```
+op-patchstudio-companion/
+├── OpPatchStudioCompanion.App/           # main avalonia ui application
+├── OpPatchStudioCompanion.Core/          # shared interfaces and models
+├── OpPatchStudioCompanion.Platforms/     # platform-agnostic abstractions
+├── OpPatchStudioCompanion.Platforms.macOS/    # macos-specific implementations
+├── OpPatchStudioCompanion.Platforms.Windows/  # windows-specific implementations
+└── OpPatchStudioCompanion.Platforms.Linux/    # linux-specific implementations
+```
 
-### multisample tool (up to 24 zones)
-- **virtual midi keyboard** with note assignment and zone mapping
-- **automatic note detection** from filename parsing (c4, f#3, etc.)
-- **loop point editing** with start/end markers and loop visualization
-- **midi note mapping toggle** between c3=60 and c4=60 conventions
-- **adsr envelope presets** with randomization and custom settings
-- **advanced preset settings** including envelopes, tuning, velocity sensitivity, and modulation
-- **real-time sample playback** with pitch shifting and adsr envelopes
+### core components
 
-### audio processing
-- **advanced waveform editing** with interactive zoom modal and marker adjustment
-- **snap-to-zero-crossing** functionality for clean sample trimming
-- **audio normalization** with peak detection and configurable levels
-- **transparent limiter** to prevent clipping and ensure consistent levels
-- **format conversion** between wav and aiff with metadata preservation
-- **sample rate conversion** with quality preservation
-- **bit depth conversion** (8-bit, 12-bit, 16-bit, 24-bit, 32-bit)
-- **channel conversion** (mono/stereo)
-- **gain adjustment** with precise dbfs control
-- **cut at loop end** functionality for multisample presets
+- **IAudioRecorder**: interface for audio recording across platforms
+- **IDeviceManager**: interface for op-xy device management
+- **IWebAppCommunication**: interface for web app communication
 
-### library system
-- **preset management** with save, load, and organize capabilities
-- **indexeddb storage** for local preset persistence
-- **search and filtering** by type, favorites, and keywords
-- **bulk operations** for deleting multiple presets
-- **preset favorites** with star rating system
-- **pagination** for large preset collections
-- **preset metadata** including sample counts and descriptions
-- **export capabilities** for sharing presets
+### platform support
 
-### session management
-- **automatic session saving** with 12-hour persistence
-- **session restoration** with confirmation dialogs
-- **cross-browser persistence** using indexeddb
-- **session state recovery** for samples, settings, and metadata
+#### macos
+- audio recording via naudio and coreaudio
+- system audio capture via blackhole (requires installation)
+- mtp device support (planned)
 
-### recording capabilities
-- **built-in audio recording** with microphone access
-- **device selection** for multiple audio inputs
-- **real-time waveform visualization** during recording
-- **recording time limits** with auto-stop functionality
-- **playback preview** of recorded samples
-- **automatic metadata embedding** (root note, loop points)
-- **filename customization** with timestamp generation
+#### windows
+- audio recording via naudio and wasapi
+- system audio capture via wasapi loopback
+- mtp device support (planned)
 
-### midi integration
-- **webmidi api support** for midi keyboard and controller input
-- **midi device detection** and connection management
-- **midi channel selection** for multi-device setups
-- **real-time midi note mapping** to drum and multisample keys
-- **visual feedback** for midi-triggered keys
-- **velocity sensitivity** support for expressive playing
+#### linux
+- audio recording via pulseaudio/pipewire
+- system audio capture via parec/cli tools
+- mtp device support (planned)
 
-### file management
-- **drag-and-drop upload** with visual feedback
-- **batch file processing** for multiple samples
-- **file renaming options** with preset name integration
-- **filename separators** (space or hyphen)
-- **audio format detection** and metadata extraction
-- **wav metadata parsing** including smpl chunks and loop points
-- **file size optimization** with compression recommendations
+## setup
 
-### preset settings
-- **engine-level settings** including playmode, transpose, velocity, volume, width
-- **envelope controls** for amplitude and filter with visual graphs
-- **modulation settings** for aftertouch, modwheel, pitchbend, velocity
-- **tuning controls** with root note and scale options
-- **portamento settings** with type and amount controls
-- **highpass filter** with frequency control
-- **preset import/export** for engine settings
+### prerequisites
 
-### mobile & accessibility
-- **progressive web app (pwa)** with offline functionality
-- **mobile rotation handling** with landscape orientation prompts
-- **touch-friendly interface** with proper touch targets
-- **keyboard navigation** with arrow key support
-- **screen reader compatibility** with proper aria labels
-- **high contrast mode** support
-- **responsive design** for all screen sizes
+- .net 9.0 sdk
+- avalonia templates: `dotnet new install Avalonia.Templates`
 
-### advanced features
-- **waveform zoom** for detailed sample editing
-- **bulk edit** for batch sample operations
-- **confirmation dialogs** for destructive operations
-- **notification system** for user feedback
-- **error handling** with graceful fallbacks
-- **performance optimization** with efficient audio processing
-- **memory management** with automatic cleanup
-
-## development setup
-
-this project has been migrated to react with typescript for improved maintainability and modularity.
-
-### requirements
-
-- node.js 18+ 
-- npm or yarn
-
-### installation
+### building
 
 ```bash
-# clone the repository
-git clone https://github.com/joseph-holland/op-patchstudio.git
-cd op-patchstudio
+# restore dependencies
+dotnet restore
 
-# install dependencies
-npm install
+# build the solution
+dotnet build
 
-# start development server
-npm run dev
+# run the app
+dotnet run --project OpPatchStudioCompanion.App
+```
 
-# build for production
-npm run build
+### system audio recording setup
 
+#### macos
+1. install blackhole: `brew install blackhole-2ch`
+2. restart your computer
+3. in system preferences > sound > output, select 'blackhole 2ch'
+4. in system preferences > sound > input, select 'blackhole 2ch'
+5. select 'blackhole 2ch' as your recording source in the app
+
+#### windows
+system audio recording is supported out of the box via wasapi loopback.
+
+#### linux
+system audio recording requires pulseaudio or pipewire with appropriate permissions.
+
+## development
+
+### adding new features
+
+1. define interfaces in `OpPatchStudioCompanion.Core/Interfaces/`
+2. implement platform-specific versions in respective platform folders
+3. create factories for dependency injection
+4. update the main app to use the new features
+
+### testing
+
+```bash
 # run tests
-npm run test
+dotnet test
+
+# run with coverage
+dotnet test --collect:"XPlat Code Coverage"
 ```
 
-### project structure
+## roadmap
 
-```
-/src
-  /components         # react ui components (carbon-based, OP-XY themed)
-    /common          # shared components
-    /drum           # drum-specific components
-    /multisample    # multisample-specific components
-    /library        # library management components
-  /hooks              # custom hooks for state, file i/o, audio, etc.
-  /utils              # pure js/ts logic: audio, patch, file mgmt
-  /theme              # custom carbon theme and style overrides
-  /context            # app/global context providers
-  app.tsx
-  main.tsx
-```
+### phase 1: core infrastructure ✅
+- [x] project structure and architecture
+- [x] basic audio recording (microphone)
+- [x] web app communication framework
+- [x] device management interfaces
 
-## usage
+### phase 2: system audio recording
+- [ ] macos blackhole integration
+- [ ] windows wasapi loopback
+- [ ] linux pulseaudio/pipewire
+- [ ] real-time audio streaming to web app
 
-1. **open** the [OP-PatchStudio web app](https://op-patch.studio/) in your browser
-2. select either the **drum** or **multisample** tab.
-3. drag and drop your samples, or use the browse button to select files.
-4. assign notes (for multisample), adjust settings and use the advanced dialog for detailed control.
-5. optionally, use **import patch.json** to load engine-level settings from existing preset files.
-6. click **generate patch** to download your preset as a zip file.
-7. unzip and copy the folder to your OP-XY's `presets` directory via usb.
+### phase 3: op-xy device integration
+- [ ] mtp device detection
+- [ ] file browsing and transfer
+- [ ] backup/restore functionality
+- [ ] preset installation
 
-## progressive web app (pwa)
+### phase 4: advanced features
+- [ ] real-time effects and monitoring
+- [ ] batch processing
+- [ ] custom protocol support
+- [ ] plugin architecture
 
-OP-PatchStudio is available as a progressive web app for offline use and quick access.
+## contributing
 
-### install for offline use
+1. fork the repository
+2. create a feature branch
+3. implement your changes
+4. add tests
+5. submit a pull request
 
-- **desktop**: look for the install icon in your browser's address bar or menu
-- **mobile**: use your browser's "add to home screen" option
-- **automatic prompt**: the app will show an install prompt when available
+## license
 
-### pwa features
-
-- **offline functionality**: core features work without internet connection
-- **home screen access**: launch directly from your device's home screen
-- **app shortcuts**: quick access to drum and multisample tools
-- **automatic updates**: app updates automatically when online
-- **native app experience**: runs like a native app with full-screen mode
-
-### offline capabilities
-
-- ✅ create and edit drum presets
-- ✅ create and edit multisample presets  
-- ✅ waveform editing and sample processing
-- ✅ generate and download patch files
-- ✅ library management and preset storage
-- ✅ audio recording and processing
-
-## credits
-
-- joseph holland
-- inspired by the awesome [opxy-drum-tool](https://buba447.github.io/opxy-drum-tool/) by brandon withrow (zeitgeese)
-
-OP-PatchStudio is an unofficial tool not affiliated with or endorsed by teenage engineering.
-this software is provided "as is" without warranty of any kind. use at your own risk. for educational and personal use only.
-OP-XY, OP-1 and OP-Z are registered trademarks of teenage engineering.
+mit license - see license file for details.
 

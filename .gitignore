@@ -1,26 +1,65 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
+# .NET build outputs
+bin/
+obj/
+*.user
 *.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+*.cache
+*.dll
+*.exe
+*.pdb
 
-coverage/*
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.sln.docstates
+
+# Avalonia
+*.app
+*.dmg
+*.deb
+*.rpm
+*.msi
+
+# Audio files (for testing)
+*.wav
+*.aiff
+*.mp3
+*.flac
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# NuGet
+*.nupkg
+packages/
+*.nuget.props
+*.nuget.targets
+
+# Test results
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+node_modules
