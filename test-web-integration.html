@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OP-PatchStudio Bridge Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .header {
+            background: #000;
+            color: #fff;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header img {
+            width: 32px;
+            height: 32px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 300;
+        }
+        
+        .section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .section h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        .button {
+            background: #000;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        
+        .button:hover {
+            background: #333;
+        }
+        
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 3px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .websocket-status {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .websocket-status.connected {
+            background: #28a745;
+        }
+        
+        .websocket-status.disconnected {
+            background: #dc3545;
+        }
+        
+        .websocket-status.connecting {
+            background: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="../op-patchstudio/public/assets/favicon.svg" alt="OP-PatchStudio" />
+        <h1>OP-PatchStudio Bridge Test</h1>
+        <p>test the bridge's HTTP API and WebSocket communication</p>
+    </div>
+    
+    <div class="grid">
+        <div class="section">
+            <h2>HTTP API Tests</h2>
+            <button class="button" onclick="testStatus()">test status</button>
+            <button class="button" onclick="testAudioDevices()">test audio devices</button>
+            <button class="button" onclick="testAudioStart()">test audio start</button>
+            <button class="button" onclick="testAudioStop()">test audio stop</button>
+            <button class="button" onclick="testDeviceConnect()">test device connect</button>
+            <button class="button" onclick="testDeviceBackup()">test device backup</button>
+            <button class="button" onclick="testDeviceRestore()">test device restore</button>
+            <button class="button" onclick="testRecordings()">test recordings</button>
+            <div id="http-status"></div>
+        </div>
+        
+        <div class="section">
+            <h2>WebSocket Communication</h2>
+            <div>
+                <span class="websocket-status" id="ws-status"></span>
+                <span id="ws-status-text">disconnected</span>
+            </div>
+            <button class="button" onclick="connectWebSocket()">connect</button>
+            <button class="button" onclick="disconnectWebSocket()">disconnect</button>
+            <button class="button" onclick="sendPing()">send ping</button>
+            <button class="button" onclick="requestAudioDevices()">request audio devices</button>
+            <button class="button" onclick="requestDeviceStatus()">request device status</button>
+            <div id="ws-status-display"></div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Log</h2>
+        <button class="button" onclick="clearLog()">clear log</button>
+        <div class="log" id="log"></div>
+    </div>
+    
+    <script>
+        const BRIDGE_URL = 'http://localhost:5000';
+        let ws = null;
+        let wsConnected = false;
+        
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toISOString();
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `status ${type}`;
+            element.textContent = message;
+        }
+        
+        function updateWebSocketStatus() {
+            const statusElement = document.getElementById('ws-status');
+            const textElement = document.getElementById('ws-status-text');
+            
+            if (wsConnected) {
+                statusElement.className = 'websocket-status connected';
+                textElement.textContent = 'connected';
+            } else if (ws && ws.readyState === WebSocket.CONNECTING) {
+                statusElement.className = 'websocket-status connecting';
+                textElement.textContent = 'connecting...';
+            } else {
+                statusElement.className = 'websocket-status disconnected';
+                textElement.textContent = 'disconnected';
+            }
+        }
+        
+        async function makeRequest(endpoint, method = 'GET', body = null) {
+            try {
+                const url = `${BRIDGE_URL}${endpoint}`;
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(url, options);
+                const data = await response.json();
+                
+                log(`${method} ${endpoint}: ${JSON.stringify(data, null, 2)}`);
+                return data;
+            } catch (error) {
+                log(`error ${method} ${endpoint}: ${error.message}`);
+                throw error;
+            }
+        }
+        
+        async function testStatus() {
+            try {
+                const data = await makeRequest('/api/status');
+                showStatus('http-status', `status: ${data.status}, version: ${data.version}, websocket clients: ${data.websocketClients}`, 'success');
+            } catch (error) {
+                showStatus('http-status', `error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAudioDevices() {
+            try {
+                const data = await makeRequest('/api/audio/devices');
+                showStatus('http-status', `found ${data.length} audio devices`, 'success');
+            } catch (error) {
+                showStatus('http-status', `error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAudioStart() {
+            try {
+                const data = await makeRequest('/api/audio/start', 'POST');
+                showStatus('http-status', data.message, 'success');
+            } catch (error) {
+                showStatus('http-status', `error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAudioStop() {
+            try {
+                const data = await makeRequest('/api/audio/stop', 'POST');
+                showStatus('http-status', data.message, 'success');
+            } catch (error) {
+                showStatus('http-status', `error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testDeviceConnect() {
+            try {
+                const data = await makeRequest('/api/device/connect', 'POST');
+                showStatus('http-status', data.message, data.success ? 'success' : 'error');
+            } catch (error) {
+                showStatus('http-status', `error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testDeviceBackup() {
+            try {
+                const data = await makeRequest('/api/device/backup', 'POST');
+                showStatus('http-status', data.message, data.success ? 'success' : 'error');
+            } catch (error) {
+                showStatus('http-status', `error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testDeviceRestore() {
+            try {
+                const data = await makeRequest('/api/device/restore', 'POST');
+                showStatus('http-status', data.message, data.success ? 'success' : 'error');
+            } catch (error) {
+                showStatus('http-status', `error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testRecordings() {
+            try {
+                const data = await makeRequest('/api/recordings');
+                showStatus('http-status', `found ${data.recordings.length} recordings`, 'success');
+            } catch (error) {
+                showStatus('http-status', `error: ${error.message}`, 'error');
+            }
+        }
+        
+        function connectWebSocket() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('websocket already connected');
+                return;
+            }
+            
+            try {
+                ws = new WebSocket('ws://localhost:5000/ws');
+                updateWebSocketStatus();
+                
+                ws.onopen = function() {
+                    wsConnected = true;
+                    updateWebSocketStatus();
+                    log('websocket connected');
+                    showStatus('ws-status-display', 'websocket connected', 'success');
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const message = JSON.parse(event.data);
+                        log(`websocket message: ${JSON.stringify(message, null, 2)}`);
+                        
+                        if (message.type === 'device_status') {
+                            showStatus('ws-status-display', `device status: ${message.data.status}`, 'info');
+                        } else if (message.type === 'audio_data') {
+                            showStatus('ws-status-display', `audio received: ${message.data.filename}`, 'success');
+                        }
+                    } catch (error) {
+                        log(`websocket message parse error: ${error.message}`);
+                    }
+                };
+                
+                ws.onclose = function() {
+                    wsConnected = false;
+                    updateWebSocketStatus();
+                    log('websocket disconnected');
+                    showStatus('ws-status-display', 'websocket disconnected', 'error');
+                };
+                
+                ws.onerror = function(error) {
+                    log(`websocket error: ${error}`);
+                    showStatus('ws-status-display', 'websocket error', 'error');
+                };
+                
+            } catch (error) {
+                log(`websocket connection error: ${error.message}`);
+                showStatus('ws-status-display', `connection error: ${error.message}`, 'error');
+            }
+        }
+        
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                wsConnected = false;
+                updateWebSocketStatus();
+                log('websocket disconnected');
+            }
+        }
+        
+        function sendPing() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('websocket not connected');
+                return;
+            }
+            
+            const message = { type: 'ping' };
+            ws.send(JSON.stringify(message));
+            log('sent ping');
+        }
+        
+        function requestAudioDevices() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('websocket not connected');
+                return;
+            }
+            
+            const message = { type: 'request_audio_devices' };
+            ws.send(JSON.stringify(message));
+            log('requested audio devices');
+        }
+        
+        function requestDeviceStatus() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('websocket not connected');
+                return;
+            }
+            
+            const message = { type: 'request_device_status' };
+            ws.send(JSON.stringify(message));
+            log('requested device status');
+        }
+        
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+        
+        // Initialize
+        updateWebSocketStatus();
+        log('test page loaded');
+        log('make sure the bridge is running on http://localhost:5000');
+        
+        // Auto-connect WebSocket after a short delay
+        setTimeout(() => {
+            connectWebSocket();
+        }, 1000);
+    </script>
+</body>
+</html> 
