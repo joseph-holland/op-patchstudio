@@ -4,6 +4,11 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.14.3] - 2025-07-19
+
+### fixed
+- fixed small regression with main tabs focus
+
 ## [0.14.2] - 2025-07-19
 
 ### fixed

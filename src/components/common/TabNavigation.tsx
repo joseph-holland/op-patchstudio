@@ -105,15 +105,6 @@ export function TabNavigation({ currentTab, onTabChange }: TabNavigationProps) {
             e.currentTarget.style.color = 'var(--color-text-secondary)';
           }
         }}
-        onFocus={(e) => {
-          // Add focus indicator
-          e.currentTarget.style.outline = '2px solid var(--color-interactive-focus)';
-          e.currentTarget.style.outlineOffset = '2px';
-        }}
-        onBlur={(e) => {
-          // Remove focus indicator
-          e.currentTarget.style.outline = 'none';
-        }}
       >
         {label}
       </button>
