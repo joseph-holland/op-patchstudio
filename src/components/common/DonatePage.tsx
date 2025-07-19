@@ -44,8 +44,7 @@ export function DonatePage() {
         boxShadow: '0 2px 8px var(--color-shadow-primary)',
         border: '1px solid var(--color-border-subtle)',
         overflow: 'hidden',
-        marginBottom: '1rem',
-        margin: isMobile ? '0.5rem' : '2rem'
+        margin: isMobile ? '0.5rem 0.5rem 1rem 0.5rem' : '2rem 2rem 1rem 2rem'
       }}>
         {/* Header */}
         <div style={{
@@ -166,8 +165,7 @@ export function DonatePage() {
         boxShadow: '0 2px 8px var(--color-shadow-primary)',
         border: '1px solid var(--color-border-subtle)',
         overflow: 'hidden',
-        marginBottom: '1rem',
-        margin: isMobile ? '0.5rem' : '2rem'
+        margin: isMobile ? '0.5rem 0.5rem 1rem 0.5rem' : '2rem 2rem 1rem 2rem'
       }}>
         {/* Header */}
         <div style={{
