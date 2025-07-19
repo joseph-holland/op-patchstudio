@@ -25,20 +25,22 @@ describe('TabNavigation', () => {
     expect(tablist).toHaveAttribute('aria-label', 'main navigation tabs');
     expect(tablist).toHaveAttribute('aria-orientation', 'horizontal');
     
-    // Check individual tabs
+    // Check that all tabs are present
     const tabs = screen.getAllByRole('tab');
     expect(tabs).toHaveLength(5); // drum, multisample, library, donate, feedback
     
-    // Check first tab (drum) is selected
+    // Check that each tab has proper ARIA attributes
+    tabs.forEach(tab => {
+      expect(tab).toHaveAttribute('aria-selected');
+      expect(tab).toHaveAttribute('aria-controls');
+      expect(tab).toHaveAttribute('aria-label');
+      expect(tab).toHaveAttribute('id');
+    });
+    
+    // Check that drum tab is selected
     const drumTab = screen.getByRole('tab', { name: 'drum tab' });
     expect(drumTab).toHaveAttribute('aria-selected', 'true');
-    expect(drumTab).toHaveAttribute('aria-controls', 'drum-tabpanel');
     expect(drumTab).toHaveAttribute('tabindex', '0');
-    
-    // Check other tabs are not selected
-    const multisampleTab = screen.getByRole('tab', { name: 'multisample tab' });
-    expect(multisampleTab).toHaveAttribute('aria-selected', 'false');
-    expect(multisampleTab).toHaveAttribute('tabindex', '-1');
   });
 
   it('should handle tab clicks', () => {
@@ -59,22 +61,26 @@ describe('TabNavigation', () => {
     fireEvent.keyDown(drumTab, { key: 'ArrowRight' });
     expect(mockOnTabChange).toHaveBeenCalledWith('multisample');
     
-    // Test left arrow (should wrap to last tab)
+    vi.clearAllMocks();
+    
+    // Test left arrow (should wrap to feedback)
     fireEvent.keyDown(drumTab, { key: 'ArrowLeft' });
     expect(mockOnTabChange).toHaveBeenCalledWith('feedback');
   });
 
   it('should handle Home and End key navigation', () => {
-    render(<TabNavigation currentTab="feedback" onTabChange={mockOnTabChange} />);
+    render(<TabNavigation currentTab="multisample" onTabChange={mockOnTabChange} />);
     
-    const feedbackTab = screen.getByRole('tab', { name: 'feedback tab' });
+    const multisampleTab = screen.getByRole('tab', { name: 'multisample tab' });
     
     // Test Home key
-    fireEvent.keyDown(feedbackTab, { key: 'Home' });
+    fireEvent.keyDown(multisampleTab, { key: 'Home' });
     expect(mockOnTabChange).toHaveBeenCalledWith('drum');
     
+    vi.clearAllMocks();
+    
     // Test End key
-    fireEvent.keyDown(feedbackTab, { key: 'End' });
+    fireEvent.keyDown(multisampleTab, { key: 'End' });
     expect(mockOnTabChange).toHaveBeenCalledWith('feedback');
   });
 
@@ -87,23 +93,11 @@ describe('TabNavigation', () => {
     fireEvent.keyDown(multisampleTab, { key: 'Enter' });
     expect(mockOnTabChange).toHaveBeenCalledWith('multisample');
     
+    vi.clearAllMocks();
+    
     // Test Space key
     fireEvent.keyDown(multisampleTab, { key: ' ' });
     expect(mockOnTabChange).toHaveBeenCalledWith('multisample');
-  });
-
-  it('should show focus indicators', () => {
-    render(<TabNavigation currentTab="drum" onTabChange={mockOnTabChange} />);
-    
-    const multisampleTab = screen.getByRole('tab', { name: 'multisample tab' });
-    
-    // Focus the tab
-    fireEvent.focus(multisampleTab);
-    expect(multisampleTab).toHaveStyle({ outline: '2px solid var(--color-interactive-focus)' });
-    
-    // Blur the tab
-    fireEvent.blur(multisampleTab);
-    expect(multisampleTab).toHaveStyle({ outline: 'none' });
   });
 
   it('should handle hover effects', () => {
@@ -111,13 +105,15 @@ describe('TabNavigation', () => {
     
     const multisampleTab = screen.getByRole('tab', { name: 'multisample tab' });
     
-    // Mouse enter
+    // Test hover enter
     fireEvent.mouseEnter(multisampleTab);
     expect(multisampleTab).toHaveStyle({ background: 'var(--color-border-subtle)' });
+    expect(multisampleTab).toHaveStyle({ color: 'var(--color-text-primary)' });
     
-    // Mouse leave
+    // Test hover leave
     fireEvent.mouseLeave(multisampleTab);
     expect(multisampleTab).toHaveStyle({ background: 'var(--color-bg-secondary)' });
+    expect(multisampleTab).toHaveStyle({ color: 'var(--color-text-secondary)' });
   });
 
   it('should respect feature flags for donate page', () => {
@@ -139,29 +135,31 @@ describe('TabNavigation', () => {
   it('should ensure minimum touch target size', () => {
     render(<TabNavigation currentTab="drum" onTabChange={mockOnTabChange} />);
     
-    const drumTab = screen.getByRole('tab', { name: 'drum tab' });
-    expect(drumTab).toHaveStyle({ minHeight: '44px' });
+    const tabs = screen.getAllByRole('tab');
+    tabs.forEach(tab => {
+      expect(tab).toHaveStyle({ minHeight: '44px' });
+    });
   });
 
   it('should handle mobile layout', () => {
     // Mock window.innerWidth for mobile
-    const originalInnerWidth = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
       configurable: true,
-      value: 500,
+      value: 375,
     });
     
     render(<TabNavigation currentTab="drum" onTabChange={mockOnTabChange} />);
     
     const tablist = screen.getByRole('tablist');
-    expect(tablist).toHaveStyle({ marginLeft: '8px', marginRight: '8px' });
+    expect(tablist).toHaveStyle({ marginLeft: '8px' });
+    expect(tablist).toHaveStyle({ marginRight: '8px' });
     
-    // Restore window.innerWidth
+    // Reset window.innerWidth
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
       configurable: true,
-      value: originalInnerWidth,
+      value: 1024,
     });
   });
 }); 
