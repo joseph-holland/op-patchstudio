@@ -4,6 +4,7 @@ import { scrapePatreonPosts, type PatreonPost } from '../../utils/patreonPosts';
 export function DonatePage() {
   const [patreonPosts, setPatreonPosts] = useState<PatreonPost[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -18,8 +19,9 @@ export function DonatePage() {
 
   // Load Patreon posts when component mounts
   useEffect(() => {
-    if (patreonPosts.length === 0 && !isLoadingPosts) {
+    if (patreonPosts.length === 0 && !isLoadingPosts && !hasError) {
       setIsLoadingPosts(true);
+      setHasError(false);
       scrapePatreonPosts()
         .then(posts => {
           setPatreonPosts(posts);
@@ -28,9 +30,10 @@ export function DonatePage() {
         .catch(error => {
           console.error('Failed to load Patreon posts:', error);
           setIsLoadingPosts(false);
+          setHasError(true);
         });
     }
-  }, [patreonPosts.length, isLoadingPosts]);
+  }, [patreonPosts.length, isLoadingPosts, hasError]);
 
   return (
     <>
@@ -198,6 +201,14 @@ export function DonatePage() {
               fontSize: '1rem'
             }}>
               loading posts...
+            </div>
+          ) : hasError ? (
+            <div style={{
+              textAlign: 'center',
+              color: 'var(--color-text-secondary)',
+              fontSize: '1rem'
+            }}>
+              failed to load posts
             </div>
           ) : patreonPosts.length > 0 ? (
             <div style={{
