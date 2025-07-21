@@ -66,10 +66,44 @@ export function MultisampleTool() {
       return map;
     }
 
-    // Since the files are sorted by rootNote descending, we can iterate through all MIDI notes
+    // Sort samples by rootNote ascending for proper zone calculation
+    const sortedSamples = [...state.multisampleFiles].sort((a, b) => a.rootNote - b.rootNote);
+    
+    // Iterate through all MIDI notes
     for (let midiNote = 0; midiNote <= 127; midiNote++) {
-      // Find the first sample whose rootNote is >= the current midiNote
-      const rootSample = state.multisampleFiles.find(sample => sample.rootNote >= midiNote);
+      let rootSample = null;
+      
+      // Find the sample that should handle this MIDI note
+      // Rule: Each sample covers from its root note DOWN to just above the next lower sample
+      // The topmost sample also covers notes UP from its root note
+      
+      for (let i = sortedSamples.length - 1; i >= 0; i--) {
+        const sample = sortedSamples[i];
+        const prevSample = i > 0 ? sortedSamples[i - 1] : null;
+        
+        if (i === sortedSamples.length - 1) {
+          // Topmost sample - covers from its root note UP to 127
+          if (midiNote >= sample.rootNote) {
+            rootSample = sample;
+            break;
+          }
+        }
+        
+        // All samples (including topmost) cover DOWN from their root note
+        if (prevSample) {
+          // Has a lower sample - covers from just above prev sample down to its own root
+          if (midiNote > prevSample.rootNote && midiNote <= sample.rootNote) {
+            rootSample = sample;
+            break;
+          }
+        } else {
+          // Lowest sample - covers from its root note down to MIDI note 0
+          if (midiNote <= sample.rootNote) {
+            rootSample = sample;
+            break;
+          }
+        }
+      }
 
       if (rootSample) {
         map.set(midiNote, {
