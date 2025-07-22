@@ -395,7 +395,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
       18: 'F',  // TRI
       19: 'G',  // LT2
       20: 'Y',  // LC
-      21: 'H',  // LC
+      21: 'H',  // WS
       22: 'U',  // HC
       23: 'J',  // GUI
     };

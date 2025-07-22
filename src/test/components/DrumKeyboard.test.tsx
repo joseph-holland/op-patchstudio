@@ -22,18 +22,18 @@ const drumKeyMap = [
   },
   // Upper octave (octave 1)
   {
-    W: { label: "RC-13", idx: 13 },
-    E: { label: "CC-15", idx: 15 },
-    R: { label: "TRI-17", idx: 17 },
-    Y: { label: "LC-18", idx: 18 },
-    U: { label: "HC-19", idx: 19 },
-    A: { label: "LT1-12", idx: 12 },
-    S: { label: "MT-14", idx: 14 },
-    D: { label: "HT-16", idx: 16 },
-    F: { label: "LC-20", idx: 20 },
-    G: { label: "LT2-21", idx: 21 },
-    H: { label: "CL2-22", idx: 22 },
-    J: { label: "GUI-23", idx: 23 },
+    W: { label: "RC", idx: 13 },
+    E: { label: "CC", idx: 15 },
+    R: { label: "COW", idx: 17 },
+    Y: { label: "LC", idx: 20 },
+    U: { label: "HC", idx: 22 },
+    A: { label: "LT1", idx: 12 },
+    S: { label: "MT", idx: 14 },
+    D: { label: "HT", idx: 16 },
+    F: { label: "TRI", idx: 18 },
+    G: { label: "LT2", idx: 19 },
+    H: { label: "WS", idx: 21 },
+    J: { label: "GUI", idx: 23 },
   },
 ];
 
@@ -47,65 +47,65 @@ describe('DrumKeyboard', () => {
   });
 
   it('should have correct drum key mapping for G key in octave 1', () => {
-    // Test that the G key in octave 1 correctly maps to "LT2" (low tom alt) at index 21
+    // Test that the G key in octave 1 correctly maps to "LT2" (low tom alt) at index 19
     const gKeyMapping = drumKeyMap[1].G;
-    expect(gKeyMapping.label).toBe('LT2-21');
-    expect(gKeyMapping.idx).toBe(21);
+    expect(gKeyMapping.label).toBe('LT2');
+    expect(gKeyMapping.idx).toBe(19);
   });
 
   it('should have correct drum key mapping for A key in octave 1', () => {
     // Test that the A key in octave 1 correctly maps to "LT1" (low tom) at index 12
     const aKeyMapping = drumKeyMap[1].A;
-    expect(aKeyMapping.label).toBe('LT1-12');
+    expect(aKeyMapping.label).toBe('LT1');
     expect(aKeyMapping.idx).toBe(12);
   });
 
   it('should have correct drum key mapping for S key in octave 1', () => {
     // Test that the S key in octave 1 correctly maps to "MT" (mid-tom) at index 14
     const sKeyMapping = drumKeyMap[1].S;
-    expect(sKeyMapping.label).toBe('MT-14');
+    expect(sKeyMapping.label).toBe('MT');
     expect(sKeyMapping.idx).toBe(14);
   });
 
   it('should have correct drum key mapping for D key in octave 1', () => {
     // Test that the D key in octave 1 correctly maps to "HT" (hi-tom) at index 16
     const dKeyMapping = drumKeyMap[1].D;
-    expect(dKeyMapping.label).toBe('HT-16');
+    expect(dKeyMapping.label).toBe('HT');
     expect(dKeyMapping.idx).toBe(16);
   });
 
   it('should have correct drum key mapping for F key in octave 1', () => {
-    // Test that the F key in octave 1 correctly maps to "LC-20" (low conga) at index 20
+    // Test that the F key in octave 1 correctly maps to "TRI" (triangle) at index 18
     const fKeyMapping = drumKeyMap[1].F;
-    expect(fKeyMapping.label).toBe('LC-20');
-    expect(fKeyMapping.idx).toBe(20);
+    expect(fKeyMapping.label).toBe('TRI');
+    expect(fKeyMapping.idx).toBe(18);
   });
 
   it('should have correct drum key mapping for Y key in octave 1', () => {
-    // Test that the Y key in octave 1 correctly maps to "LTA" (low tom alt) at index 18
+    // Test that the Y key in octave 1 correctly maps to "LC" (low conga) at index 20
     const yKeyMapping = drumKeyMap[1].Y;
-    expect(yKeyMapping.label).toBe('LC-18');
-    expect(yKeyMapping.idx).toBe(18);
+    expect(yKeyMapping.label).toBe('LC');
+    expect(yKeyMapping.idx).toBe(20);
   });
 
   it('should have correct drum key mapping for H key in octave 1', () => {
-    // Test that the H key in octave 1 correctly maps to "CL2" (wood stick) at index 22
+    // Test that the H key in octave 1 correctly maps to "WS" (wood stick) at index 21
     const hKeyMapping = drumKeyMap[1].H;
-    expect(hKeyMapping.label).toBe('CL2-22');
-    expect(hKeyMapping.idx).toBe(22);
+    expect(hKeyMapping.label).toBe('WS');
+    expect(hKeyMapping.idx).toBe(21);
   });
 
   it('should not have duplicate "LT1" labels in octave 1', () => {
     // Test that there are no duplicate "LT1" labels in octave 1
     const octave1Labels = Object.values(drumKeyMap[1]).map(mapping => mapping.label);
-    const lt1Count = octave1Labels.filter(label => label === 'LT1-12').length;
+    const lt1Count = octave1Labels.filter(label => label === 'LT1').length;
     expect(lt1Count).toBe(1); // Should only be one "LT1" label (on A key)
   });
 
   it('should not have duplicate "LT2" labels in octave 1', () => {
     // Test that there are no duplicate "LT2" labels in octave 1
     const octave1Labels = Object.values(drumKeyMap[1]).map(mapping => mapping.label);
-    const lt2Count = octave1Labels.filter(label => label === 'LT2-21').length;
+    const lt2Count = octave1Labels.filter(label => label === 'LT2').length;
     expect(lt2Count).toBe(1); // Should only be one "LT2" label (on G key)
   });
 
@@ -116,11 +116,11 @@ describe('DrumKeyboard', () => {
     expect(cl1Count).toBe(0); // Should be no "CL1" labels in octave 1 (it's in octave 0)
   });
 
-  it('should not have duplicate "CL2" labels in octave 1', () => {
-    // Test that there are no duplicate "CL2" labels in octave 1
+  it('should not have duplicate "WS" labels in octave 1', () => {
+    // Test that there are no duplicate "WS" labels in octave 1
     const octave1Labels = Object.values(drumKeyMap[1]).map(mapping => mapping.label);
-    const cl2Count = octave1Labels.filter(label => label === 'CL2-22').length;
-    expect(cl2Count).toBe(1); // Should only be one "CL2" label (on H key)
+    const wsCount = octave1Labels.filter(label => label === 'WS').length;
+    expect(wsCount).toBe(1); // Should only be one "WS" label (on H key)
   });
 
   it('should have unique indices for all keys in octave 1', () => {
