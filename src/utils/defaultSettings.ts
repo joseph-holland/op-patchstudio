@@ -155,10 +155,16 @@ export function loadDrumDefaultSettings(): typeof defaultDrumSettings {
       // Handle both old format (just basic settings) and new format (with imported preset)
       if (parsed.basicSettings) {
         // New format with imported preset
-        return { ...defaultDrumSettings, ...parsed.basicSettings };
+        const settings = { ...defaultDrumSettings, ...parsed.basicSettings };
+        // Always reset preset name to empty string on page reload
+        settings.presetName = '';
+        return settings;
       } else {
         // Old format - just basic settings
-        return { ...defaultDrumSettings, ...parsed };
+        const settings = { ...defaultDrumSettings, ...parsed };
+        // Always reset preset name to empty string on page reload
+        settings.presetName = '';
+        return settings;
       }
     }
   } catch (error) {
@@ -205,10 +211,16 @@ export function loadMultisampleDefaultSettings(): typeof defaultMultisampleSetti
           release: parsed.basicSettings.filterEnvelope?.release ?? defaultMultisampleSettings.filterEnvelope.release
         };
         
+        // Always reset preset name to empty string on page reload
+        settings.presetName = '';
+        
         return settings;
       } else {
         // Old format - just basic settings
-        return { ...defaultMultisampleSettings, ...parsed };
+        const settings = { ...defaultMultisampleSettings, ...parsed };
+        // Always reset preset name to empty string on page reload
+        settings.presetName = '';
+        return settings;
       }
     }
   } catch (error) {
