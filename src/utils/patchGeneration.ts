@@ -189,8 +189,8 @@ export async function generateDrumPatch(
       playmode: sample.playmode,
       reverse: sample.reverse,
       sample: outputName,
-      transpose: 0,
-      tune: sample.tune,
+      transpose: sample.transpose, // Apply individual sample transpose setting to region transpose
+      tune: 0, // Keep tune at 0 since we don't have a tune slider
       gain: sample.gain,
       "sample.start": sampleStart,
       "sample.end": sampleEnd,
@@ -291,8 +291,32 @@ export async function generateMultisamplePatch(
   mergeImportedMultisampleSettings(patchJson, (state as any).importedMultisamplePreset);
 
   // Apply multisample preset settings
-  // TODO: Add multisample advanced settings when implemented
-  // For now, use defaults similar to legacy implementation
+  if (patchJson.engine && state.multisampleSettings) {
+    const settings = state.multisampleSettings;
+    
+    if (!isNaN(settings.transpose)) patchJson.engine.transpose = settings.transpose;
+    if (!isNaN(settings.velocitySensitivity)) {
+      patchJson.engine["velocity.sensitivity"] = percentToInternal(settings.velocitySensitivity);
+    }
+    if (!isNaN(settings.volume)) {
+      patchJson.engine.volume = percentToInternal(settings.volume);
+    }
+    if (!isNaN(settings.width)) {
+      patchJson.engine.width = percentToInternal(settings.width);
+    }
+    if (!isNaN(settings.highpass)) {
+      patchJson.engine.highpass = percentToInternal(settings.highpass);
+    }
+    if (settings.portamentoType) {
+      patchJson.engine["portamento.type"] = settings.portamentoType === 'linear' ? 0 : 32767;
+    }
+    if (!isNaN(settings.portamentoAmount)) {
+      patchJson.engine["portamento.amount"] = percentToInternal(settings.portamentoAmount);
+    }
+    if (!isNaN(settings.tuningRoot)) {
+      patchJson.engine["tuning.root"] = settings.tuningRoot;
+    }
+  }
 
   const fileReadPromises: Promise<void>[] = [];
   const regionsInOrder: MultisampleRegion[] = [];

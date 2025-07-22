@@ -121,7 +121,7 @@ export class SessionStorageManagerIndexedDB {
                 outPoint: sample.outPoint,
                 playmode: sample.playmode,
                 reverse: sample.reverse,
-                tune: sample.tune,
+                transpose: sample.transpose,
                 pan: sample.pan,
                 gain: sample.gain,
                 hasBeenEdited: sample.hasBeenEdited,

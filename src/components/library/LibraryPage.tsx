@@ -51,7 +51,7 @@ const initialDrumSample = {
   outPoint: 0,
   playmode: 'oneshot' as const,
   reverse: false,
-  tune: 0,
+      transpose: 0,
   pan: 0,
   gain: 0,
   hasBeenEdited: false
@@ -376,7 +376,7 @@ export function LibraryPage() {
                   outPoint: sample.outPoint,
                   playmode: sample.playmode,
                   reverse: sample.reverse,
-                  tune: sample.tune,
+                  transpose: sample.transpose,
                   pan: sample.pan,
                   gain: sample.gain,
                   hasBeenEdited: sample.hasBeenEdited,

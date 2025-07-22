@@ -202,7 +202,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
       await play(sample.audioBuffer, {
         inFrame: sample.inPoint !== undefined ? Math.floor(sample.inPoint * sample.audioBuffer.sampleRate) : 0,
         outFrame: sample.outPoint !== undefined ? Math.floor(sample.outPoint * sample.audioBuffer.sampleRate) : sample.audioBuffer.length,
-        playbackRate: Math.pow(2, (sample.tune || 0) / 12),
+        playbackRate: Math.pow(2, (sample.transpose || 0) / 12),
         gain: sample.gain || 0,
         pan: sample.pan || 0,
         reverse: sample.reverse || false,

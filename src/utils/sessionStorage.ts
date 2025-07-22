@@ -17,7 +17,7 @@ export interface SessionData {
       outPoint: number;
       playmode: 'oneshot' | 'group' | 'loop' | 'gate';
       reverse: boolean;
-      tune: number;
+      transpose: number;
       pan: number;
       gain: number;
       hasBeenEdited: boolean;
@@ -205,7 +205,7 @@ export class SessionStorageManager {
             outPoint: sample.outPoint,
             playmode: sample.playmode,
             reverse: sample.reverse,
-            tune: sample.tune,
+            transpose: sample.transpose,
             pan: sample.pan,
             gain: sample.gain,
             hasBeenEdited: sample.hasBeenEdited,

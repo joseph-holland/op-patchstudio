@@ -146,7 +146,7 @@ export function useSessionManagement() {
             outPoint: storedSample.settings.outPoint,
             playmode: storedSample.settings.playmode,
             reverse: storedSample.settings.reverse,
-            tune: storedSample.settings.tune,
+            transpose: storedSample.settings.transpose,
             pan: storedSample.settings.pan,
             gain: storedSample.settings.gain,
             hasBeenEdited: storedSample.settings.hasBeenEdited,

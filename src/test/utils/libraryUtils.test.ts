@@ -133,7 +133,7 @@ const mockAppState: Partial<AppState> = {
       outPoint: 1.0,
       playmode: 'oneshot' as const,
       reverse: false,
-      tune: 0,
+      transpose: 0,
       pan: 0,
       gain: 0,
       hasBeenEdited: false,
@@ -364,7 +364,7 @@ describe('Drum Sample Index Preservation', () => {
       outPoint: 0,
       playmode: 'oneshot' as const,
       reverse: false,
-      tune: 0,
+      transpose: 0,
       pan: 0,
       gain: 0,
       hasBeenEdited: false,
@@ -387,7 +387,7 @@ describe('Drum Sample Index Preservation', () => {
          hasBeenEdited: true,
          inPoint: 0.1,
          outPoint: 1.4,
-         tune: index * 2,
+         transpose: index * 2,
          pan: index * 5,
          gain: index
        };
@@ -449,7 +449,7 @@ describe('Drum Sample Index Preservation', () => {
           {
             originalIndex: 2,
             name: 'Sample 2',
-            tune: 4,
+            transpose: 4,
             pan: 10,
             gain: 2,
             audioBlob: new Blob(['mock'], { type: 'audio/wav' }),
@@ -458,7 +458,7 @@ describe('Drum Sample Index Preservation', () => {
           {
             originalIndex: 5,
             name: 'Sample 5',
-            tune: 10,
+            transpose: 10,
             pan: 25,
             gain: 5,
             audioBlob: new Blob(['mock'], { type: 'audio/wav' }),
@@ -467,7 +467,7 @@ describe('Drum Sample Index Preservation', () => {
           {
             originalIndex: 8,
             name: 'Sample 8',
-            tune: 16,
+            transpose: 16,
             pan: 40,
             gain: 8,
             audioBlob: new Blob(['mock'], { type: 'audio/wav' }),
@@ -476,7 +476,7 @@ describe('Drum Sample Index Preservation', () => {
           {
             originalIndex: 12,
             name: 'Sample 12',
-            tune: 24,
+            transpose: 24,
             pan: 60,
             gain: 12,
             audioBlob: new Blob(['mock'], { type: 'audio/wav' }),
@@ -510,7 +510,7 @@ describe('Drum Sample Index Preservation', () => {
     savedPreset.data.drumSamples.forEach((sample: any, arrayIndex: number) => {
       expect(sample.originalIndex).toBe(sampleIndexes[arrayIndex]);
       expect(sample.name).toBe(`Sample ${sampleIndexes[arrayIndex]}`);
-      expect(sample.tune).toBe(sampleIndexes[arrayIndex] * 2);
+      expect(sample.transpose).toBe(sampleIndexes[arrayIndex] * 2);
       expect(sample.pan).toBe(sampleIndexes[arrayIndex] * 5);
       expect(sample.gain).toBe(sampleIndexes[arrayIndex]);
       expect(sample.audioBlob).toBeDefined();
@@ -556,7 +556,7 @@ describe('Drum Sample Index Preservation', () => {
         outPoint: 0,
         playmode: 'oneshot' as const,
         reverse: false,
-        tune: 0,
+        transpose: 0,
         pan: 0,
         gain: 0,
         hasBeenEdited: false,

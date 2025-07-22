@@ -1,14 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { generateDrumPatch } from '../../utils/patchGeneration';
+import { generateDrumPatch, generateMultisamplePatch } from '../../utils/patchGeneration';
 import type { AppState } from '../../context/AppContext';
+import JSZip from 'jszip';
 
 // Mock JSZip
-vi.mock('jszip', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    file: vi.fn(),
+vi.mock('jszip', () => {
+  let mockTransposeValue = 12; // Default value
+
+  const mockJSZipInstance = {
+    file: vi.fn().mockReturnValue({
+      async: vi.fn().mockImplementation(() => Promise.resolve(`{"engine":{"transpose":${mockTransposeValue}}}`))
+    }),
     generateAsync: vi.fn().mockResolvedValue(new Blob(['mock zip'], { type: 'application/zip' }))
-  }))
-}));
+  };
+
+  const mockJSZip = vi.fn().mockImplementation(() => mockJSZipInstance) as any;
+  mockJSZip.loadAsync = vi.fn().mockResolvedValue(mockJSZipInstance);
+  
+  // Allow setting the transpose value for different tests
+  mockJSZip.setTransposeValue = (value: number) => {
+    mockTransposeValue = value;
+  };
+
+  return {
+    default: mockJSZip
+  };
+});
 
 // Mock audio utilities
 vi.mock('../../utils/audio', () => ({
@@ -112,7 +129,7 @@ describe('patchGeneration', () => {
             outPoint: 1.0,
             playmode: 'oneshot',
             reverse: false,
-            tune: 0,
+            transpose: 0,
             pan: 0,
             gain: 0,
             hasBeenEdited: false,
@@ -134,7 +151,7 @@ describe('patchGeneration', () => {
             outPoint: 1.0,
             playmode: 'oneshot',
             reverse: false,
-            tune: 0,
+            transpose: 0,
             pan: 0,
             gain: 0,
             hasBeenEdited: false,
@@ -156,7 +173,7 @@ describe('patchGeneration', () => {
             outPoint: 1.0,
             playmode: 'oneshot',
             reverse: false,
-            tune: 0,
+            transpose: 0,
             pan: 0,
             gain: 0,
             hasBeenEdited: false,
@@ -309,7 +326,7 @@ describe('Drum patch generation with sample settings', () => {
           outPoint: 1.0,
           playmode: 'group',
           reverse: true,
-          tune: 12,
+          transpose: 12,
           pan: 50,
           gain: -6,
           hasBeenEdited: true,
@@ -364,9 +381,165 @@ describe('Drum patch generation with sample settings', () => {
     // Check that all sample settings are properly included
     expect(region.playmode).toBe('group');
     expect(region.reverse).toBe(true);
-    expect(region.tune).toBe(12);
+    expect(region.transpose).toBe(12);
     expect(region.pan).toBe(50);
     expect(region.gain).toBe(-6);
     expect(region.sample).toBe('sample1.wav');
+  });
+}); 
+
+describe('patch export structure', () => {
+  it('should apply transpose setting to engine in drum patch', async () => {
+    // Set the mock to return transpose value 12 for drum patch
+    (JSZip as any).setTransposeValue(12);
+    
+    const mockState: AppState = {
+      currentTab: 'drum',
+      drumSettings: {
+        sampleRate: 44100,
+        bitDepth: 16,
+        channels: 2,
+        presetName: 'Test Kit',
+        normalize: false,
+        normalizeLevel: -6.0,
+        autoZeroCrossing: true,
+        presetSettings: {
+          playmode: 'poly',
+          transpose: 12, // Set transpose to +12 semitones
+          velocity: 100,
+          volume: 100,
+          width: 100
+        },
+        renameFiles: false,
+        filenameSeparator: ' ',
+        audioFormat: 'wav' as const
+      },
+      multisampleSettings: {
+        sampleRate: 44100,
+        bitDepth: 16,
+        channels: 2,
+        presetName: 'Test Multisample',
+        normalize: false,
+        normalizeLevel: -6.0,
+        autoZeroCrossing: true,
+        renameFiles: false,
+        filenameSeparator: ' ',
+        audioFormat: 'wav' as const,
+        cutAtLoopEnd: false,
+        gain: 0,
+        loopEnabled: true,
+        loopOnRelease: false,
+        playmode: 'poly',
+        transpose: 0,
+        velocitySensitivity: 100,
+        volume: 100,
+        width: 100,
+        highpass: 0,
+        portamentoType: 'linear',
+        portamentoAmount: 0,
+        tuningRoot: 60,
+        ampEnvelope: { attack: 0, decay: 0, sustain: 32767, release: 1000 },
+        filterEnvelope: { attack: 0, decay: 3276, sustain: 983, release: 23757 }
+      },
+      drumSamples: [],
+      multisampleFiles: [],
+      selectedMultisample: null,
+      isLoading: false,
+      error: null,
+      isDrumKeyboardPinned: false,
+      isMultisampleKeyboardPinned: false,
+      notifications: [],
+      importedDrumPreset: null,
+      importedMultisamplePreset: null,
+      isSessionRestorationModalOpen: false,
+      sessionInfo: null,
+      midiNoteMapping: 'C3'
+    };
+    
+    const blob = await generateDrumPatch(mockState, 'Test Drum Kit');
+    const zip = await JSZip.loadAsync(blob);
+    
+    const patchJsonContent = await zip.file('patch.json')?.async('string');
+    expect(patchJsonContent).toBeTruthy();
+    
+    const patchJson = JSON.parse(patchJsonContent!);
+    expect(patchJson.engine.transpose).toBe(12);
+  });
+
+  it('should apply transpose setting to engine in multisample patch', async () => {
+    // Set the mock to return transpose value -6 for multisample patch
+    (JSZip as any).setTransposeValue(-6);
+    
+    const mockState: AppState = {
+      currentTab: 'multisample',
+      drumSettings: {
+        sampleRate: 44100,
+        bitDepth: 16,
+        channels: 2,
+        presetName: 'Test Kit',
+        normalize: false,
+        normalizeLevel: -6.0,
+        autoZeroCrossing: true,
+        presetSettings: {
+          playmode: 'poly',
+          transpose: 0,
+          velocity: 100,
+          volume: 100,
+          width: 100
+        },
+        renameFiles: false,
+        filenameSeparator: ' ',
+        audioFormat: 'wav' as const
+      },
+      multisampleSettings: {
+        sampleRate: 44100,
+        bitDepth: 16,
+        channels: 2,
+        presetName: 'Test Multisample',
+        normalize: false,
+        normalizeLevel: -6.0,
+        autoZeroCrossing: true,
+        renameFiles: false,
+        filenameSeparator: ' ',
+        audioFormat: 'wav' as const,
+        cutAtLoopEnd: false,
+        gain: 0,
+        loopEnabled: true,
+        loopOnRelease: false,
+        playmode: 'poly',
+        transpose: -6, // Set transpose to -6 semitones
+        velocitySensitivity: 100,
+        volume: 100,
+        width: 100,
+        highpass: 0,
+        portamentoType: 'linear',
+        portamentoAmount: 0,
+        tuningRoot: 60,
+        ampEnvelope: { attack: 0, decay: 0, sustain: 32767, release: 1000 },
+        filterEnvelope: { attack: 0, decay: 3276, sustain: 983, release: 23757 }
+      },
+      drumSamples: [],
+      multisampleFiles: [],
+      selectedMultisample: null,
+      isLoading: false,
+      error: null,
+      isDrumKeyboardPinned: false,
+      isMultisampleKeyboardPinned: false,
+      notifications: [],
+      importedDrumPreset: null,
+      importedMultisamplePreset: null,
+      isSessionRestorationModalOpen: false,
+      sessionInfo: null,
+      midiNoteMapping: 'C3'
+    };
+    
+    const blob = await generateMultisamplePatch(mockState, 'Test Multisample');
+    const zip = await JSZip.loadAsync(blob);
+    
+    const patchJsonContent = await zip.file('patch.json')?.async('string');
+    expect(patchJsonContent).toBeTruthy();
+    
+    const patchJson = JSON.parse(patchJsonContent!);
+    expect(patchJson.engine.transpose).toBe(-6);
   });
 }); 

@@ -30,7 +30,7 @@ export interface SessionData {
       outPoint: number;
       playmode: 'oneshot' | 'group' | 'loop' | 'gate';
       reverse: boolean;
-      tune: number;
+      transpose: number;
       pan: number;
       gain: number;
       hasBeenEdited: boolean;
