@@ -29,6 +29,7 @@ interface DrumRegion {
   sample: string;
   transpose: number;
   tune: number;
+  gain?: number;
   "sample.start"?: number;
   "sample.end"?: number;
 }
@@ -183,13 +184,14 @@ export async function generateDrumPatch(
       framecount: framecount,
       hikey: midiNote,
       lokey: midiNote,
-      pan: 0, // TODO: Get from advanced settings when implemented
+      pan: sample.pan,
       "pitch.keycenter": 60,
-      playmode: "oneshot", // TODO: Get from advanced settings when implemented
-      reverse: false, // TODO: Get from advanced settings when implemented
+      playmode: sample.playmode,
+      reverse: sample.reverse,
       sample: outputName,
       transpose: 0,
-      tune: 0, // TODO: Get from advanced settings when implemented
+      tune: sample.tune,
+      gain: sample.gain,
       "sample.start": sampleStart,
       "sample.end": sampleEnd,
     };

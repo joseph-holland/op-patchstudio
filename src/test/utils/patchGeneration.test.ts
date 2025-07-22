@@ -235,4 +235,138 @@ describe('Drum patch generation with updated mappings', () => {
     expect(generateFilename('Test Kit', ' ', 'drum', 21, 'sample21.wav', 'C3', 'wav')).toBe('Test Kit WS.wav');
     expect(generateFilename('Test Kit', ' ', 'drum', 22, 'sample22.wav', 'C3', 'wav')).toBe('Test Kit HC.wav');
   });
+});
+
+describe('Drum patch generation with sample settings', () => {
+  it('should include sample settings in generated patch.json regions', async () => {
+    // Create a mock state with samples that have custom settings
+    const mockState: AppState = {
+      currentTab: 'drum',
+      drumSettings: {
+        sampleRate: 44100,
+        bitDepth: 16,
+        channels: 2,
+        presetName: 'Test Kit',
+        normalize: false,
+        normalizeLevel: -6.0,
+        autoZeroCrossing: true,
+        presetSettings: {
+          playmode: 'poly',
+          transpose: 0,
+          velocity: 100,
+          volume: 100,
+          width: 100
+        },
+        renameFiles: false,
+        filenameSeparator: ' ',
+        audioFormat: 'wav' as const
+      },
+      multisampleSettings: {
+        sampleRate: 44100,
+        bitDepth: 16,
+        channels: 2,
+        presetName: 'Test Multisample',
+        normalize: false,
+        normalizeLevel: -6.0,
+        autoZeroCrossing: true,
+        renameFiles: false,
+        filenameSeparator: ' ',
+        audioFormat: 'wav' as const,
+        cutAtLoopEnd: false,
+        gain: 0,
+        loopEnabled: true,
+        loopOnRelease: false,
+        playmode: 'poly',
+        transpose: 0,
+        velocitySensitivity: 100,
+        volume: 100,
+        width: 100,
+        highpass: 0,
+        portamentoType: 'linear',
+        portamentoAmount: 0,
+        tuningRoot: 60,
+        ampEnvelope: {
+          attack: 0,
+          decay: 0,
+          sustain: 32767,
+          release: 0
+        },
+        filterEnvelope: {
+          attack: 0,
+          decay: 0,
+          sustain: 32767,
+          release: 0
+        }
+      },
+      drumSamples: [
+        // Sample with custom settings
+        {
+          file: new File(['sample1'], 'sample1.wav', { type: 'audio/wav' }),
+          audioBuffer: new AudioContext().createBuffer(1, 44100, 44100),
+          name: 'sample1.wav',
+          isLoaded: true,
+          inPoint: 0,
+          outPoint: 1.0,
+          playmode: 'group',
+          reverse: true,
+          tune: 12,
+          pan: 50,
+          gain: -6,
+          hasBeenEdited: true,
+          isAssigned: true,
+          assignedKey: 0,
+          originalBitDepth: 16,
+          originalSampleRate: 44100,
+          originalChannels: 2,
+          fileSize: 1024,
+          duration: 1.0
+        }
+      ],
+      multisampleFiles: [],
+      selectedMultisample: null,
+      isLoading: false,
+      error: null,
+      isDrumKeyboardPinned: false,
+      isMultisampleKeyboardPinned: false,
+      notifications: [],
+      importedDrumPreset: null,
+      importedMultisamplePreset: null,
+      isSessionRestorationModalOpen: false,
+      sessionInfo: null,
+      midiNoteMapping: 'C3'
+    };
+
+    // Mock JSZip to capture what files are added
+    const mockZip = {
+      file: vi.fn(),
+      generateAsync: vi.fn().mockResolvedValue(new Blob(['mock zip'], { type: 'application/zip' }))
+    };
+    
+    const JSZip = (await import('jszip')).default;
+    vi.mocked(JSZip).mockImplementation(() => mockZip as any);
+
+    // Generate the patch
+    await generateDrumPatch(mockState, 'Test Kit');
+
+    // Verify that patch.json was added to the ZIP
+    expect(mockZip.file).toHaveBeenCalledWith('patch.json', expect.any(String));
+
+    // Get the patch.json content to verify sample settings are included
+    const patchJsonCall = vi.mocked(mockZip.file).mock.calls.find(call => call[0] === 'patch.json');
+    expect(patchJsonCall).toBeDefined();
+    
+    const patchJsonContent = JSON.parse(patchJsonCall![1] as string);
+    
+    // Verify that the region contains the correct sample settings
+    expect(patchJsonContent.regions).toHaveLength(1);
+    const region = patchJsonContent.regions[0];
+    
+    // Check that all sample settings are properly included
+    expect(region.playmode).toBe('group');
+    expect(region.reverse).toBe(true);
+    expect(region.tune).toBe(12);
+    expect(region.pan).toBe(50);
+    expect(region.gain).toBe(-6);
+    expect(region.sample).toBe('sample1.wav');
+  });
 }); 
