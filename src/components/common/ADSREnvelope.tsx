@@ -110,22 +110,22 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
   const svgRef = React.useRef<SVGSVGElement>(null);
   const [activeEnvelope, setActiveEnvelope] = useState<'amp' | 'filter'>('amp');
   const [isDragging, setIsDragging] = useState<string | null>(null);
-  const [selectedPreset, setSelectedPreset] = useState<PresetType>('random');
+  const [selectedPreset, setSelectedPreset] = useState<PresetType>('keys');
 
   const currentEnvelope = activeEnvelope === 'amp' ? ampEnvelope : filterEnvelope;
   const inactiveEnvelope = activeEnvelope === 'amp' ? filterEnvelope : ampEnvelope;
 
-  // Initialize with random preset if envelopes are empty
+  // Initialize with keys preset if envelopes are empty
   useEffect(() => {
     const isEnvelopesEmpty = 
       ampEnvelope.attack === 0 && ampEnvelope.decay === 0 && ampEnvelope.sustain === 0 && ampEnvelope.release === 0 &&
       filterEnvelope.attack === 0 && filterEnvelope.decay === 0 && filterEnvelope.sustain === 0 && filterEnvelope.release === 0;
     
     if (isEnvelopesEmpty) {
-      const randomAmp = generateRandomEnvelope();
-      const randomFilter = generateRandomEnvelope();
-      onAmpEnvelopeChange(randomAmp);
-      onFilterEnvelopeChange(randomFilter);
+      // Apply keys preset instead of random values
+      const keysPreset = ADSR_PRESETS.keys;
+      onAmpEnvelopeChange(keysPreset.amp);
+      onFilterEnvelopeChange(keysPreset.filter);
     }
   }, [ampEnvelope, filterEnvelope, onAmpEnvelopeChange, onFilterEnvelopeChange]);
 

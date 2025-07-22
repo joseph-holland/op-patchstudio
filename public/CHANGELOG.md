@@ -4,6 +4,16 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.14.4] - 2025-07-22
+
+### changed
+- envelope tool in multisample adsr now defaults to 'keys' preset values instead of generating random values when empty
+
+### fixed
+- issue with multisample tool sample zone mapping that caused c4 samples to be incorrectly assigned to all lower notes
+- changed default adsr in multisample preset from 'random' to 'keys' in multisample tool for more consistent, musical starting point
+- preset name is now always reset to empty string on page reload while preserving other user preferences
+
 ## [0.14.3] - 2025-07-19
 
 ### fixed
