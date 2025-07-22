@@ -366,7 +366,7 @@ export async function parseOP1DrumPreset(arrayBuffer: ArrayBuffer, filename: str
 }
 
 // Extract key index from marker ID or name
-function extractKeyIndexFromMarker(markerId: number, markerName: string): number | null {
+export function extractKeyIndexFromMarker(markerId: number, markerName: string): number | null {
   // Try to extract from marker name first - look for various patterns
   const nameMatch = markerName.match(/(\d+)/);
   if (nameMatch) {
@@ -381,17 +381,22 @@ function extractKeyIndexFromMarker(markerId: number, markerName: string): number
     return markerId;
   }
   
+  // Handle OP-1 to OP-XY naming conversion
+  let normalizedName = markerName.toLowerCase();
+  if (normalizedName.includes('clave alt')) {
+    normalizedName = normalizedName.replace('clave alt', 'wood stick');
+  }
+  
   // Try to extract from common drum sample names
   const drumNameMap: { [key: string]: number } = {
     'kick': 0, 'kick alt': 1, 'snare': 2, 'snare alt': 3, 'rim': 4, 'hand clap': 5,
     'tambourine': 6, 'shaker': 7, 'closed hi-hat': 8, 'clave': 9, 'open hi-hat': 10, 'cabasa': 11,
     'low tom': 12, 'ride cymbal': 13, 'mid-tom': 14, 'crash cymbal': 15, 'hi-tom': 16, 'cowbell': 17,
-    'triangle': 18, 'low tom alt': 19, 'low conga': 20, 'clave alt': 21, 'hi-conga': 22, 'guiro': 23
+    'triangle': 18, 'low tom alt': 19, 'low conga': 20, 'wood stick': 21, 'hi-conga': 22, 'guiro': 23
   };
   
-  const lowerName = markerName.toLowerCase();
   for (const [drumName, index] of Object.entries(drumNameMap)) {
-    if (lowerName.includes(drumName)) {
+    if (normalizedName.includes(drumName)) {
       return index;
     }
   }

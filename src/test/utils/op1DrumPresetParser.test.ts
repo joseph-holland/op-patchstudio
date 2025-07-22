@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { parseOP1DrumPreset, isOP1DrumPreset } from '../../utils/op1DrumPresetParser';
+import { parseOP1DrumPreset, isOP1DrumPreset, extractKeyIndexFromMarker } from '../../utils/op1DrumPresetParser';
 
 // Mock AIFF file data for testing
 function createMockAIFFDrumV1(): ArrayBuffer {
@@ -381,6 +381,22 @@ describe('OP-1 Drum Preset Parser', () => {
       
       const isPreset = isOP1DrumPreset(buffer);
       expect(isPreset).toBe(false);
+    });
+  });
+
+  describe('OP-1 to OP-XY naming conversion', () => {
+    it('should convert clave alt to wood stick for index 21', () => {
+      // Test that 'clave alt' maps to index 21 (wood stick)
+      const claveAltIndex = extractKeyIndexFromMarker(-1, 'clave alt');
+      expect(claveAltIndex).toBe(21);
+      
+      // Test that 'wood stick' also maps to index 21
+      const woodStickIndex = extractKeyIndexFromMarker(-1, 'wood stick');
+      expect(woodStickIndex).toBe(21);
+      
+      // Test that 'CLAVE ALT' (uppercase) also maps to index 21
+      const claveAltUpperIndex = extractKeyIndexFromMarker(-1, 'CLAVE ALT');
+      expect(claveAltUpperIndex).toBe(21);
     });
   });
 }); 
