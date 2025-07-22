@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generateDrumPatch } from '../../utils/patchGeneration';
 import type { AppState } from '../../context/AppContext';
-import JSZip from 'jszip';
 
 // Mock JSZip
 vi.mock('jszip', () => ({
@@ -15,7 +14,7 @@ vi.mock('jszip', () => ({
 vi.mock('../../utils/audio', () => ({
   audioBufferToWav: vi.fn().mockResolvedValue(new Blob(['mock wav'], { type: 'audio/wav' })),
   sanitizeName: vi.fn().mockImplementation((name) => name.replace(/[^a-zA-Z0-9.]/g, '')),
-  generateFilename: vi.fn().mockImplementation((presetName: string, separator: string, type: string, index: number, originalName: string, mapping: string, extension: string) => {
+  generateFilename: vi.fn().mockImplementation((presetName: string, separator: string, _type: string, index: number, _originalName: string, _mapping: string, extension: string) => {
     const drumShortLabels = [
       'KD1', 'KD2', 'SD1', 'SD2', 'RIM', 'CLP', 'TB', 'SH', 'CH', 'CL1', 'OH', 'CAB',
       'LT1', 'RC', 'MT', 'CC', 'HT', 'COW', 'TRI', 'LT2', 'LC', 'WS', 'HC', 'GUI'
