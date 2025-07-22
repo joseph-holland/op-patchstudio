@@ -129,21 +129,7 @@ export function MultisamplePresetSettings() {
   };
 
   const [settings, setSettings] = useState<MultisampleAdvancedSettings>(() => {
-    const initialSettings = createSettingsFromGlobalState();
-    
-    // If we're using 'keys' preset as default (no matching preset found),
-    // update the global state to reflect this
-    const currentAmpEnvelope = state.multisampleSettings.ampEnvelope;
-    const currentFilterEnvelope = state.multisampleSettings.filterEnvelope;
-    const matchingPreset = getMatchingPreset(currentAmpEnvelope, currentFilterEnvelope);
-    
-    if (!matchingPreset) {
-      // Update global state with 'keys' preset values
-      dispatch({ type: 'SET_MULTISAMPLE_AMP_ENVELOPE', payload: ADSR_PRESETS.keys.amp });
-      dispatch({ type: 'SET_MULTISAMPLE_FILTER_ENVELOPE', payload: ADSR_PRESETS.keys.filter });
-    }
-    
-    return initialSettings;
+    return createSettingsFromGlobalState();
   });
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
@@ -180,6 +166,19 @@ export function MultisamplePresetSettings() {
     state.multisampleSettings.ampEnvelope,
     state.multisampleSettings.filterEnvelope,
   ]);
+
+  // Initialize global state with 'keys' preset if no matching preset is found
+  useEffect(() => {
+    const currentAmpEnvelope = state.multisampleSettings.ampEnvelope;
+    const currentFilterEnvelope = state.multisampleSettings.filterEnvelope;
+    const matchingPreset = getMatchingPreset(currentAmpEnvelope, currentFilterEnvelope);
+    
+    if (!matchingPreset) {
+      // Update global state with 'keys' preset values
+      dispatch({ type: 'SET_MULTISAMPLE_AMP_ENVELOPE', payload: ADSR_PRESETS.keys.amp });
+      dispatch({ type: 'SET_MULTISAMPLE_FILTER_ENVELOPE', payload: ADSR_PRESETS.keys.filter });
+    }
+  }, []); // Only run once on mount
 
   const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
