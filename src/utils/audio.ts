@@ -871,17 +871,12 @@ export function generateFilename(
   
   if (type === 'drum') {
     // Short drum key labels by index (from DrumKeyboard.tsx)
-    // Keep original labels to match TE docs, handle duplicate 'LT' in filename generation
+    // Updated to match current drum key mappings
     const drumShortLabels = [
-      'KD1', 'KD2', 'SD1', 'SD2', 'RIM', 'CLP', 'TB', 'SH', 'CH', 'CL', 'OH', 'CAB',
-      'RC', 'CC', 'LT', 'COW', 'MT', 'HT', 'LC', 'HC', 'TRI', 'LT', 'WS', 'GUI'
+      'KD1', 'KD2', 'SD1', 'SD2', 'RIM', 'CLP', 'TB', 'SH', 'CH', 'CL1', 'OH', 'CAB',
+      'LT1', 'RC', 'MT', 'CC', 'HT', 'COW', 'TRI', 'LT2', 'LC', 'WS', 'HC', 'GUI'
     ];
     let drumLabel = drumShortLabels[index] || `DRUM${index + 1}`;
-    
-    // Handle duplicate 'LT' entries - second LT becomes 'LT2' in filename
-    if (drumLabel === 'LT' && index === 21) {
-      drumLabel = 'LT2';
-    }
     
     return `${cleanPresetName}${separator}${drumLabel}.${extension}`;
   } else {

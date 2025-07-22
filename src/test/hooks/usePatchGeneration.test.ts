@@ -77,7 +77,7 @@ describe('usePatchGeneration', () => {
           outPoint: 1.0,
           playmode: 'oneshot' as const,
           reverse: false,
-          tune: 0,
+          transpose: 0,
           pan: 0,
           gain: 0,
           hasBeenEdited: false,

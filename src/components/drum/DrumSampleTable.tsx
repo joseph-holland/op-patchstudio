@@ -22,7 +22,7 @@ const drumSampleNames = [
   'kick', 'kick alt', 'snare', 'snare alt', 'rim', 'hand clap', 
   'tambourine', 'shaker', 'closed hi-hat', 'clave', 'open hi-hat', 'cabasa',
   'low tom', 'ride cymbal', 'mid-tom', 'crash cymbal', 'hi-tom', 'cowbell', 
-  'triangle', 'low tom', 'low conga', 'clave', 'hi-conga', 'guiro'
+  'triangle', 'low tom alt', 'low conga', 'wood stick', 'hi-conga', 'guiro'
 ];
 
 // Theme colour shortcuts for readability
@@ -91,7 +91,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
       await play(sample.audioBuffer, {
         inFrame: sample.inPoint !== undefined ? Math.floor(sample.inPoint * sample.audioBuffer.sampleRate) : 0,
         outFrame: sample.outPoint !== undefined ? Math.floor(sample.outPoint * sample.audioBuffer.sampleRate) : sample.audioBuffer.length,
-        playbackRate: Math.pow(2, (sample.tune || 0) / 12),
+        playbackRate: Math.pow(2, (sample.transpose || 0) / 12),
         gain: sample.gain || 0,
         pan: sample.pan || 0,
         reverse: sample.reverse || false,

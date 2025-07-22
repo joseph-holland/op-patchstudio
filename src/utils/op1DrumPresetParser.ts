@@ -386,7 +386,7 @@ function extractKeyIndexFromMarker(markerId: number, markerName: string): number
     'kick': 0, 'kick alt': 1, 'snare': 2, 'snare alt': 3, 'rim': 4, 'hand clap': 5,
     'tambourine': 6, 'shaker': 7, 'closed hi-hat': 8, 'clave': 9, 'open hi-hat': 10, 'cabasa': 11,
     'low tom': 12, 'ride cymbal': 13, 'mid-tom': 14, 'crash cymbal': 15, 'hi-tom': 16, 'cowbell': 17,
-    'triangle': 18, 'low conga': 20, 'hi-conga': 22, 'guiro': 23
+    'triangle': 18, 'low tom alt': 19, 'low conga': 20, 'clave alt': 21, 'hi-conga': 22, 'guiro': 23
   };
   
   const lowerName = markerName.toLowerCase();

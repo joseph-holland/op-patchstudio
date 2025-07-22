@@ -9,7 +9,7 @@ interface DrumBulkEditModalProps {
 interface BulkSettings {
   playmode: 'oneshot' | 'group' | 'loop' | 'gate';
   reverse: boolean;
-  tune: number; // -48 to +48 semitones
+  transpose: number; // -48 to +48 semitones
   gain: number; // -30 to +20 dB
   pan: number; // -100 to +100
 }
@@ -20,7 +20,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
   const [settings, setSettings] = useState<BulkSettings>({
     playmode: 'oneshot',
     reverse: false,
-    tune: 0,
+    transpose: 0,
     gain: 0,
     pan: 0
   });
@@ -35,7 +35,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
         const originalValues = {
           playmode: sample.playmode || 'oneshot',
           reverse: sample.reverse || false,
-          tune: sample.tune || 0,
+          transpose: sample.transpose || 0,
           gain: sample.gain || 0,
           pan: sample.pan || 0
         };
@@ -43,7 +43,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
         const valuesChanged = 
           settings.playmode !== originalValues.playmode ||
           settings.reverse !== originalValues.reverse ||
-          settings.tune !== originalValues.tune ||
+          settings.transpose !== originalValues.transpose ||
           settings.gain !== originalValues.gain ||
           settings.pan !== originalValues.pan;
         
@@ -187,7 +187,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
             </select>
           </div>
 
-          {/* Tuning */}
+          {/* Transpose */}
           <div style={{ marginBottom: '2rem' }}>
             <label style={{ 
               display: 'block',
@@ -195,30 +195,30 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
               fontSize: '0.875rem',
               fontWeight: '600',
               color: '#374151'
-            }}>tuning (semitones)</label>
+            }}>transpose (semitones)</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <input
                 type="range"
                 min="-48"
                 max="48"
-                value={settings.tune}
+                value={settings.transpose}
                 step="1"
                 style={{
                   flex: 1,
                   height: '6px',
                   borderRadius: '3px',
-                  background: `linear-gradient(to right, #6b7280 0%, #6b7280 ${((settings.tune + 48) / 96) * 100}%, #e5e7eb ${((settings.tune + 48) / 96) * 100}%, #e5e7eb 100%)`,
+                  background: `linear-gradient(to right, #6b7280 0%, #6b7280 ${((settings.transpose + 48) / 96) * 100}%, #e5e7eb ${((settings.transpose + 48) / 96) * 100}%, #e5e7eb 100%)`,
                   outline: 'none',
                   appearance: 'none',
                   WebkitAppearance: 'none'
                 }}
-                onChange={(e) => setSettings({...settings, tune: parseInt(e.target.value)})}
+                onChange={(e) => setSettings({...settings, transpose: parseInt(e.target.value)})}
               />
               <input 
                 type="number" 
                 min="-48" 
                 max="48" 
-                value={settings.tune} 
+                value={settings.transpose} 
                 style={{ 
                   width: '80px', 
                   padding: '0.5rem',
@@ -231,7 +231,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
                 }}
                 onChange={(e) => {
                   const val = Math.max(-48, Math.min(48, parseInt(e.target.value) || 0));
-                  setSettings({...settings, tune: val});
+                  setSettings({...settings, transpose: val});
                 }}
               />
             </div>

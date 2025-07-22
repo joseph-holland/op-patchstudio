@@ -15,7 +15,7 @@ interface DrumSampleSettingsModalProps {
 interface SampleSettings {
   playmode: 'oneshot' | 'group' | 'loop' | 'gate';
   reverse: boolean;
-  tune: number; // -48 to +48 semitones
+  transpose: number; // -48 to +48 semitones
   gain: number; // -30 to +20 dB
   pan: number; // -100 to +100
 }
@@ -28,7 +28,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
   const [settings, setSettings] = useState<SampleSettings>({
     playmode: 'oneshot',
     reverse: false,
-    tune: 0,
+    transpose: 0,
     gain: 0,
     pan: 0
   });
@@ -46,7 +46,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
       setSettings({
         playmode: sample.playmode || 'oneshot',
         reverse: sample.reverse || false,
-        tune: sample.tune || 0,
+        transpose: sample.transpose || 0,
         gain: sample.gain || 0,
         pan: sample.pan || 0
       });
@@ -100,14 +100,14 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
       const originalValues = {
         playmode: sample.playmode || 'oneshot',
         reverse: sample.reverse || false,
-        tune: sample.tune || 0,
+        transpose: sample.transpose || 0,
         gain: sample.gain || 0,
         pan: sample.pan || 0
       };
       const valuesChanged =
         settings.playmode !== originalValues.playmode ||
         settings.reverse !== originalValues.reverse ||
-        settings.tune !== originalValues.tune ||
+        settings.transpose !== originalValues.transpose ||
         settings.gain !== originalValues.gain ||
         settings.pan !== originalValues.pan;
       dispatch({
@@ -147,7 +147,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
           {
             inFrame,
             outFrame,
-            playbackRate: Math.pow(2, settings.tune / 12),
+            playbackRate: Math.pow(2, settings.transpose / 12),
             gain: settings.gain,
             pan: settings.pan,
             reverse: settings.reverse,
@@ -160,7 +160,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
           {
             inFrame,
             outFrame,
-            playbackRate: Math.pow(2, settings.tune / 12),
+            playbackRate: Math.pow(2, settings.transpose / 12),
             gain: settings.gain,
             pan: settings.pan,
             reverse: settings.reverse,
@@ -425,7 +425,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               )}
             </div>
           )}
-          {/* Tuning */}
+          {/* Transpose */}
           <div style={{ marginBottom: '1rem' }}>
             <div style={{
               fontSize: '0.9rem',
@@ -434,16 +434,16 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               marginBottom: '0.5rem',
               textTransform: 'lowercase',
             }}>
-              tuning: {settings.tune} semitones
+              transpose: {settings.transpose} semitones
             </div>
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: 0, margin: 0 }}>
               <Slider
-                id="sample-tuning"
+                id="sample-transpose"
                 min={-48}
                 max={48}
                 step={1}
-                value={settings.tune}
-                onChange={({ value }) => setSettings({ ...settings, tune: value })}
+                value={settings.transpose}
+                onChange={({ value }) => setSettings({ ...settings, transpose: value })}
                 hideTextInput
                 style={{ width: '100%', maxWidth: '100%' }}
                 className="full-width-slider"
