@@ -863,8 +863,8 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
                       <OPXYKey {...createLargeKeyProps('W', 0, 'right')} />
                       <OPXYKey {...createStandardKeyProps('E', 0)} />
                       <OPXYKey {...createLargeKeyProps('R', 0, 'left')} />
-                      <OPXYKey {...createLargeKeyProps('Y', 0, 'left')} />
-                      <OPXYKey {...createLargeKeyProps('U', 0, 'right')} />
+                      <OPXYKey {...createLargeKeyProps('Y', 0, 'right')} />
+                      <OPXYKey {...createLargeKeyProps('U', 0, 'left')} />
                     </div>
                     {/* Bottom row */}
                     <div style={{ display: 'flex', gap: '1px' }}>
@@ -892,8 +892,8 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
                       <OPXYKey {...createLargeKeyProps('W', 1, 'right')} />
                       <OPXYKey {...createStandardKeyProps('E', 1)} />
                       <OPXYKey {...createLargeKeyProps('R', 1, 'left')} />
-                      <OPXYKey {...createLargeKeyProps('Y', 1, 'left')} />
-                      <OPXYKey {...createLargeKeyProps('U', 1, 'right')} />
+                      <OPXYKey {...createLargeKeyProps('Y', 1, 'right')} />
+                      <OPXYKey {...createLargeKeyProps('U', 1, 'left')} />
                     </div>
                     {/* Bottom row */}
                     <div style={{ display: 'flex', gap: '1px' }}>
@@ -983,8 +983,8 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
               <OPXYKey {...createLargeKeyProps('W', 0, 'right')} />
               <OPXYKey {...createStandardKeyProps('E', 0)} />
               <OPXYKey {...createLargeKeyProps('R', 0, 'left')} />
-              <OPXYKey {...createLargeKeyProps('Y', 0, 'left')} />
-              <OPXYKey {...createLargeKeyProps('U', 0, 'right')} />
+              <OPXYKey {...createLargeKeyProps('Y', 0, 'right')} />
+              <OPXYKey {...createLargeKeyProps('U', 0, 'left')} />
             </div>
 
             {/* Bottom row */}
@@ -1032,8 +1032,8 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
               <OPXYKey {...createLargeKeyProps('W', 1, 'right')} />
               <OPXYKey {...createStandardKeyProps('E', 1)} />
               <OPXYKey {...createLargeKeyProps('R', 1, 'left')} />
-              <OPXYKey {...createLargeKeyProps('Y', 1, 'left')} />
-              <OPXYKey {...createLargeKeyProps('U', 1, 'right')} />
+              <OPXYKey {...createLargeKeyProps('Y', 1, 'right')} />
+              <OPXYKey {...createLargeKeyProps('U', 1, 'left')} />
             </div>
 
             {/* Bottom row */}
