@@ -4,6 +4,14 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.14.5] - 2025-07-22
+
+### fixed
+- issue 66 drum tool tuning and transpose not working correctly
+- issue 65 drum tool export, missing gain and pan, tune, transpose not applying to patch.json
+- issue 63 incorrect sample assignment
+- issue 62 drum keyboard incorrect layout
+
 ## [0.14.4] - 2025-07-22
 
 ### changed
