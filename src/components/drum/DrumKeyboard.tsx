@@ -29,19 +29,19 @@ const drumKeyMap = [
   // Upper octave (octave 1)
   {
     // top row (offset like a real keyboard)
-    W: { label: "RC", idx: 12 },  // index 12 = sample 13
-    E: { label: "CC", idx: 13 },  // index 13 = sample 14
-    R: { label: "COW", idx: 15 }, // index 15 = sample 16
-    Y: { label: "LC", idx: 18 },  // index 18 = sample 19
-    U: { label: "HC", idx: 19 },  // index 19 = sample 20
+    W: { label: "RC", idx: 13 },  // index 13 = ride cymbal
+    E: { label: "CC", idx: 15 },  // index 15 = crash cymbal
+    R: { label: "COW", idx: 17 }, // index 17 = cowbell
+    Y: { label: "LC", idx: 20 },  // index 20 = low conga
+    U: { label: "HC", idx: 22 },  // index 22 = hi-conga
     // bottom row
-    A: { label: "LT", idx: 14 },  // index 14 = sample 15
-    S: { label: "MT", idx: 16 },  // index 16 = sample 17
-    D: { label: "HT", idx: 17 },  // index 17 = sample 18
-    F: { label: "TRI", idx: 20 }, // index 20 = sample 21
-    G: { label: "LT", idx: 21 },  // index 21 = sample 22
-    H: { label: "WS", idx: 22 },  // index 22 = sample 23
-    J: { label: "GUI", idx: 23 }, // index 23 = sample 24
+    A: { label: "LT1", idx: 12 },  // index 12 = low tom
+    S: { label: "MT", idx: 14 },  // index 14 = mid-tom
+    D: { label: "HT", idx: 16 },  // index 16 = hi-tom
+    F: { label: "TRI", idx: 18 }, // index 18 = triangle
+    G: { label: "LT2", idx: 19 },  // index 19 = low tom alt
+    H: { label: "WS", idx: 21 },  // index 21 = wood stick
+    J: { label: "GUI", idx: 23 }, // index 23 = guiro
   },
 ];
 
@@ -349,17 +349,17 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
     
     // Upper octave (octave 1) - F4 to E5
     const upperOctaveMap: { [key: number]: number } = {
-      65: 14, // F4  -> LT (A key, octave 1)
-      66: 12, // F#4 -> RC (W key, octave 1)
-      67: 16, // G4  -> MT (S key, octave 1)
-      68: 13, // G#4 -> CC (E key, octave 1)
-      69: 17, // A4  -> HT (D key, octave 1)
-      70: 15, // A#4 -> COW (R key, octave 1)
-      71: 20, // B4  -> TRI (F key, octave 1)
-      72: 21, // C5  -> LT (G key, octave 1) - using different LT key to avoid conflict with F
-      73: 18, // C#5 -> LC (Y key, octave 1)
-      74: 22, // D5  -> WS (H key, octave 1)
-      75: 19, // D#5 -> HC (U key, octave 1)
+      65: 12, // F4  -> LT1 (A key, octave 1)
+      66: 13, // F#4 -> RC (W key, octave 1)
+      67: 14, // G4  -> MT (S key, octave 1)
+      68: 15, // G#4 -> CC (E key, octave 1)
+      69: 16, // A4  -> HT (D key, octave 1)
+      70: 17, // A#4 -> COW (R key, octave 1)
+      71: 18, // B4  -> TRI (F key, octave 1)
+      72: 19, // C5  -> LT2 (G key, octave 1)
+      73: 20, // C#5 -> LC (Y key, octave 1)
+      74: 21, // D5  -> WS (H key, octave 1)
+      75: 22, // D#5 -> HC (U key, octave 1)
       76: 23, // E5  -> GUI (J key, octave 1)
     };
     
@@ -386,17 +386,17 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
     
     // Upper octave (octave 1)
     const upperOctaveKeys: { [key: number]: string } = {
-      12: 'W',  // RC
-      13: 'E',  // CC
-      14: 'A',  // LT
-      15: 'R',  // COW
-      16: 'S',  // MT
-      17: 'D',  // HT
-      18: 'Y',  // LC
-      19: 'U',  // HC
-      20: 'F',  // TRI
-      21: 'G',  // LT
-      22: 'H',  // WS
+      12: 'A',  // LT
+      13: 'W',  // RC
+      14: 'S',  // MT
+      15: 'E',  // CC
+      16: 'D',  // HT
+      17: 'R',  // COW
+      18: 'F',  // TRI
+      19: 'G',  // LT2
+      20: 'Y',  // LC
+      21: 'H',  // LC
+      22: 'U',  // HC
       23: 'J',  // GUI
     };
     

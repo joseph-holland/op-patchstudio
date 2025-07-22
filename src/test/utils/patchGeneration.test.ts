@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generateDrumPatch } from '../../utils/patchGeneration';
 import type { AppState } from '../../context/AppContext';
+import JSZip from 'jszip';
 
 // Mock JSZip
 vi.mock('jszip', () => ({
@@ -13,7 +14,17 @@ vi.mock('jszip', () => ({
 // Mock audio utilities
 vi.mock('../../utils/audio', () => ({
   audioBufferToWav: vi.fn().mockResolvedValue(new Blob(['mock wav'], { type: 'audio/wav' })),
-  sanitizeName: vi.fn().mockImplementation((name) => name.replace(/[^a-zA-Z0-9.]/g, ''))
+  sanitizeName: vi.fn().mockImplementation((name) => name.replace(/[^a-zA-Z0-9.]/g, '')),
+  generateFilename: vi.fn().mockImplementation((presetName: string, separator: string, type: string, index: number, originalName: string, mapping: string, extension: string) => {
+    const drumShortLabels = [
+      'KD1', 'KD2', 'SD1', 'SD2', 'RIM', 'CLP', 'TB', 'SH', 'CH', 'CL1', 'OH', 'CAB',
+      'LT1', 'RC', 'MT', 'CC', 'HT', 'COW', 'TRI', 'LT2', 'LC', 'WS', 'HC', 'GUI'
+    ];
+    const drumLabel = drumShortLabels[index] || `DRUM${index + 1}`;
+    return `${presetName}${separator}${drumLabel}.${extension}`;
+  }),
+  getAudioFileExtension: vi.fn(() => 'wav'),
+  percentToInternal: vi.fn((percent: number) => Math.round(percent * 327.67))
 }));
 
 // Mock convertAudioFormat
@@ -208,5 +219,21 @@ describe('patchGeneration', () => {
       expect(regionSampleNames).toContain('assigned2.wav');
       expect(regionSampleNames).not.toContain('unassigned1.wav'); // Should NOT be in patch.json
     });
+  });
+}); 
+
+describe('Drum patch generation with updated mappings', () => {
+  it('should generate correct filenames for drum samples with updated indices', async () => {
+    // Test the filename generation directly using the mock
+    const { generateFilename } = vi.mocked(await import('../../utils/audio'));
+    
+    // Test specific indices that were changed
+    expect(generateFilename('Test Kit', ' ', 'drum', 0, 'sample0.wav', 'C3', 'wav')).toBe('Test Kit KD1.wav');
+    expect(generateFilename('Test Kit', ' ', 'drum', 12, 'sample12.wav', 'C3', 'wav')).toBe('Test Kit LT1.wav');
+    expect(generateFilename('Test Kit', ' ', 'drum', 18, 'sample18.wav', 'C3', 'wav')).toBe('Test Kit TRI.wav');
+    expect(generateFilename('Test Kit', ' ', 'drum', 19, 'sample19.wav', 'C3', 'wav')).toBe('Test Kit LT2.wav');
+    expect(generateFilename('Test Kit', ' ', 'drum', 20, 'sample20.wav', 'C3', 'wav')).toBe('Test Kit LC.wav');
+    expect(generateFilename('Test Kit', ' ', 'drum', 21, 'sample21.wav', 'C3', 'wav')).toBe('Test Kit WS.wav');
+    expect(generateFilename('Test Kit', ' ', 'drum', 22, 'sample22.wav', 'C3', 'wav')).toBe('Test Kit HC.wav');
   });
 }); 

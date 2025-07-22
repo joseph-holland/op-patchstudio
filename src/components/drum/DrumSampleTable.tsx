@@ -22,7 +22,7 @@ const drumSampleNames = [
   'kick', 'kick alt', 'snare', 'snare alt', 'rim', 'hand clap', 
   'tambourine', 'shaker', 'closed hi-hat', 'clave', 'open hi-hat', 'cabasa',
   'low tom', 'ride cymbal', 'mid-tom', 'crash cymbal', 'hi-tom', 'cowbell', 
-  'triangle', 'low tom', 'low conga', 'clave', 'hi-conga', 'guiro'
+  'triangle', 'low tom alt', 'low conga', 'wood stick', 'hi-conga', 'guiro'
 ];
 
 // Theme colour shortcuts for readability
