@@ -80,8 +80,37 @@ export function MultisamplePresetSettings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   
+  // Function to check if ADSR values match a known preset
+  const getMatchingPreset = (ampEnvelope: any, filterEnvelope: any): string | null => {
+    for (const [presetName, preset] of Object.entries(ADSR_PRESETS)) {
+      if (
+        ampEnvelope.attack === preset.amp.attack &&
+        ampEnvelope.decay === preset.amp.decay &&
+        ampEnvelope.sustain === preset.amp.sustain &&
+        ampEnvelope.release === preset.amp.release &&
+        filterEnvelope.attack === preset.filter.attack &&
+        filterEnvelope.decay === preset.filter.decay &&
+        filterEnvelope.sustain === preset.filter.sustain &&
+        filterEnvelope.release === preset.filter.release
+      ) {
+        return presetName;
+      }
+    }
+    return null;
+  };
+
   // Function to convert global state to local settings format
   const createSettingsFromGlobalState = (): MultisampleAdvancedSettings => {
+    const currentAmpEnvelope = state.multisampleSettings.ampEnvelope;
+    const currentFilterEnvelope = state.multisampleSettings.filterEnvelope;
+    
+    // Check if current ADSR values match any known preset
+    const matchingPreset = getMatchingPreset(currentAmpEnvelope, currentFilterEnvelope);
+    
+    // If no preset matches, use 'keys' preset as default
+    const ampEnvelope = matchingPreset ? currentAmpEnvelope : ADSR_PRESETS.keys.amp;
+    const filterEnvelope = matchingPreset ? currentFilterEnvelope : ADSR_PRESETS.keys.filter;
+    
     return {
       playmode: state.multisampleSettings.playmode,
       loopEnabled: state.multisampleSettings.loopEnabled,
@@ -94,12 +123,28 @@ export function MultisamplePresetSettings() {
       portamentoType: state.multisampleSettings.portamentoType,
       portamentoAmount: state.multisampleSettings.portamentoAmount,
       tuningRoot: state.multisampleSettings.tuningRoot,
-      ampEnvelope: state.multisampleSettings.ampEnvelope,
-      filterEnvelope: state.multisampleSettings.filterEnvelope,
+      ampEnvelope,
+      filterEnvelope,
     };
   };
 
-  const [settings, setSettings] = useState<MultisampleAdvancedSettings>(createSettingsFromGlobalState());
+  const [settings, setSettings] = useState<MultisampleAdvancedSettings>(() => {
+    const initialSettings = createSettingsFromGlobalState();
+    
+    // If we're using 'keys' preset as default (no matching preset found),
+    // update the global state to reflect this
+    const currentAmpEnvelope = state.multisampleSettings.ampEnvelope;
+    const currentFilterEnvelope = state.multisampleSettings.filterEnvelope;
+    const matchingPreset = getMatchingPreset(currentAmpEnvelope, currentFilterEnvelope);
+    
+    if (!matchingPreset) {
+      // Update global state with 'keys' preset values
+      dispatch({ type: 'SET_MULTISAMPLE_AMP_ENVELOPE', payload: ADSR_PRESETS.keys.amp });
+      dispatch({ type: 'SET_MULTISAMPLE_FILTER_ENVELOPE', payload: ADSR_PRESETS.keys.filter });
+    }
+    
+    return initialSettings;
+  });
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
     sound: false,
