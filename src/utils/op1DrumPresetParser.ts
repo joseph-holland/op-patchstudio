@@ -127,7 +127,33 @@ export async function parseOP1DrumPreset(arrayBuffer: ArrayBuffer, filename: str
           if (applText.startsWith('op-1')) {
             const jsonStart = applText.indexOf('{');
             if (jsonStart !== -1) {
-              const jsonStr = applText.substring(jsonStart);
+              let jsonStr = applText.substring(jsonStart);
+              
+              // Clean the JSON string by removing null characters and other problematic characters
+              jsonStr = jsonStr.replace(/\0/g, ''); // Remove null characters
+              jsonStr = jsonStr.replace(/[\x00-\x1F\x7F]/g, ''); // Remove other control characters
+              jsonStr = jsonStr.trim(); // Remove leading/trailing whitespace
+              
+              // Try to find the end of the JSON object
+              let braceCount = 0;
+              let jsonEnd = -1;
+              for (let i = 0; i < jsonStr.length; i++) {
+                if (jsonStr[i] === '{') {
+                  braceCount++;
+                } else if (jsonStr[i] === '}') {
+                  braceCount--;
+                  if (braceCount === 0) {
+                    jsonEnd = i + 1;
+                    break;
+                  }
+                }
+              }
+              
+              // If we found a complete JSON object, use it
+              if (jsonEnd > 0) {
+                jsonStr = jsonStr.substring(0, jsonEnd);
+              }
+              
               const op1Metadata = JSON.parse(jsonStr);
               
               // Check if this is a drum preset
@@ -135,18 +161,38 @@ export async function parseOP1DrumPreset(arrayBuffer: ArrayBuffer, filename: str
                 // Extract sample positions from the metadata
                 if (op1Metadata.start && op1Metadata.end && Array.isArray(op1Metadata.start) && Array.isArray(op1Metadata.end)) {
                   const numSamples = Math.min(op1Metadata.start.length, op1Metadata.end.length, 24);
+                  
+                  // Track unique samples to avoid duplicates
+                  const uniqueSamples = new Map<string, number>();
+                  const validSamples: Array<{
+                    keyIndex: number;
+                    startSample: number;
+                    endSample: number;
+                    name: string;
+                  }> = [];
+                  
                   for (let i = 0; i < numSamples; i++) {
                     const startSample = op1Metadata.start[i];
                     const endSample = op1Metadata.end[i];
+                    
                     if (startSample !== undefined && endSample !== undefined && endSample > startSample) {
-                      sampleMetadata.push({
-                        keyIndex: i,
-                        startSample,
-                        endSample,
-                        name: `${baseFilename} sample ${i + 1}`
-                      });
+                      const sampleKey = `${startSample}-${endSample}`;
+                      
+                      // Only add if this is a unique sample
+                      if (!uniqueSamples.has(sampleKey)) {
+                        uniqueSamples.set(sampleKey, i);
+                        validSamples.push({
+                          keyIndex: i,
+                          startSample,
+                          endSample,
+                          name: `${baseFilename} sample ${i + 1}`
+                        });
+                      }
                     }
                   }
+                  
+                  // Add the valid samples to metadata
+                  sampleMetadata.push(...validSamples);
                 }
               }
             }
@@ -444,10 +490,49 @@ export function isOP1DrumPreset(arrayBuffer: ArrayBuffer): boolean {
           if (applText.startsWith('op-1')) {
             const jsonStart = applText.indexOf('{');
             if (jsonStart !== -1) {
-              const jsonStr = applText.substring(jsonStart);
+              let jsonStr = applText.substring(jsonStart);
+              
+              // Clean the JSON string by removing null characters and other problematic characters
+              jsonStr = jsonStr.replace(/\0/g, ''); // Remove null characters
+              jsonStr = jsonStr.replace(/[\x00-\x1F\x7F]/g, ''); // Remove other control characters
+              jsonStr = jsonStr.trim(); // Remove leading/trailing whitespace
+              
+              // Try to find the end of the JSON object
+              let braceCount = 0;
+              let jsonEnd = -1;
+              for (let i = 0; i < jsonStr.length; i++) {
+                if (jsonStr[i] === '{') {
+                  braceCount++;
+                } else if (jsonStr[i] === '}') {
+                  braceCount--;
+                  if (braceCount === 0) {
+                    jsonEnd = i + 1;
+                    break;
+                  }
+                }
+              }
+              
+              // If we found a complete JSON object, use it
+              if (jsonEnd > 0) {
+                jsonStr = jsonStr.substring(0, jsonEnd);
+              }
+              
               const op1Metadata = JSON.parse(jsonStr);
               
               if (op1Metadata.type === 'drum' && op1Metadata.drum_version) {
+                // Check if there are any valid samples (not just duplicates)
+                if (op1Metadata.start && op1Metadata.end && Array.isArray(op1Metadata.start) && Array.isArray(op1Metadata.end)) {
+                  const uniqueSamples = new Set<string>();
+                  for (let i = 0; i < Math.min(op1Metadata.start.length, op1Metadata.end.length); i++) {
+                    const startSample = op1Metadata.start[i];
+                    const endSample = op1Metadata.end[i];
+                    if (startSample !== undefined && endSample !== undefined && endSample > startSample) {
+                      uniqueSamples.add(`${startSample}-${endSample}`);
+                    }
+                  }
+                  // Only return true if there are actual unique samples
+                  return uniqueSamples.size > 0;
+                }
                 return true;
               }
             }

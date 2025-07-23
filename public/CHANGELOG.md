@@ -4,6 +4,11 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.14.6] - 2025-07-23
+
+### fixed
+- issue 59 drum tool OP-1 preset import issue
+
 ## [0.14.5] - 2025-07-22
 
 ### fixed
