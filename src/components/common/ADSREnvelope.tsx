@@ -38,6 +38,10 @@ const ADSR_PRESETS = {
   lead: {
     amp: { attack: 800, decay: 8000, sustain: 20000, release: 12000 },
     filter: { attack: 0, decay: 6000, sustain: 18000, release: 10000 }
+  },
+  sustain: {
+    amp: { attack: 0, decay: 0, sustain: 32767, release: 0 },
+    filter: { attack: 0, decay: 0, sustain: 32767, release: 0 }
   }
 };
 
@@ -723,6 +727,7 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
             <option value="lead">lead</option>
             <option value="pad">pad</option>
             <option value="pluck">pluck</option>
+            <option value="sustain">sustain</option>
           </select>
           <button
             onClick={() => {

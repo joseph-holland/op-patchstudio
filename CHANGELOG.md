@@ -4,6 +4,11 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.14.7] - 2025-07-23
+
+### added
+- added sustain preset to multisample adsr component
+
 ## [0.14.6] - 2025-07-23
 
 ### fixed
