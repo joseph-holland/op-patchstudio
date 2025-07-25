@@ -1,4 +1,5 @@
 import { cookieUtils, COOKIE_KEYS } from './cookies';
+import { AUDIO_CONSTANTS } from './constants';
 import type { AppState } from '../context/AppContext';
 
 // Default settings that will be used when no custom defaults are saved
@@ -8,7 +9,7 @@ export const defaultDrumSettings: AppState['drumSettings'] = {
   channels: 2,
   presetName: '',
   normalize: false,
-  normalizeLevel: -0.1, // Default to -0.1 dBFS for safety
+  normalizeLevel: AUDIO_CONSTANTS.DRUM_NORMALIZATION_LEVEL, // Use constant for drum normalization level
   autoZeroCrossing: false, // Disable automatic zero-crossing detection by default
   renameFiles: false,
   filenameSeparator: ' ',
@@ -28,7 +29,7 @@ export const defaultMultisampleSettings: AppState['multisampleSettings'] = {
   channels: 2,
   presetName: '',
   normalize: false,
-  normalizeLevel: -0.1, // Default to -0.1 dBFS for safety
+  normalizeLevel: AUDIO_CONSTANTS.MULTISAMPLE_NORMALIZATION_LEVEL, // Use constant for multisample normalization level
   autoZeroCrossing: false, // Disable automatic zero-crossing detection by default
   cutAtLoopEnd: false,
   gain: 0,

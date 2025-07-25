@@ -5,6 +5,7 @@ import { indexedDB } from '../../utils/indexedDB';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 import { generateDrumPatch, generateMultisamplePatch, downloadBlob } from '../../utils/patchGeneration';
 import type { LibraryPreset } from '../../utils/libraryUtils';
+import { AUDIO_CONSTANTS } from '../../utils/constants';
 
 // Mock dependencies
 vi.mock('../../utils/indexedDB', () => ({
@@ -47,7 +48,7 @@ vi.mock('../../context/AppContext', () => ({
         channels: 2,
         presetName: 'Test Drum Kit',
         normalize: false,
-        normalizeLevel: -0.1,
+        normalizeLevel: AUDIO_CONSTANTS.DRUM_NORMALIZATION_LEVEL,
         presetSettings: {
           playmode: 'poly',
           transpose: 0,
@@ -64,7 +65,7 @@ vi.mock('../../context/AppContext', () => ({
         channels: 2,
         presetName: 'Test Multisample',
         normalize: false,
-        normalizeLevel: -0.1,
+        normalizeLevel: AUDIO_CONSTANTS.MULTISAMPLE_NORMALIZATION_LEVEL,
         cutAtLoopEnd: false,
         gain: 0,
         loopEnabled: true,

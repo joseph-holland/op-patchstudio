@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Toggle, Slider } from '@carbon/react';
 import { AudioFormatControls } from './AudioFormatControls';
 import { EnhancedTooltip } from './EnhancedTooltip';
+import { AUDIO_CONSTANTS } from '../../utils/constants';
 
 interface AudioProcessingSectionProps {
   type: 'drum' | 'multisample';
@@ -66,7 +67,7 @@ export function AudioProcessingSection({
     bitDepth !== 0 ||
     channels !== 0 ||
     normalize !== false ||
-    normalizeLevel !== 0.0 ||
+    normalizeLevel !== (type === 'drum' ? AUDIO_CONSTANTS.DRUM_NORMALIZATION_LEVEL : AUDIO_CONSTANTS.MULTISAMPLE_NORMALIZATION_LEVEL) ||
     autoZeroCrossing !== false || // Default is false
     (type === 'multisample' && cutAtLoopEnd !== false) ||
     (type === 'multisample' && gain !== 0)

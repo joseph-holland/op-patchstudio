@@ -17,6 +17,7 @@ import { savePresetToLibrary } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 import { saveDrumSettingsAsDefault } from '../../utils/defaultSettings';
 import { parseOP1DrumPreset, isOP1DrumPreset } from '../../utils/op1DrumPresetParser';
+import { AUDIO_CONSTANTS } from '../../utils/constants';
 
 export function DrumTool() {
   const { state, dispatch } = useAppContext();
@@ -78,7 +79,7 @@ export function DrumTool() {
         dispatch({ type: 'SET_DRUM_BIT_DEPTH', payload: 0 });
         dispatch({ type: 'SET_DRUM_CHANNELS', payload: 0 });
         dispatch({ type: 'SET_DRUM_NORMALIZE', payload: false });
-        dispatch({ type: 'SET_DRUM_NORMALIZE_LEVEL', payload: 0.0 });
+        dispatch({ type: 'SET_DRUM_NORMALIZE_LEVEL', payload: AUDIO_CONSTANTS.DRUM_NORMALIZATION_LEVEL });
         setConfirmDialog({ isOpen: false, message: '', onConfirm: async () => {} });
       }
     });
@@ -343,7 +344,7 @@ export function DrumTool() {
         
         // Reset normalize settings
         dispatch({ type: 'SET_DRUM_NORMALIZE', payload: false });
-        dispatch({ type: 'SET_DRUM_NORMALIZE_LEVEL', payload: -0.1 });
+        dispatch({ type: 'SET_DRUM_NORMALIZE_LEVEL', payload: AUDIO_CONSTANTS.DRUM_NORMALIZATION_LEVEL });
         
         // Reset file renaming settings to defaults
         dispatch({ type: 'SET_DRUM_RENAME_FILES', payload: false });
@@ -430,7 +431,7 @@ export function DrumTool() {
     state.drumSettings.bitDepth !== 0 ||
     state.drumSettings.channels !== 0 ||
     state.drumSettings.normalize !== false || // Normalize settings changed
-    state.drumSettings.normalizeLevel !== 0.0 ||
+    state.drumSettings.normalizeLevel !== AUDIO_CONSTANTS.DRUM_NORMALIZATION_LEVEL ||
     state.drumSettings.renameFiles !== false || // File renaming settings changed
     state.drumSettings.filenameSeparator !== ' ' ||
     state.drumSettings.presetSettings.playmode !== 'poly' || // Preset settings changed

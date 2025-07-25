@@ -8,6 +8,9 @@ export const AUDIO_CONSTANTS = {
   PATCH_SIZE_LIMIT: 8 * 1024 * 1024, // 8MB limit for OP-XY
   AUDIO_SCHEDULE_BUFFER: 0.001, // 1ms buffer for audio scheduling to prevent past operations
   ZERO_CROSSING_THRESHOLD: 0.001, // Amplitude threshold for detecting true zero crossings
+  // Normalization level constants
+  DRUM_NORMALIZATION_LEVEL: 0.0, // Default normalization level for drum samples (dBFS)
+  MULTISAMPLE_NORMALIZATION_LEVEL: 0.0, // Default normalization level for multisample zones (dBFS)
 } as const;
 
 // UI constants

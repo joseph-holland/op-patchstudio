@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DrumTool } from '../../components/drum/DrumTool';
 import { useAppContext } from '../../context/AppContext';
 import { vi as vitestVi } from 'vitest';
+import { AUDIO_CONSTANTS } from '../../utils/constants';
 
 // Mock dependencies
 vi.mock('../../context/AppContext');
@@ -160,7 +161,7 @@ describe('DrumTool', () => {
       channels: 0,
       presetName: '',
       normalize: false,
-      normalizeLevel: 0.0,
+      normalizeLevel: AUDIO_CONSTANTS.DRUM_NORMALIZATION_LEVEL,
       autoZeroCrossing: false,
       renameFiles: false, // always present
       filenameSeparator: ' ', // always present
@@ -201,7 +202,7 @@ describe('DrumTool', () => {
       channels: 0,
       presetName: '',
       normalize: false,
-      normalizeLevel: -0.1,
+      normalizeLevel: AUDIO_CONSTANTS.MULTISAMPLE_NORMALIZATION_LEVEL,
       cutAtLoopEnd: false,
       gain: 0,
       loopEnabled: true,
