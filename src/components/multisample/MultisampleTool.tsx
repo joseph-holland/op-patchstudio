@@ -17,6 +17,7 @@ import { savePresetToLibrary } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 import { ToggleSwitch } from '../common/ToggleSwitch';
 import { saveMultisampleSettingsAsDefault } from '../../utils/defaultSettings';
+import { AUDIO_CONSTANTS } from '../../utils/constants';
 
 
 export function MultisampleTool() {
@@ -167,7 +168,7 @@ export function MultisampleTool() {
         dispatch({ type: 'SET_MULTISAMPLE_BIT_DEPTH', payload: 0 });
         dispatch({ type: 'SET_MULTISAMPLE_CHANNELS', payload: 0 });
         dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE', payload: false });
-        dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: -6.0 });
+        dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: AUDIO_CONSTANTS.MULTISAMPLE_NORMALIZATION_LEVEL });
         dispatch({ type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END', payload: false });
         dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: 0 });
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: true });
@@ -315,7 +316,7 @@ export function MultisampleTool() {
         
         // Reset normalize and cut settings
         dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE', payload: false });
-        dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: -6.0 });
+        dispatch({ type: 'SET_MULTISAMPLE_NORMALIZE_LEVEL', payload: AUDIO_CONSTANTS.MULTISAMPLE_NORMALIZATION_LEVEL });
         dispatch({ type: 'SET_MULTISAMPLE_CUT_AT_LOOP_END', payload: false });
         dispatch({ type: 'SET_MULTISAMPLE_GAIN', payload: 0 });
         dispatch({ type: 'SET_MULTISAMPLE_LOOP_ENABLED', payload: true });
@@ -478,7 +479,7 @@ export function MultisampleTool() {
     state.multisampleSettings.bitDepth !== 0 ||
     state.multisampleSettings.channels !== 0 ||
     state.multisampleSettings.normalize !== false || // Normalize settings changed
-    state.multisampleSettings.normalizeLevel !== -6.0 ||
+    state.multisampleSettings.normalizeLevel !== AUDIO_CONSTANTS.MULTISAMPLE_NORMALIZATION_LEVEL ||
     state.multisampleSettings.renameFiles !== false || // File renaming settings changed
     state.multisampleSettings.filenameSeparator !== ' ' ||
     state.multisampleSettings.cutAtLoopEnd !== false // Trim to loop end changed

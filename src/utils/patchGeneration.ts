@@ -212,7 +212,8 @@ export async function generateDrumPatch(
       (targetSampleRate && originalSampleRate !== targetSampleRate) ||
       (targetBitDepth && targetBitDepth !== sample.originalBitDepth) ||
       (targetChannels === "mono" && sample.audioBuffer.numberOfChannels > 1) ||
-      state.drumSettings.normalize;
+      state.drumSettings.normalize ||
+      sample.gain !== 0;
     if (needsConversion) {
       fileReadPromises.push(
         (async () => {
@@ -223,6 +224,7 @@ export async function generateDrumPatch(
               channels: targetChannels === "mono" ? 1 : sample.audioBuffer!.numberOfChannels,
               normalize: state.drumSettings.normalize,
               normalizeLevel: state.drumSettings.normalizeLevel,
+              gain: sample.gain,
               sampleName: sample.name
             });
             const audioBlob = exportAudioBuffer(convertedBuffer, {

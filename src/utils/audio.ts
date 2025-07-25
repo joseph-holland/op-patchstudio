@@ -386,9 +386,9 @@ export async function convertAudioFormat(
   const targetSampleRate = options.sampleRate || audioBuffer.sampleRate;
   const targetChannels = options.channels || audioBuffer.numberOfChannels;
   const normalize = options.normalize || false;
-  const normalizeLevel = options.normalizeLevel || -0.1; // Default to -0.1 dBFS for safety
+  const normalizeLevel = options.normalizeLevel ?? 0.0; // Default to 0.0 dBFS (will be overridden by specific tool constants)
   const gain = options.gain || 0;
-  const shouldApplyLimiter = options.applyLimiter !== undefined ? options.applyLimiter : true;
+  const shouldApplyLimiter = options.applyLimiter !== undefined ? options.applyLimiter : false;
   
   // Apply trim to loop end if enabled (do this first to get correct duration)
   let processedBuffer = audioBuffer;
@@ -496,7 +496,7 @@ export async function convertAudioFormat(
     // Set limiter threshold based on normalization target
     // Add small headroom (0.1dB) to prevent limiting normalized audio
     // Ensure threshold is never positive to prevent clipping
-    const limiterThreshold = normalize ? Math.min(normalizeLevel + 0.1, 0.0) : -0.1;
+    const limiterThreshold = normalize ? Math.min(normalizeLevel + 0.1, 0.0) : 0.0;
     result = await applyLimiter(result, limiterThreshold);
   }
   

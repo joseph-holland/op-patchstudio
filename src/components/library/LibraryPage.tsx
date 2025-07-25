@@ -10,6 +10,7 @@ import { generateDrumPatch, generateMultisamplePatch, downloadBlob } from '../..
 import type { LibraryPreset } from '../../utils/libraryUtils';
 import { blobToAudioBuffer } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
+import { AUDIO_CONSTANTS } from '../../utils/constants';
 
 // Default values for clean state restoration
 const defaultDrumSettings = {
@@ -18,7 +19,7 @@ const defaultDrumSettings = {
   channels: 2,
   presetName: '',
   normalize: false,
-  normalizeLevel: -0.1, // Default to -0.1 dBFS for safety
+  normalizeLevel: AUDIO_CONSTANTS.DRUM_NORMALIZATION_LEVEL, // Use constant for drum normalization level
   presetSettings: {
     playmode: 'poly' as const,
     transpose: 0,
@@ -34,7 +35,7 @@ const defaultMultisampleSettings = {
   channels: 2,
   presetName: '',
   normalize: false,
-  normalizeLevel: -0.1, // Default to -0.1 dBFS for safety
+  normalizeLevel: AUDIO_CONSTANTS.MULTISAMPLE_NORMALIZATION_LEVEL, // Use constant for multisample normalization level
   cutAtLoopEnd: false,
   gain: 0,
   loopEnabled: true,

@@ -1,4 +1,5 @@
 import type { AppState } from '../../context/AppContext';
+import { AUDIO_CONSTANTS } from '../../utils/constants';
 
 // Helper function to create complete multisample settings for tests
 export function createCompleteMultisampleSettings(overrides: Partial<AppState['multisampleSettings']> = {}): AppState['multisampleSettings'] {
@@ -8,7 +9,7 @@ export function createCompleteMultisampleSettings(overrides: Partial<AppState['m
     channels: 2,
     presetName: '',
     normalize: false,
-    normalizeLevel: -0.1, // Default to -0.1 dBFS for safety
+    normalizeLevel: AUDIO_CONSTANTS.MULTISAMPLE_NORMALIZATION_LEVEL, // Use constant for multisample normalization level
     autoZeroCrossing: true,
     cutAtLoopEnd: false,
     gain: 0,
