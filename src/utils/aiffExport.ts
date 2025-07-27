@@ -86,14 +86,15 @@ function writeExtendedFloat80(dataView: DataView, offset: number, value: number)
     exponent--;
   }
   
-  // Remove implicit leading 1 and scale to 63-bit integer
-  const mantissaInt = Math.round((mantissa - 1) * Math.pow(2, 63));
+  // Scale mantissa to 63-bit integer (IEEE 80-bit has explicit leading bit)
+  const mantissaInt = Math.round(mantissa * Math.pow(2, 63));
   
   // Write exponent (15 bits + sign bit)
   const exponentWithSign = (sign << 15) | (exponent & 0x7FFF);
   dataView.setUint16(offset, exponentWithSign, false);
   
   // Write mantissa (64 bits, but only 63 bits used)
+  // Note: IEEE 80-bit stores mantissa as 64 bits, but only 63 are used
   const hiMant = Math.floor(mantissaInt / Math.pow(2, 32));
   const loMant = mantissaInt % Math.pow(2, 32);
   
