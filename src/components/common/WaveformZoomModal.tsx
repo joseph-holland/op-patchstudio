@@ -509,7 +509,7 @@ export function WaveformZoomModal({
     onClose();
   };
 
-  const playSelection = async () => {
+  const playSelection = useCallback(async () => {
     if (!audioBuffer) return;
     
     try {
@@ -520,7 +520,7 @@ export function WaveformZoomModal({
     } catch (error) {
       console.error('Error playing selection:', error);
     }
-  };
+  }, [audioBuffer, inFrame, outFrame, play]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -536,7 +536,7 @@ export function WaveformZoomModal({
 
     document.addEventListener('keydown', handleKeyPress);
     return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [isOpen]);
+  }, [isOpen, playSelection]);
 
   // Add touch event handlers for mobile marker dragging
   const handleTouchStart = (e: React.TouchEvent) => {
