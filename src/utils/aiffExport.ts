@@ -373,10 +373,12 @@ function writeAudioData(
     buffers.push(audioBuffer.getChannelData(ch));
   }
   
+  // Create DataView and byteIndex once for the entire function
+  const dataView = new DataView(uint8.buffer, offset);
+  let byteIndex = 0;
+  
   if (compressionInfo.isFloat) {
     // 32-bit or 64-bit float
-    const dataView = new DataView(uint8.buffer, offset);
-    let byteIndex = 0;
     
     for (let i = 0; i < length; i++) {
       for (let ch = 0; ch < channels; ch++) {
@@ -395,8 +397,6 @@ function writeAudioData(
     }
   } else {
     // PCM integer data
-    const dataView = new DataView(uint8.buffer, offset);
-    let byteIndex = 0;
     
     for (let i = 0; i < length; i++) {
       for (let ch = 0; ch < channels; ch++) {
