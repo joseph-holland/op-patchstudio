@@ -84,36 +84,17 @@ export function MultisamplePresetSettings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   
-  // Function to check if ADSR values match a known preset
-  const getMatchingPreset = (ampEnvelope: any, filterEnvelope: any): string | null => {
-    for (const [presetName, preset] of Object.entries(ADSR_PRESETS)) {
-      if (
-        ampEnvelope.attack === preset.amp.attack &&
-        ampEnvelope.decay === preset.amp.decay &&
-        ampEnvelope.sustain === preset.amp.sustain &&
-        ampEnvelope.release === preset.amp.release &&
-        filterEnvelope.attack === preset.filter.attack &&
-        filterEnvelope.decay === preset.filter.decay &&
-        filterEnvelope.sustain === preset.filter.sustain &&
-        filterEnvelope.release === preset.filter.release
-      ) {
-        return presetName;
-      }
-    }
-    return null;
-  };
+
 
   // Function to convert global state to local settings format
   const createSettingsFromGlobalState = (): MultisampleAdvancedSettings => {
     const currentAmpEnvelope = state.multisampleSettings.ampEnvelope;
     const currentFilterEnvelope = state.multisampleSettings.filterEnvelope;
     
-    // Check if current ADSR values match any known preset
-    const matchingPreset = getMatchingPreset(currentAmpEnvelope, currentFilterEnvelope);
-    
-    // If no preset matches, use 'keys' preset as default
-    const ampEnvelope = matchingPreset ? currentAmpEnvelope : ADSR_PRESETS.keys.amp;
-    const filterEnvelope = matchingPreset ? currentFilterEnvelope : ADSR_PRESETS.keys.filter;
+    // Always use the current envelope values from global state
+    // Don't replace with preset values - preserve user's custom settings
+    const ampEnvelope = currentAmpEnvelope;
+    const filterEnvelope = currentFilterEnvelope;
     
     return {
       playmode: state.multisampleSettings.playmode,
@@ -152,6 +133,7 @@ export function MultisamplePresetSettings() {
   }, []);
 
   // Sync local settings with global state when global state changes
+  // Note: Excluded ampEnvelope and filterEnvelope from dependencies to prevent loops
   useEffect(() => {
     const globalSettings = createSettingsFromGlobalState();
     setSettings(globalSettings);
@@ -167,22 +149,11 @@ export function MultisamplePresetSettings() {
     state.multisampleSettings.portamentoType,
     state.multisampleSettings.portamentoAmount,
     state.multisampleSettings.tuningRoot,
-    state.multisampleSettings.ampEnvelope,
-    state.multisampleSettings.filterEnvelope,
+    // Removed ampEnvelope and filterEnvelope to prevent reset loops
   ]);
 
-  // Initialize global state with 'keys' preset if no matching preset is found
-  useEffect(() => {
-    const currentAmpEnvelope = state.multisampleSettings.ampEnvelope;
-    const currentFilterEnvelope = state.multisampleSettings.filterEnvelope;
-    const matchingPreset = getMatchingPreset(currentAmpEnvelope, currentFilterEnvelope);
-    
-    if (!matchingPreset) {
-      // Update global state with 'keys' preset values
-      dispatch({ type: 'SET_MULTISAMPLE_AMP_ENVELOPE', payload: ADSR_PRESETS.keys.amp });
-      dispatch({ type: 'SET_MULTISAMPLE_FILTER_ENVELOPE', payload: ADSR_PRESETS.keys.filter });
-    }
-  }, []); // Only run once on mount
+  // Note: Removed the useEffect that was resetting envelopes to 'keys' preset
+  // This was causing the envelopes to reset every time the user interacted with them
 
   const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -317,7 +288,8 @@ export function MultisamplePresetSettings() {
   const updateAmpEnvelope = (envelope: MultisampleAdvancedSettings['ampEnvelope']) => {
     setSettings(prev => {
       const newSettings = { ...prev, ampEnvelope: envelope };
-      dispatchSettingsToContext(newSettings);
+      // Only dispatch envelope changes to avoid loops
+      dispatch({ type: 'SET_MULTISAMPLE_AMP_ENVELOPE', payload: envelope });
       return newSettings;
     });
   };
@@ -325,7 +297,8 @@ export function MultisamplePresetSettings() {
   const updateFilterEnvelope = (envelope: MultisampleAdvancedSettings['filterEnvelope']) => {
     setSettings(prev => {
       const newSettings = { ...prev, filterEnvelope: envelope };
-      dispatchSettingsToContext(newSettings);
+      // Only dispatch envelope changes to avoid loops
+      dispatch({ type: 'SET_MULTISAMPLE_FILTER_ENVELOPE', payload: envelope });
       return newSettings;
     });
   };

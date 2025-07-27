@@ -4,6 +4,11 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.14.10] - 2025-07-27
+
+### fixed
+- issue 79 fixed issue with amp/filter env component
+
 ## [0.14.9] - 2025-07-27
 
 ### fixed

@@ -119,7 +119,7 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
   const currentEnvelope = activeEnvelope === 'amp' ? ampEnvelope : filterEnvelope;
   const inactiveEnvelope = activeEnvelope === 'amp' ? filterEnvelope : ampEnvelope;
 
-  // Initialize with keys preset if envelopes are empty
+  // Initialize with keys preset if envelopes are empty (only on mount)
   useEffect(() => {
     const isEnvelopesEmpty = 
       ampEnvelope.attack === 0 && ampEnvelope.decay === 0 && ampEnvelope.sustain === 0 && ampEnvelope.release === 0 &&
@@ -131,7 +131,7 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
       onAmpEnvelopeChange(keysPreset.amp);
       onFilterEnvelopeChange(keysPreset.filter);
     }
-  }, [ampEnvelope, filterEnvelope, onAmpEnvelopeChange, onFilterEnvelopeChange]);
+  }, []); // Only run once on mount
 
   // Handle preset changes
   const handlePresetChange = useCallback((preset: PresetType) => {
