@@ -143,19 +143,19 @@ export function parseCommChunk(
         // Signed 16-bit little-endian (reverse of 'twos')
         isLittleEndian = true;
         bitDepth = 16;
-        console.log('[AIF PARSER] Detected little-endian 16-bit AIFC file (sowt)');
+
         break;
       case 'fl32':
         // 32-bit floating point
         isFloat = true;
         bitDepth = 32;
-        console.log('[AIF PARSER] Detected 32-bit float AIFC file (fl32)');
+
         break;
       case 'fl64':
         // 64-bit floating point (rare but supported)
         isFloat = true;
         bitDepth = 64;
-        console.log('[AIF PARSER] Detected 64-bit float AIFC file (fl64)');
+
         break;
       case 'ulaw':
         // μ-law compression (rare)

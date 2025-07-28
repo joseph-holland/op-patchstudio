@@ -653,10 +653,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         finalInPoint = result.inPoint;
         finalOutPoint = result.outPoint;
         
-        // Log adjustments if any were made
-        if (result.adjustments.length > 0) {
-          console.log(`Applied zero-crossing adjustments to ${sampleToApply.name}:`, result.adjustments);
-        }
+
       }
       
       updatedDrumSamples[sampleIndex] = {
@@ -704,10 +701,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         finalLoopStart = result.loopStart || initialLoopStart;
         finalLoopEnd = result.loopEnd || initialLoopEnd;
         
-        // Log adjustments if any were made
-        if (result.adjustments.length > 0) {
-          console.log(`Applied zero-crossing adjustments to ${fileToApply.name}:`, result.adjustments);
-        }
+
       }
       
              updatedMultisampleFiles[fileIndex] = {
@@ -1118,10 +1112,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         finalLoopStart = result.loopStart || initialLoopStart;
         finalLoopEnd = result.loopEnd || initialLoopEnd;
         
-        // Log adjustments if any were made
-        if (result.adjustments.length > 0) {
-          console.log(`Applied zero-crossing adjustments to ${action.payload.file.name}:`, result.adjustments);
-        }
+
       }
       
       const newMultisampleFile: MultisampleFile = {

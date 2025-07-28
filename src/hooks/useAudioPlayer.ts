@@ -126,6 +126,7 @@ export function useAudioPlayer() {
 
   // Centralized cleanup function for note state
   const cleanupNoteState = useCallback((noteId: string, noteState: NoteEnvelopeState) => {
+    
     try {
       // Stop the audio source if it's still playing
       if (noteState.source && noteState.source.buffer) {
@@ -317,9 +318,13 @@ export function useAudioPlayer() {
 
   // Trigger release phase for a note
   const triggerRelease = useCallback((noteId: string) => {
+    
     const noteState = activeNotesRef.current.get(noteId);
-    if (!noteState) return;
+    if (!noteState) {
+      return;
+    }
 
+    
     // Prevent multiple release calls on the same note
     if (noteState.envelopePhase === 'release' || noteState.envelopePhase === 'finished') {
       return;
@@ -330,12 +335,13 @@ export function useAudioPlayer() {
 
     // Handle loop on release behavior
     if (noteState.loopOnRelease) {
-      // Enable looping if not already enabled
-      if (!noteState.source.loop) {
-        noteState.source.loop = true;
-        noteState.source.loopStart = noteState.loopStart || 0;
-        noteState.source.loopEnd = noteState.loopEnd || noteState.source.buffer?.duration || 1;
-      }
+      
+      // For loop on release, enable looping but continue from current position
+      // The source will continue playing and only loop when it reaches the loop end
+      noteState.source.loop = true;
+      noteState.source.loopStart = noteState.loopStart || 0;
+      noteState.source.loopEnd = noteState.loopEnd || noteState.source.buffer?.duration || 1;
+      
       
       // For loop on release, apply a gentle release envelope but don't stop the note
       // This creates the effect of a sustaining loop that gradually fades
@@ -345,14 +351,21 @@ export function useAudioPlayer() {
       // Apply the ADSR release curve for looped release
       const { releaseTime: adsrReleaseTime } = convertADSRValues(noteState.adsr);
       
+      
       if (adsrReleaseTime > 0) {
         // Use the exact ADSR release time - respect user's envelope settings
         // Fade to zero like a normal release, but the loop continues playing
         const currentGain = noteState.gainNode.gain.value;
+        
+        // Cancel any existing scheduled values to prevent overlap
+        noteState.gainNode.gain.cancelScheduledValues(currentTime);
+        
         const releaseCurve = generateExponentialCurve(currentGain, 0, 2.0);
         noteState.gainNode.gain.setValueCurveAtTime(releaseCurve, currentTime, adsrReleaseTime);
         
-        // Schedule cleanup after the ADSR release time
+        
+        // Schedule cleanup after the release phase completes
+        // Even though it's looping, we should stop the note after the release envelope finishes
         const timerId = setTimeout(() => {
           cleanupNoteState(noteState.noteId, noteState);
           removeTimer(timerId);
@@ -360,12 +373,11 @@ export function useAudioPlayer() {
         
         // Add timer to tracking
         addTimer(timerId);
+        return;
       } else {
-        // Instant release - stop immediately
         cleanupNoteState(noteState.noteId, noteState);
       }
       
-      // Don't clean up automatically - let the note loop indefinitely with reduced volume
       return;
     }
 
@@ -405,8 +417,9 @@ export function useAudioPlayer() {
     } else {
       // Clean up after release phase
       const timerId = setTimeout(() => {
-        // For looping notes, stop the source explicitly since it won't end naturally
-        if (noteState.loopEnabled || noteState.loopOnRelease) {
+        // For regular looping notes, stop the source explicitly since it won't end naturally
+        // But for loop on release notes, don't stop the source - let it continue looping
+        if (noteState.loopEnabled && !noteState.loopOnRelease) {
           try {
             noteState.source.stop();
           } catch (error) {
@@ -535,6 +548,10 @@ export function useAudioPlayer() {
       // Start playback
       if (loopEnabled) {
         // For looping, don't pass duration to allow infinite loop
+        source.start(0, bufferStartTime);
+      } else if (loopOnRelease) {
+        // For loop on release, start without looping but don't pass duration
+        // This allows the sample to play to the end, then loop on release
         source.start(0, bufferStartTime);
       } else if (duration > 0) {
         // For non-looping, use duration if specified

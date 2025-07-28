@@ -18,6 +18,9 @@ describe('useAudioPlayer', () => {
   let mockGainParam: any;
 
   beforeEach(async () => {
+    // Mock timers
+    vi.useFakeTimers();
+    vi.spyOn(global, 'setTimeout');
     // Create a more robust mock for AudioParam
     mockGainParam = {
       value: 1,
@@ -78,6 +81,7 @@ describe('useAudioPlayer', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it('should initialize with correct default state', () => {
@@ -514,6 +518,86 @@ describe('useAudioPlayer', () => {
       // This pattern should match actual noteIds
       const actualNoteId = 'multisample-60-1234567890';
       expect(actualNoteId.startsWith(extractedPattern)).toBe(true);
+    });
+
+    it('should handle loop on release correctly with proper cleanup', async () => {
+      const { result } = renderHook(() => useAudioPlayer());
+      
+      const adsrWithRelease = {
+        attack: 0,
+        decay: 0,
+        sustain: 32767,
+        release: 16383, // 50% release time
+      };
+
+      await act(async () => {
+        await result.current.playWithADSR(mockBuffer, 'test-note', {
+          adsr: adsrWithRelease,
+          loopOnRelease: true,
+        });
+      });
+
+      expect(result.current.getActiveNotesCount()).toBe(1);
+
+      // Release the note with loop on release
+      act(() => {
+        result.current.releaseNote('test-note');
+      });
+
+      // The note should remain active during the release phase
+      // The gain should fade to zero but the source should continue looping
+      expect(result.current.getActiveNotesCount()).toBe(1);
+
+      // Verify that the release curve was applied
+      expect(mockGainParam.setValueCurveAtTime).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.any(Number),
+        expect.any(Number)
+      );
+
+      // Verify that a cleanup timer was scheduled
+      expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), expect.any(Number));
+    });
+
+    it('should handle loop on release with loop enabled correctly', async () => {
+      const { result } = renderHook(() => useAudioPlayer());
+      
+      const adsrWithRelease = {
+        attack: 0,
+        decay: 0,
+        sustain: 32767,
+        release: 16383, // 50% release time
+      };
+
+      await act(async () => {
+        await result.current.playWithADSR(mockBuffer, 'test-note', {
+          adsr: adsrWithRelease,
+          loopEnabled: true,
+          loopOnRelease: true,
+          loopStart: 0.5,
+          loopEnd: 1.0,
+        });
+      });
+
+      expect(result.current.getActiveNotesCount()).toBe(1);
+
+      // Release the note with loop on release
+      act(() => {
+        result.current.releaseNote('test-note');
+      });
+
+      // The note should remain active during the release phase
+      expect(result.current.getActiveNotesCount()).toBe(1);
+
+      // Verify that the release curve was applied
+      expect(mockGainParam.setValueCurveAtTime).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.any(Number),
+        expect.any(Number)
+      );
+
+      // The source should not be stopped for loop on release
+      expect(mockSource.stop).not.toHaveBeenCalled();
     });
   });
 }); 

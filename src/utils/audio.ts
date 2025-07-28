@@ -418,30 +418,12 @@ export async function convertAudioFormat(
 
   // Apply normalization if enabled
   let normalizeGain = 1;
-  let originalPeakDB = 0;
   if (normalize) {
-    // Calculate original peak level in dBFS
-    let maxAmplitude = 0;
-    for (let ch = 0; ch < processedBuffer.numberOfChannels; ch++) {
-      const channelData = processedBuffer.getChannelData(ch);
-      for (let i = 0; i < channelData.length; i++) {
-        const amplitude = Math.abs(channelData[i]);
-        if (amplitude > maxAmplitude) {
-          maxAmplitude = amplitude;
-        }
-      }
-    }
-    originalPeakDB = maxAmplitude > 0 ? 20 * Math.log10(maxAmplitude) : -Infinity;
-    
     normalizeGain = calculatePeakNormalizationGain(processedBuffer, normalizeLevel);
     gainValue *= normalizeGain;
   }
 
-  // Debug logging for normalization and gain
-  if (normalize || gain !== 0) {
-    const sampleInfo = options.sampleName ? ` (${options.sampleName})` : '';
-    console.log(`[AUDIO PROCESSING]${sampleInfo} normalization: ${normalize}, target: ${normalizeLevel}dBFS, original peak: ${originalPeakDB.toFixed(1)}dBFS, normalizeGain: ${normalizeGain.toFixed(4)}, gain: ${gain}dBFS, final gainValue: ${gainValue.toFixed(4)}`);
-  }
+
 
   gainNode.gain.value = gainValue;
 
