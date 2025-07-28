@@ -353,6 +353,15 @@ export function useAudioPlayer() {
   ) => {
     try {
       const audioContext = await audioContextManager.getAudioContext();
+      
+      // Ensure audio context is fully ready before proceeding
+      if (audioContext.state !== 'running' && typeof audioContext.resume === 'function') {
+        console.warn('Audio context not running, attempting to resume...');
+        await audioContext.resume();
+        // Add a small delay to ensure context is fully ready
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      
       const playMode = options.playMode || 'poly';
       const velocity = options.velocity || 127;
       const adsr = options.adsr || { attack: 0, decay: 0, sustain: 32767, release: 0 };

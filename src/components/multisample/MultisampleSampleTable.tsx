@@ -1127,6 +1127,10 @@ export function MultisampleSampleTable({
         initialLoopStart={state.multisampleFiles[zoomSampleIndex]?.loopStart || 0}
         initialLoopEnd={state.multisampleFiles[zoomSampleIndex]?.loopEnd || (state.multisampleFiles[zoomSampleIndex]?.audioBuffer ? state.multisampleFiles[zoomSampleIndex].audioBuffer!.length / state.multisampleFiles[zoomSampleIndex].audioBuffer!.sampleRate : 0)}
         onSave={handleZoomSave}
+        // Pass loop settings for preview playback
+        loopEnabled={state.multisampleSettings.loopEnabled}
+        loopOnRelease={state.multisampleSettings.loopOnRelease}
+        ampEnvelope={state.multisampleSettings.ampEnvelope}
       />
     </div>
   );

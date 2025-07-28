@@ -13,6 +13,15 @@ interface WaveformZoomModalProps {
   initialLoopStart?: number;
   initialLoopEnd?: number;
   onSave: (inPoint: number, outPoint: number, loopStart?: number, loopEnd?: number) => void;
+  // Loop settings for preview playback
+  loopEnabled?: boolean;
+  loopOnRelease?: boolean;
+  ampEnvelope?: {
+    attack: number;
+    decay: number;
+    sustain: number;
+    release: number;
+  };
 }
 
 export function WaveformZoomModal({
@@ -24,6 +33,9 @@ export function WaveformZoomModal({
   initialLoopStart,
   initialLoopEnd,
   onSave,
+  loopEnabled = false,
+  loopOnRelease = false,
+  ampEnvelope,
 }: WaveformZoomModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -36,7 +48,9 @@ export function WaveformZoomModal({
   const [snapToZero, setSnapToZero] = useState(true);
   const [dragging, setDragging] = useState<'in' | 'out' | 'loopStart' | 'loopEnd' | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
-  const { play } = useAudioPlayer();
+  const { playWithADSR, releaseNote } = useAudioPlayer();
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentNoteId, setCurrentNoteId] = useState<string | null>(null);
 
   // Check if device is mobile/tablet in portrait mode
   const isMobilePortrait = () => {
@@ -513,30 +527,83 @@ export function WaveformZoomModal({
     if (!audioBuffer) return;
     
     try {
-      await play(audioBuffer, {
+      const noteId = `waveform-preview-${Date.now()}`;
+      setCurrentNoteId(noteId);
+      setIsPlaying(true);
+      
+      // Calculate loop points in seconds for the selection
+      const selectionStart = inFrame / audioBuffer.sampleRate;
+      const selectionEnd = outFrame / audioBuffer.sampleRate;
+      
+
+      
+      await playWithADSR(audioBuffer, noteId, {
         inFrame,
-        outFrame
+        outFrame,
+        // Use loop settings if enabled
+        loopEnabled,
+        loopOnRelease,
+        loopStart: hasLoopPoints ? (loopStartFrame / audioBuffer.sampleRate) : selectionStart,
+        loopEnd: hasLoopPoints ? (loopEndFrame / audioBuffer.sampleRate) : selectionEnd,
+        // Use ADSR envelope if provided, with safe defaults for preview
+        adsr: ampEnvelope || { attack: 100, decay: 1000, sustain: 30000, release: 2000 },
+        velocity: 127,
       });
     } catch (error) {
       console.error('Error playing selection:', error);
+      setIsPlaying(false);
+      setCurrentNoteId(null);
     }
-  }, [audioBuffer, inFrame, outFrame, play]);
+  }, [audioBuffer, inFrame, outFrame, playWithADSR, loopEnabled, loopOnRelease, hasLoopPoints, loopStartFrame, loopEndFrame, ampEnvelope]);
 
+  const stopPlayback = useCallback(() => {
+    if (currentNoteId) {
+      if (loopOnRelease) {
+        // For loop on release, trigger release phase
+        releaseNote(currentNoteId);
+      } else {
+        // For normal playback, stop immediately
+        releaseNote(currentNoteId, true); // Force stop
+      }
+      setIsPlaying(false);
+      setCurrentNoteId(null);
+    }
+  }, [currentNoteId, releaseNote, loopOnRelease]);
+
+  // Clean up playback when modal closes
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      stopPlayback();
+      return;
+    }
 
-    const handleKeyPress = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'p' || e.key === 'P') {
         e.preventDefault();
-        playSelection().catch(error => {
-          console.error('Error playing selection:', error);
-        });
+        if (!isPlaying) {
+          playSelection().catch(error => {
+            console.error('Error playing selection:', error);
+          });
+        }
       }
     };
 
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [isOpen, playSelection]);
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        if (isPlaying) {
+          stopPlayback();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isOpen, playSelection, isPlaying, stopPlayback]);
 
   // Add touch event handlers for mobile marker dragging
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -1047,9 +1114,23 @@ export function WaveformZoomModal({
               }}>
                 <button
                   ref={firstButtonRef}
-                  onClick={() => playSelection().catch(error => {
-                    console.error('Error playing selection:', error);
-                  })}
+                  onMouseDown={() => {
+                    if (!isPlaying) {
+                      playSelection().catch(error => {
+                        console.error('Error playing selection:', error);
+                      });
+                    }
+                  }}
+                  onMouseUp={stopPlayback}
+                  onMouseLeave={stopPlayback}
+                  onTouchStart={() => {
+                    if (!isPlaying) {
+                      playSelection().catch(error => {
+                        console.error('Error playing selection:', error);
+                      });
+                    }
+                  }}
+                  onTouchEnd={stopPlayback}
                   style={{
                     padding: isMobileDevice() ? '0.75rem 1.25rem' : '0.65rem 1rem',
                     border: `1px solid ${c.border}`,
@@ -1063,11 +1144,14 @@ export function WaveformZoomModal({
                     fontSize: isMobileDevice() ? '1rem' : '0.875rem',
                     fontWeight: '500',
                     fontFamily: 'inherit',
-                    minHeight: isMobileDevice() ? '44px' : undefined
+                    minHeight: isMobileDevice() ? '44px' : undefined,
+                    // Prevent button from shrinking when text changes
+                    minWidth: isMobileDevice() ? '180px' : '200px',
+                    justifyContent: 'center'
                   }}
                 >
-                  <i className="fas fa-play" style={{ fontSize: isMobileDevice() ? '0.75rem' : '0.8rem' }}></i>
-                  play selection (P)
+                  <i className={`fas ${isPlaying ? 'fa-stop' : 'fa-play'}`} style={{ fontSize: isMobileDevice() ? '0.75rem' : '0.8rem' }}></i>
+                  {isPlaying ? 'stop (P)' : 'play selection (P)'}
                 </button>
                 <label style={{ 
                   display: 'flex', 

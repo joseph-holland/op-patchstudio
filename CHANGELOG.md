@@ -4,6 +4,15 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.15.0] - 2025-07-28
+
+### added
+- proper looping implemention
+
+### fixed
+- issue 79, bug with only playing selection in zoom and edit modal
+- while working on above, i noticed the adsr was broken. this was working so i had to fix this regression.
+
 ## [0.14.10] - 2025-07-27
 
 ### fixed
