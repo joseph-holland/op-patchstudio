@@ -204,6 +204,8 @@ export function useSessionManagement() {
       // Sort multisample files by rootNote descending (to match the original logic)
       restoredMultisampleFiles.sort((a, b) => b.rootNote - a.rootNote);
 
+
+
       // Now restore everything in one go with the complete state
       dispatch({
         type: 'RESTORE_SESSION',

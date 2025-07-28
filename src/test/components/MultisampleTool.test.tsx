@@ -264,13 +264,18 @@ describe('MultisampleTool ADSR Integration', () => {
           gain: 0,
           pan: 0,
           adsr: {
-            attack: 1000,
-            decay: 8000,
-            sustain: 25000,
-            release: 15000,
+            attack: 500,
+            decay: 6000,
+            sustain: 22000,
+            release: 12000,
           },
           playMode: 'poly',
           velocity: 127,
+          // Loop settings
+          loopEnabled: true,
+          loopOnRelease: true,
+          loopStart: 0,
+          loopEnd: 2,
         }
       );
     });
@@ -336,10 +341,10 @@ describe('MultisampleTool ADSR Integration', () => {
         expect.stringMatching(/multisample-60-\d+/),
         expect.objectContaining({
           adsr: {
-            attack: 0,
-            decay: 0,
-            sustain: 32767,
-            release: 0,
+            attack: 500,
+            decay: 6000,
+            sustain: 22000,
+            release: 12000,
           },
           playMode: 'poly',
         })
@@ -347,15 +352,12 @@ describe('MultisampleTool ADSR Integration', () => {
     });
   });
 
-  it('should use imported play mode from preset', async () => {
+  it('should use play mode from multisample settings', async () => {
     const stateWithMonoMode = {
       ...defaultState,
-      importedMultisamplePreset: {
-        ...defaultState.importedMultisamplePreset,
-        engine: {
-          ...defaultState.importedMultisamplePreset.engine,
-          playmode: 'mono',
-        },
+      multisampleSettings: {
+        ...defaultState.multisampleSettings,
+        playmode: 'mono' as const,
       },
     };
 

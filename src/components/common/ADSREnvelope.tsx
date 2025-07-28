@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { FourKnobControl } from './FourKnobControl';
 
 interface ADSRValues {
@@ -119,19 +119,8 @@ export const ADSREnvelope: React.FC<ADSREnvelopeProps> = ({
   const currentEnvelope = activeEnvelope === 'amp' ? ampEnvelope : filterEnvelope;
   const inactiveEnvelope = activeEnvelope === 'amp' ? filterEnvelope : ampEnvelope;
 
-  // Initialize with keys preset if envelopes are empty (only on mount)
-  useEffect(() => {
-    const isEnvelopesEmpty = 
-      ampEnvelope.attack === 0 && ampEnvelope.decay === 0 && ampEnvelope.sustain === 0 && ampEnvelope.release === 0 &&
-      filterEnvelope.attack === 0 && filterEnvelope.decay === 0 && filterEnvelope.sustain === 0 && filterEnvelope.release === 0;
-    
-    if (isEnvelopesEmpty) {
-      // Apply keys preset instead of random values
-      const keysPreset = ADSR_PRESETS.keys;
-      onAmpEnvelopeChange(keysPreset.amp);
-      onFilterEnvelopeChange(keysPreset.filter);
-    }
-  }, []); // Only run once on mount
+  // Note: Removed automatic preset application to prevent overriding session/library restored values
+  // The default settings in defaultSettings.ts should provide appropriate initial values
 
   // Handle preset changes
   const handlePresetChange = useCallback((preset: PresetType) => {

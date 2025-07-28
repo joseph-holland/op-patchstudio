@@ -403,16 +403,11 @@ export function MultisampleTool() {
         // Apply pitch shifting
         const playbackRate = Math.pow(2, pitchOffset / 12);
         
-        // Get ADSR settings from imported preset or use defaults
-        const adsrSettings = state.importedMultisamplePreset?.envelope?.amp || {
-          attack: 0,
-          decay: 0,
-          sustain: 32767,
-          release: 0
-        };
+        // Get ADSR settings from current multisample settings (which includes defaults and user adjustments)
+        const adsrSettings = state.multisampleSettings.ampEnvelope;
         
-        // Get play mode from imported preset or use poly as default
-        const playMode = state.importedMultisamplePreset?.engine?.playmode || 'poly';
+        // Get play mode from current multisample settings
+        const playMode = state.multisampleSettings.playmode;
         
         // Use the ADSR-enabled audio player
         const noteId = `multisample-${midiNote}-${Date.now()}`;
@@ -423,12 +418,17 @@ export function MultisampleTool() {
           adsr: adsrSettings,
           playMode: playMode as 'poly' | 'mono' | 'legato',
           velocity: 127, // Full velocity for keyboard clicks
+          // Loop settings
+          loopEnabled: state.multisampleSettings.loopEnabled,
+          loopOnRelease: state.multisampleSettings.loopOnRelease,
+          loopStart: rootSample.loopStart,
+          loopEnd: rootSample.loopEnd,
         });
       } catch (error) {
         console.error("Error playing pitched sample:", error);
       }
     }
-  }, [zoneMap, state.multisampleFiles, playWithADSR, state.multisampleSettings.gain, state.importedMultisamplePreset]);
+  }, [zoneMap, state.multisampleFiles, playWithADSR, state.multisampleSettings.gain, state.multisampleSettings.ampEnvelope, state.multisampleSettings.playmode, state.multisampleSettings.loopEnabled, state.multisampleSettings.loopOnRelease]);
 
   // Handler for releasing a key (for ADSR release phase)
   const handleKeyRelease = useCallback((midiNote: number) => {
