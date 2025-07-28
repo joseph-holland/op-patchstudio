@@ -271,6 +271,11 @@ describe('MultisampleTool ADSR Integration', () => {
           },
           playMode: 'poly',
           velocity: 127,
+          // Loop settings
+          loopEnabled: true,
+          loopOnRelease: true,
+          loopStart: 0,
+          loopEnd: 2,
         }
       );
     });

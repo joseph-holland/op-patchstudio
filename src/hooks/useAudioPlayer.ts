@@ -9,6 +9,10 @@ export interface AudioPlaybackOptions {
   gain?: number;
   pan?: number;
   reverse?: boolean;
+  loopEnabled?: boolean;
+  loopOnRelease?: boolean;
+  loopStart?: number; // in seconds
+  loopEnd?: number; // in seconds
 }
 
 export interface AudioPlayerState {
@@ -45,6 +49,11 @@ interface NoteEnvelopeState {
   currentGain: number;
   adsr: ADSRValues;
   velocity: number;
+  // Loop settings
+  loopEnabled: boolean;
+  loopOnRelease: boolean;
+  loopStart?: number;
+  loopEnd?: number;
 }
 
 export function useAudioPlayer() {
@@ -212,7 +221,69 @@ export function useAudioPlayer() {
     const audioContext = noteState.gainNode.context;
     const currentTime = audioContext.currentTime;
 
-    // Use the new ADSR envelope release function
+    // Handle loop on release behavior
+    if (noteState.loopOnRelease) {
+      // Enable looping if not already enabled
+      if (!noteState.source.loop) {
+        noteState.source.loop = true;
+        noteState.source.loopStart = noteState.loopStart || 0;
+        noteState.source.loopEnd = noteState.loopEnd || noteState.source.buffer?.duration || 1;
+      }
+      
+      // For loop on release, apply a gentle release envelope but don't stop the note
+      // This creates the effect of a sustaining loop that gradually fades
+      noteState.envelopePhase = 'release';
+      noteState.releaseTime = currentTime;
+      
+      // Apply the ADSR release curve for looped release
+      const { releaseTime: adsrReleaseTime } = convertADSRValues(noteState.adsr);
+      
+      if (adsrReleaseTime > 0) {
+        // Use the exact ADSR release time - respect user's envelope settings
+        // Fade to zero like a normal release, but the loop continues playing
+        const currentGain = noteState.gainNode.gain.value;
+        const releaseCurve = generateExponentialCurve(currentGain, 0, 2.0);
+        noteState.gainNode.gain.setValueCurveAtTime(releaseCurve, currentTime, adsrReleaseTime);
+        
+        // Schedule cleanup after the ADSR release time
+        setTimeout(() => {
+          try {
+            noteState.source.stop();
+          } catch (error) {
+            // Source might already be stopped
+          }
+          activeNotesRef.current.delete(noteState.noteId);
+          noteState.source.disconnect();
+          noteState.gainNode.disconnect();
+          noteState.envelopePhase = 'finished';
+          
+          // Remove from global active notes
+          if (noteState.noteId.startsWith('multisample-')) {
+            const arr = (window as any).opPatchstudioActiveNotes;
+            if (Array.isArray(arr)) {
+              const idx = arr.indexOf(noteState.noteId);
+              if (idx !== -1) arr.splice(idx, 1);
+            }
+          }
+        }, adsrReleaseTime * 1000);
+      } else {
+        // Instant release - stop immediately
+        try {
+          noteState.source.stop();
+        } catch (error) {
+          // Source might already be stopped
+        }
+        activeNotesRef.current.delete(noteState.noteId);
+        noteState.source.disconnect();
+        noteState.gainNode.disconnect();
+        noteState.envelopePhase = 'finished';
+      }
+      
+      // Don't clean up automatically - let the note loop indefinitely with reduced volume
+      return;
+    }
+
+    // Standard release behavior (no loop on release)
     try {
       releaseNoteWithADSR(noteState.gainNode, noteState.adsr, currentTime);
       noteState.envelopePhase = 'release';
@@ -236,6 +307,11 @@ export function useAudioPlayer() {
     // Get release time for cleanup
     const { releaseTime: adsrReleaseTime } = convertADSRValues(noteState.adsr);
 
+    // For regular looping (loopEnabled), disable the loop when releasing so it can end naturally
+    if (noteState.loopEnabled && !noteState.loopOnRelease) {
+      noteState.source.loop = false;
+    }
+
     // For instant release (0ms), stop the source and clean up immediately
     if (adsrReleaseTime <= 0) {
       try {
@@ -253,6 +329,14 @@ export function useAudioPlayer() {
     } else {
       // Clean up after release phase
       setTimeout(() => {
+        // For looping notes, stop the source explicitly since it won't end naturally
+        if (noteState.loopEnabled || noteState.loopOnRelease) {
+          try {
+            noteState.source.stop();
+          } catch (error) {
+            // Source might already be stopped
+          }
+        }
         activeNotesRef.current.delete(noteId);
         noteState.source.disconnect();
         noteState.gainNode.disconnect();
@@ -301,6 +385,26 @@ export function useAudioPlayer() {
       // Configure source
       source.buffer = audioBuffer;
       source.playbackRate.value = options.playbackRate || 1;
+      
+      // Configure looping if enabled
+      const loopEnabled = options.loopEnabled || false;
+      const loopOnRelease = options.loopOnRelease || false;
+      const loopStart = options.loopStart || 0;
+      const loopEnd = options.loopEnd || audioBuffer.duration;
+      
+
+      
+      if (loopEnabled) {
+        // Validate loop points
+        const validLoopStart = Math.max(0, Math.min(loopStart, audioBuffer.duration - 0.1));
+        const validLoopEnd = Math.max(validLoopStart + 0.1, Math.min(loopEnd, audioBuffer.duration));
+        
+        source.loop = true;
+        source.loopStart = validLoopStart;
+        source.loopEnd = validLoopEnd;
+        
+
+      }
 
       // Configure pan
       const panValue = options.pan !== undefined ? Math.max(-1, Math.min(1, options.pan / 100)) : 0;
@@ -327,7 +431,11 @@ export function useAudioPlayer() {
       }
 
       // Start playback
-      if (duration > 0) {
+      if (loopEnabled) {
+        // For looping, don't pass duration to allow infinite loop
+        source.start(0, bufferStartTime);
+      } else if (duration > 0) {
+        // For non-looping, use duration if specified
         source.start(0, bufferStartTime, duration);
       } else {
         source.start(0, bufferStartTime);
@@ -342,7 +450,11 @@ export function useAudioPlayer() {
         startTime,
         currentGain: velocity / 127,
         adsr,
-        velocity
+        velocity,
+        loopEnabled,
+        loopOnRelease,
+        loopStart,
+        loopEnd
       };
 
       // Store note state
@@ -385,19 +497,48 @@ export function useAudioPlayer() {
   }, [applyADSREnvelope, triggerRelease]);
 
   // Release a specific note or notes matching a pattern
-  const releaseNote = useCallback((noteId: string) => {
+  const releaseNote = useCallback((noteId: string, forceStop: boolean = false) => {
+    const handleNote = (id: string) => {
+      if (forceStop) {
+        // Force stop the note even if it's in loop on release mode
+        const noteState = activeNotesRef.current.get(id);
+        if (noteState) {
+          try {
+            noteState.source.stop();
+          } catch (error) {
+            // Source might already be stopped
+          }
+          activeNotesRef.current.delete(id);
+          noteState.source.disconnect();
+          noteState.gainNode.disconnect();
+          noteState.envelopePhase = 'finished';
+          
+          // Remove from global active notes
+          if (id.startsWith('multisample-')) {
+            const arr = (window as any).opPatchstudioActiveNotes;
+            if (Array.isArray(arr)) {
+              const idx = arr.indexOf(id);
+              if (idx !== -1) arr.splice(idx, 1);
+            }
+          }
+        }
+      } else {
+        triggerRelease(id);
+      }
+    };
+
     // Check if this is a pattern (contains wildcard or is a base pattern)
     if (noteId.includes('*') || noteId.endsWith('-')) {
       // Pattern matching: find all notes that start with the pattern
       const pattern = noteId.replace('*', '').replace(/-$/, '');
       for (const [id] of activeNotesRef.current) {
         if (id.startsWith(pattern)) {
-          triggerRelease(id);
+          handleNote(id);
         }
       }
     } else {
       // Exact match
-      triggerRelease(noteId);
+      handleNote(noteId);
     }
   }, [triggerRelease]);
 
@@ -407,6 +548,13 @@ export function useAudioPlayer() {
       triggerRelease(noteId);
     }
   }, [triggerRelease]);
+
+  // Force stop all notes (useful for cleaning up looped notes)
+  const stopAllNotes = useCallback(() => {
+    for (const [noteId] of activeNotesRef.current) {
+      releaseNote(noteId, true); // Force stop
+    }
+  }, [releaseNote]);
 
   // Get active notes count
   const getActiveNotesCount = useCallback(() => {
@@ -527,6 +675,7 @@ export function useAudioPlayer() {
     playWithADSR,
     releaseNote,
     releaseAllNotes,
+    stopAllNotes,
     getActiveNotesCount,
   };
 } 

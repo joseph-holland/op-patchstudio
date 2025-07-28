@@ -418,12 +418,17 @@ export function MultisampleTool() {
           adsr: adsrSettings,
           playMode: playMode as 'poly' | 'mono' | 'legato',
           velocity: 127, // Full velocity for keyboard clicks
+          // Loop settings
+          loopEnabled: state.multisampleSettings.loopEnabled,
+          loopOnRelease: state.multisampleSettings.loopOnRelease,
+          loopStart: rootSample.loopStart,
+          loopEnd: rootSample.loopEnd,
         });
       } catch (error) {
         console.error("Error playing pitched sample:", error);
       }
     }
-  }, [zoneMap, state.multisampleFiles, playWithADSR, state.multisampleSettings.gain, state.multisampleSettings.ampEnvelope, state.multisampleSettings.playmode]);
+  }, [zoneMap, state.multisampleFiles, playWithADSR, state.multisampleSettings.gain, state.multisampleSettings.ampEnvelope, state.multisampleSettings.playmode, state.multisampleSettings.loopEnabled, state.multisampleSettings.loopOnRelease]);
 
   // Handler for releasing a key (for ADSR release phase)
   const handleKeyRelease = useCallback((midiNote: number) => {
