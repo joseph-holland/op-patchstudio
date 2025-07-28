@@ -2,6 +2,26 @@ import { useCallback, useRef, useEffect } from 'react';
 import { audioContextManager } from '../utils/audioContext';
 import { AUDIO_CONSTANTS } from '../utils/constants';
 
+// Firefox fallback constants
+const FIREFOX_FALLBACK_CONSTANTS = {
+  MAX_FADE_DURATION: 30000, // 30 seconds protection timeout
+  FADE_STEPS: 20, // Number of steps for manual fade
+  MIN_GAIN_THRESHOLD: 0.001, // Minimum gain value for fade
+  CLEANUP_DELAY: 100, // Small delay after fade completes
+} as const;
+
+// Timer tracking for memory leak prevention
+interface TimerTracker {
+  fadeInterval?: NodeJS.Timeout;
+  fadeTimeoutProtection?: NodeJS.Timeout;
+  cleanupTimer?: NodeJS.Timeout;
+  noteId: string;
+  gainNode: GainNode;
+}
+
+// Global timer registry to prevent memory leaks
+const activeTimersRegistry = new Map<string, TimerTracker>();
+
 // Type declaration for global active notes
 declare global {
   interface Window {
@@ -62,6 +82,11 @@ export interface ADSRValues {
   release: number;  // 0-32767 (time)
 }
 
+// TypeScript interface extension for GainNode with Firefox fallback properties
+interface ExtendedGainNode extends GainNode {
+  __cleanupCompleted?: boolean; // Flag to prevent double cleanup
+}
+
 // ADSR-enabled playback options
 export interface ADSRPlaybackOptions extends AudioPlaybackOptions {
   adsr?: ADSRValues;
@@ -89,6 +114,109 @@ interface NoteEnvelopeState {
   loopEnd?: number;
 }
 
+// Browser detection for Web Audio API compatibility
+const isFirefox = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return navigator.userAgent.includes('Firefox');
+};
+
+// Shared Firefox fallback fade function
+const createFirefoxFade = (
+  gainNode: GainNode,
+  startGain: number,
+  fadeDuration: number,
+  noteId: string,
+  onComplete?: () => void
+): void => {
+  const extendedGainNode = gainNode as ExtendedGainNode;
+  const fadeSteps = FIREFOX_FALLBACK_CONSTANTS.FADE_STEPS;
+  const stepDuration = (fadeDuration * 1000) / fadeSteps;
+  const maxFadeDuration = FIREFOX_FALLBACK_CONSTANTS.MAX_FADE_DURATION;
+  const minGain = FIREFOX_FALLBACK_CONSTANTS.MIN_GAIN_THRESHOLD;
+  
+  // Create timer tracker for this fade operation
+  const timerTracker: TimerTracker = {
+    noteId,
+    gainNode
+  };
+  
+  // Add timeout protection to prevent runaway intervals
+  timerTracker.fadeTimeoutProtection = setTimeout(() => {
+    if (timerTracker.fadeInterval) {
+      clearInterval(timerTracker.fadeInterval);
+      delete timerTracker.fadeInterval;
+    }
+    gainNode.gain.value = minGain; // Emergency stop
+    
+    // Only cleanup if not already completed
+    if (!extendedGainNode.__cleanupCompleted) {
+      extendedGainNode.__cleanupCompleted = true;
+      onComplete?.();
+    }
+    
+    // Remove from registry
+    activeTimersRegistry.delete(noteId);
+  }, maxFadeDuration);
+  
+  let currentStep = 0;
+  timerTracker.fadeInterval = setInterval(() => {
+    currentStep++;
+    const progress = currentStep / fadeSteps;
+    
+    // Handle edge cases for exponential fade
+    let newGain: number;
+    if (startGain <= 0) {
+      // If startGain is 0 or negative, fade directly to minGain
+      newGain = minGain;
+    } else if (startGain <= minGain) {
+      // If startGain is already at or below minGain, stay at minGain
+      newGain = minGain;
+    } else {
+      // Proper exponential fade: y = startGain * e^(-progress * fadeFactor)
+      // fadeFactor controls the curve steepness (higher = steeper fade)
+      const fadeFactor = 3.0; // Adjust this for different fade characteristics
+      newGain = startGain * Math.exp(-progress * fadeFactor);
+      // Ensure we don't go below minGain
+      newGain = Math.max(newGain, minGain);
+    }
+    
+    gainNode.gain.value = newGain;
+    
+    if (currentStep >= fadeSteps) {
+      if (timerTracker.fadeInterval) {
+        clearInterval(timerTracker.fadeInterval);
+        delete timerTracker.fadeInterval;
+      }
+      if (timerTracker.fadeTimeoutProtection) {
+        clearTimeout(timerTracker.fadeTimeoutProtection);
+        delete timerTracker.fadeTimeoutProtection;
+      }
+      gainNode.gain.value = minGain; // Final fade to near-zero
+      
+      // Schedule completion callback, but only if not already completed
+      if (!extendedGainNode.__cleanupCompleted) {
+        extendedGainNode.__cleanupCompleted = true;
+        if (onComplete) {
+          timerTracker.cleanupTimer = setTimeout(() => {
+            onComplete();
+            // Remove from registry after cleanup
+            activeTimersRegistry.delete(noteId);
+          }, FIREFOX_FALLBACK_CONSTANTS.CLEANUP_DELAY);
+        } else {
+          // Remove from registry immediately if no cleanup needed
+          activeTimersRegistry.delete(noteId);
+        }
+      } else {
+        // Remove from registry if already completed
+        activeTimersRegistry.delete(noteId);
+      }
+    }
+  }, stepDuration);
+  
+  // Register the timer tracker
+  activeTimersRegistry.set(noteId, timerTracker);
+};
+
 export function useAudioPlayer() {
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const currentGainNodeRef = useRef<GainNode | null>(null);
@@ -105,6 +233,89 @@ export function useAudioPlayer() {
   
   // Track active timers for cleanup
   const activeTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  
+  // Browser detection for cross-browser compatibility
+  const isFirefoxBrowser = isFirefox();
+
+  // Standardized error handling utility
+  const handleAudioError = useCallback((error: unknown, context: string, fallbackAction?: () => void) => {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(`Audio error in ${context}:`, errorMessage);
+    
+    if (fallbackAction) {
+      try {
+        fallbackAction();
+      } catch (fallbackError) {
+        console.warn(`Fallback action failed in ${context}:`, fallbackError instanceof Error ? fallbackError.message : String(fallbackError));
+      }
+    }
+  }, []);
+
+  // Cleanup verification utility to prevent memory leaks
+  const verifyCleanup = useCallback((noteId: string, noteState: NoteEnvelopeState) => {
+    const extendedGainNode = noteState.gainNode as ExtendedGainNode;
+    
+    // Verify all intervals and timeouts are cleared
+    if (extendedGainNode.__cleanupCompleted) {
+      return true;
+    }
+    
+    // Check if there are any active timers for this note
+    const timerTracker = activeTimersRegistry.get(noteId);
+    if (timerTracker) {
+      // Clean up any remaining timers
+      if (timerTracker.fadeInterval) {
+        clearInterval(timerTracker.fadeInterval);
+        delete timerTracker.fadeInterval;
+      }
+      if (timerTracker.fadeTimeoutProtection) {
+        clearTimeout(timerTracker.fadeTimeoutProtection);
+        delete timerTracker.fadeTimeoutProtection;
+      }
+      if (timerTracker.cleanupTimer) {
+        clearTimeout(timerTracker.cleanupTimer);
+        delete timerTracker.cleanupTimer;
+      }
+      // Remove from registry
+      activeTimersRegistry.delete(noteId);
+    }
+    
+    return true;
+  }, []);
+
+  // Cleanup function for timer registry
+  const cleanupTimerRegistry = useCallback((noteId?: string) => {
+    if (noteId) {
+      // Clean up specific note
+      const timerTracker = activeTimersRegistry.get(noteId);
+      if (timerTracker) {
+        if (timerTracker.fadeInterval) {
+          clearInterval(timerTracker.fadeInterval);
+        }
+        if (timerTracker.fadeTimeoutProtection) {
+          clearTimeout(timerTracker.fadeTimeoutProtection);
+        }
+        if (timerTracker.cleanupTimer) {
+          clearTimeout(timerTracker.cleanupTimer);
+        }
+        activeTimersRegistry.delete(noteId);
+      }
+    } else {
+      // Clean up all timers (component unmount)
+      for (const [, timerTracker] of activeTimersRegistry.entries()) {
+        if (timerTracker.fadeInterval) {
+          clearInterval(timerTracker.fadeInterval);
+        }
+        if (timerTracker.fadeTimeoutProtection) {
+          clearTimeout(timerTracker.fadeTimeoutProtection);
+        }
+        if (timerTracker.cleanupTimer) {
+          clearTimeout(timerTracker.cleanupTimer);
+        }
+      }
+      activeTimersRegistry.clear();
+    }
+  }, []);
 
   // Cleanup function to clear all active timers
   const clearAllTimers = useCallback(() => {
@@ -126,22 +337,32 @@ export function useAudioPlayer() {
 
   // Centralized cleanup function for note state
   const cleanupNoteState = useCallback((noteId: string, noteState: NoteEnvelopeState) => {
-    
     try {
       // Stop the audio source if it's still playing
       if (noteState.source && noteState.source.buffer) {
         noteState.source.stop();
       }
     } catch (error) {
-      // Source might already be stopped - this is expected
+      // Only ignore "already stopped" errors, log others
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (!errorMessage.includes('already started') && !errorMessage.includes('already stopped')) {
+        console.warn(`Unexpected error stopping audio source for note ${noteId}:`, errorMessage);
+      }
     }
+
+    // Clean up any fade intervals and timeout protection
+    cleanupTimerRegistry(noteId);
 
     try {
       // Disconnect audio nodes
       noteState.source.disconnect();
       noteState.gainNode.disconnect();
     } catch (error) {
-      // Nodes might already be disconnected - this is expected
+      // Only ignore "already disconnected" errors, log others
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (!errorMessage.includes('already disconnected')) {
+        console.warn(`Unexpected error disconnecting audio nodes for note ${noteId}:`, errorMessage);
+      }
     }
 
     // Remove from active notes tracking
@@ -159,23 +380,46 @@ export function useAudioPlayer() {
     if (lastNoteRef.current?.noteId === noteId) {
       lastNoteRef.current = null;
     }
-  }, []);
+
+    // Verify cleanup completed successfully
+    verifyCleanup(noteId, noteState);
+  }, [verifyCleanup, cleanupTimerRegistry]);
 
   const stopCurrentPlayback = useCallback(() => {
     if (currentSourceRef.current) {
       try {
         currentSourceRef.current.stop();
       } catch (error) {
-        // Source might already be stopped
+        // Only ignore "already stopped" errors, log others
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (!errorMessage.includes('already started') && !errorMessage.includes('already stopped')) {
+          console.warn('Unexpected error stopping current playback:', errorMessage);
+        }
       }
       currentSourceRef.current = null;
     }
     if (currentGainNodeRef.current) {
-      currentGainNodeRef.current.disconnect();
+      try {
+        currentGainNodeRef.current.disconnect();
+      } catch (error) {
+        // Only ignore "already disconnected" errors, log others
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (!errorMessage.includes('already disconnected')) {
+          console.warn('Unexpected error disconnecting current gain node:', errorMessage);
+        }
+      }
       currentGainNodeRef.current = null;
     }
     if (currentPanNodeRef.current) {
-      currentPanNodeRef.current.disconnect();
+      try {
+        currentPanNodeRef.current.disconnect();
+      } catch (error) {
+        // Only ignore "already disconnected" errors, log others
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (!errorMessage.includes('already disconnected')) {
+          console.warn('Unexpected error disconnecting current pan node:', errorMessage);
+        }
+      }
       currentPanNodeRef.current = null;
     }
     stateRef.current.isPlaying = false;
@@ -213,6 +457,9 @@ export function useAudioPlayer() {
       // Clear all active timers when component unmounts
       clearAllTimers();
       
+      // Clean up timer registry to prevent memory leaks
+      cleanupTimerRegistry();
+      
       // Stop all active notes
       for (const [noteId, noteState] of activeNotesRef.current) {
         cleanupNoteState(noteId, noteState);
@@ -222,7 +469,7 @@ export function useAudioPlayer() {
       // Stop current playback
       stopCurrentPlayback();
     };
-  }, [clearAllTimers, stopCurrentPlayback]);
+  }, [clearAllTimers, stopCurrentPlayback, cleanupNoteState, cleanupTimerRegistry]);
 
   // Generate exponential curve points for Web Audio API
   const generateExponentialCurve = useCallback((
@@ -295,7 +542,9 @@ export function useAudioPlayer() {
   const releaseNoteWithADSR = useCallback((
     gainNode: GainNode,
     adsr: ADSRValues,
-    releaseTime: number
+    releaseTime: number,
+    noteId?: string,
+    noteState?: NoteEnvelopeState
   ) => {
     const { releaseTime: adsrReleaseTime } = convertADSRValues(adsr);
     
@@ -303,28 +552,51 @@ export function useAudioPlayer() {
     const currentTime = gainNode.context.currentTime;
     const safeReleaseTime = Math.max(releaseTime, currentTime + AUDIO_CONSTANTS.AUDIO_SCHEDULE_BUFFER);
     
-    // Cancel any pending scheduled operations to prevent overlaps
-    gainNode.gain.cancelScheduledValues(safeReleaseTime);
-    
-    if (adsrReleaseTime > 0) {
-      // Release: exponential curve to 0
-      const releaseCurve = generateExponentialCurve(gainNode.gain.value, 0, 2.0);
-      gainNode.gain.setValueCurveAtTime(releaseCurve, safeReleaseTime, adsrReleaseTime);
-    } else {
-      // Instant release
-      gainNode.gain.setValueAtTime(0, safeReleaseTime);
+    try {
+      // Cancel any pending scheduled operations to prevent overlaps
+      gainNode.gain.cancelScheduledValues(safeReleaseTime);
+      
+      if (adsrReleaseTime > 0) {
+        // Release: exponential curve to 0
+        const releaseCurve = generateExponentialCurve(gainNode.gain.value, 0, 2.0);
+        gainNode.gain.setValueCurveAtTime(releaseCurve, safeReleaseTime, adsrReleaseTime);
+      } else {
+        // Instant release
+        gainNode.gain.setValueAtTime(0, safeReleaseTime);
+      }
+    } catch (error) {
+      // Standardized error handling with fallback
+      handleAudioError(error, 'releaseNoteWithADSR setValueCurveAtTime');
+      
+      // Fallback for Firefox browser
+      if (isFirefoxBrowser) {
+        if (adsrReleaseTime > 0) {
+          // Use shared Firefox fallback function
+          if (noteId && noteState) {
+            createFirefoxFade(gainNode, gainNode.gain.value, adsrReleaseTime, noteId, () => cleanupNoteState(noteId, noteState));
+          } else {
+            createFirefoxFade(gainNode, gainNode.gain.value, adsrReleaseTime, 'unknown', () => {
+              // No cleanup callback for unknown notes
+            });
+          }
+        } else {
+          // Instant release for fallback
+          gainNode.gain.value = 0;
+        }
+      } else {
+        // For other browsers, fall back to direct value assignment
+        gainNode.gain.value = 0;
+      }
     }
   }, [convertADSRValues, generateExponentialCurve]);
 
   // Trigger release phase for a note
   const triggerRelease = useCallback((noteId: string) => {
-    
     const noteState = activeNotesRef.current.get(noteId);
     if (!noteState) {
       return;
     }
 
-    
     // Prevent multiple release calls on the same note
     if (noteState.envelopePhase === 'release' || noteState.envelopePhase === 'finished') {
       return;
@@ -332,58 +604,63 @@ export function useAudioPlayer() {
 
     const audioContext = noteState.gainNode.context;
     const currentTime = audioContext.currentTime;
+    const { releaseTime: adsrReleaseTime } = convertADSRValues(noteState.adsr);
 
     // Handle loop on release behavior
     if (noteState.loopOnRelease) {
-      
       // For loop on release, enable looping but continue from current position
-      // The source will continue playing and only loop when it reaches the loop end
       noteState.source.loop = true;
       noteState.source.loopStart = noteState.loopStart || 0;
       noteState.source.loopEnd = noteState.loopEnd || noteState.source.buffer?.duration || 1;
       
-      
       // For loop on release, apply a gentle release envelope but don't stop the note
-      // This creates the effect of a sustaining loop that gradually fades
       noteState.envelopePhase = 'release';
       noteState.releaseTime = currentTime;
       
-      // Apply the ADSR release curve for looped release
-      const { releaseTime: adsrReleaseTime } = convertADSRValues(noteState.adsr);
-      
-      
       if (adsrReleaseTime > 0) {
-        // Use the exact ADSR release time - respect user's envelope settings
-        // Fade to zero like a normal release, but the loop continues playing
-        const currentGain = noteState.gainNode.gain.value;
-        
-        // Cancel any existing scheduled values to prevent overlap
-        noteState.gainNode.gain.cancelScheduledValues(currentTime);
-        
-        const releaseCurve = generateExponentialCurve(currentGain, 0, 2.0);
-        noteState.gainNode.gain.setValueCurveAtTime(releaseCurve, currentTime, adsrReleaseTime);
-        
-        
-        // Schedule cleanup after the release phase completes
-        // Even though it's looping, we should stop the note after the release envelope finishes
-        const timerId = setTimeout(() => {
-          cleanupNoteState(noteState.noteId, noteState);
-          removeTimer(timerId);
-        }, adsrReleaseTime * 1000);
-        
-        // Add timer to tracking
-        addTimer(timerId);
-        return;
+        // Use Firefox-compatible release logic for loop on release
+        if (isFirefoxBrowser) {
+          // Use shared Firefox fallback function with cleanup callback
+          createFirefoxFade(
+            noteState.gainNode,
+            noteState.gainNode.gain.value,
+            adsrReleaseTime,
+            noteId,
+            () => cleanupNoteState(noteId, noteState)
+          );
+        } else {
+          // Chrome/other browsers: use the original Web Audio API approach
+          try {
+            const currentGain = noteState.gainNode.gain.value;
+            
+            // Cancel any existing scheduled values to prevent overlap
+            noteState.gainNode.gain.cancelScheduledValues(currentTime);
+            
+            const releaseCurve = generateExponentialCurve(currentGain, 0, 2.0);
+            noteState.gainNode.gain.setValueCurveAtTime(releaseCurve, currentTime, adsrReleaseTime);
+            
+            // Schedule cleanup after the release phase completes
+            const timerId = setTimeout(() => {
+              cleanupNoteState(noteId, noteState);
+              removeTimer(timerId);
+            }, adsrReleaseTime * 1000);
+            
+            addTimer(timerId);
+          } catch (error) {
+            handleAudioError(error, 'loop on release Web Audio API', () => {
+              cleanupNoteState(noteId, noteState);
+            });
+          }
+        }
       } else {
-        cleanupNoteState(noteState.noteId, noteState);
+        cleanupNoteState(noteId, noteState);
       }
-      
       return;
     }
 
     // Standard release behavior (no loop on release)
     try {
-      releaseNoteWithADSR(noteState.gainNode, noteState.adsr, currentTime);
+      releaseNoteWithADSR(noteState.gainNode, noteState.adsr, currentTime, noteId, noteState);
       noteState.envelopePhase = 'release';
       noteState.releaseTime = currentTime;
     } catch (error) {
@@ -392,9 +669,6 @@ export function useAudioPlayer() {
       cleanupNoteState(noteId, noteState);
       return;
     }
-
-    // Get release time for cleanup
-    const { releaseTime: adsrReleaseTime } = convertADSRValues(noteState.adsr);
 
     // For regular looping (loopEnabled), disable the loop when releasing so it can end naturally
     if (noteState.loopEnabled && !noteState.loopOnRelease) {
@@ -406,7 +680,11 @@ export function useAudioPlayer() {
       try {
         noteState.source.stop();
       } catch (error) {
-        // Source might already be stopped
+        // Only ignore "already stopped" errors, log others
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (!errorMessage.includes('already started') && !errorMessage.includes('already stopped')) {
+          console.warn(`Unexpected error stopping source for instant release (note ${noteId}):`, errorMessage);
+        }
       }
       // Small delay to ensure the gain change has been applied
       const timerId = setTimeout(() => {
@@ -423,7 +701,11 @@ export function useAudioPlayer() {
           try {
             noteState.source.stop();
           } catch (error) {
-            // Source might already be stopped
+            // Only ignore "already stopped" errors, log others
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (!errorMessage.includes('already started') && !errorMessage.includes('already stopped')) {
+              console.warn(`Unexpected error stopping source for release phase (note ${noteId}):`, errorMessage);
+            }
           }
         }
         cleanupNoteState(noteId, noteState);
@@ -457,7 +739,18 @@ export function useAudioPlayer() {
           if (currentState === 'running') {
             break;
           }
-          await new Promise(resolve => setTimeout(resolve, checkInterval));
+          
+          // Track the timeout for proper cleanup
+          const resumeTimer = setTimeout(() => {
+            // This is just a delay, no action needed
+          }, checkInterval);
+          addTimer(resumeTimer);
+          
+          await new Promise(resolve => {
+            const resolveTimer = setTimeout(resolve, checkInterval);
+            addTimer(resolveTimer);
+          });
+          removeTimer(resumeTimer);
           attempts++;
         }
         
@@ -467,7 +760,16 @@ export function useAudioPlayer() {
         }
         
         // Additional small delay to ensure context is fully stable
-        await new Promise(resolve => setTimeout(resolve, 50));
+        const stabilityTimer = setTimeout(() => {
+          // This is just a delay, no action needed
+        }, 50);
+        addTimer(stabilityTimer);
+        
+        await new Promise(resolve => {
+          const resolveTimer = setTimeout(resolve, 50);
+          addTimer(resolveTimer);
+        });
+        removeTimer(stabilityTimer);
       }
       
       const playMode = options.playMode || 'poly';

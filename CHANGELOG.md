@@ -4,11 +4,15 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.15.2] - 2025-07-28
+
+### fixed
+- issue 81, fixed issue on firefox with loop release
+
 ## [0.15.1] - 2025-07-28
 
 ### fixed
-
-- fixed bug where ADSR release phase was not working correctly when loop on release is enabled - now properly applies release envelope and stops after release time completes
+- fixed bug where adsr release phase was not working correctly when loop on release is enabled - now properly applies release envelope and stops after release time completes
 - improved loop on release implementation to continue playing from current position and only loop when reaching loop end, creating seamless playback
 
 ## [0.15.0] - 2025-07-28
