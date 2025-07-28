@@ -91,6 +91,8 @@ export function MultisamplePresetSettings() {
     const currentAmpEnvelope = state.multisampleSettings.ampEnvelope;
     const currentFilterEnvelope = state.multisampleSettings.filterEnvelope;
     
+
+    
     // Always use the current envelope values from global state
     // Don't replace with preset values - preserve user's custom settings
     const ampEnvelope = currentAmpEnvelope;
@@ -133,10 +135,15 @@ export function MultisamplePresetSettings() {
   }, []);
 
   // Sync local settings with global state when global state changes
-  // Note: Excluded ampEnvelope and filterEnvelope from dependencies to prevent loops
   useEffect(() => {
     const globalSettings = createSettingsFromGlobalState();
-    setSettings(globalSettings);
+    setSettings(prevSettings => {
+      // Only update if the settings have actually changed to prevent unnecessary re-renders
+      if (JSON.stringify(prevSettings) !== JSON.stringify(globalSettings)) {
+        return globalSettings;
+      }
+      return prevSettings;
+    });
   }, [
     state.multisampleSettings.playmode,
     state.multisampleSettings.loopEnabled,
@@ -149,7 +156,15 @@ export function MultisamplePresetSettings() {
     state.multisampleSettings.portamentoType,
     state.multisampleSettings.portamentoAmount,
     state.multisampleSettings.tuningRoot,
-    // Removed ampEnvelope and filterEnvelope to prevent reset loops
+    // Include envelope dependencies to prevent stale closures
+    state.multisampleSettings.ampEnvelope.attack,
+    state.multisampleSettings.ampEnvelope.decay,
+    state.multisampleSettings.ampEnvelope.sustain,
+    state.multisampleSettings.ampEnvelope.release,
+    state.multisampleSettings.filterEnvelope.attack,
+    state.multisampleSettings.filterEnvelope.decay,
+    state.multisampleSettings.filterEnvelope.sustain,
+    state.multisampleSettings.filterEnvelope.release,
   ]);
 
   // Note: Removed the useEffect that was resetting envelopes to 'keys' preset

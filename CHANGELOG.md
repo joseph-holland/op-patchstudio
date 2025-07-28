@@ -12,6 +12,7 @@ the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 ### fixed
 - issue 79, bug with only playing selection in zoom and edit modal
 - while working on above, i noticed the adsr was broken. this was working so i had to fix this regression.
+- issue with adsr not being load from saved preset, issue with session restore persists - logged issue 82
 
 ## [0.14.10] - 2025-07-27
 

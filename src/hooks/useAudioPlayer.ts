@@ -1,6 +1,39 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { audioContextManager } from '../utils/audioContext';
 import { AUDIO_CONSTANTS } from '../utils/constants';
+
+// Type declaration for global active notes
+declare global {
+  interface Window {
+    opPatchstudioActiveNotes?: string[];
+  }
+}
+
+// Utility functions for safe global active notes management
+const getGlobalActiveNotes = (): string[] => {
+  if (typeof window === 'undefined') return [];
+  if (!Array.isArray(window.opPatchstudioActiveNotes)) {
+    window.opPatchstudioActiveNotes = [];
+  }
+  return window.opPatchstudioActiveNotes;
+};
+
+const addToGlobalActiveNotes = (noteId: string): void => {
+  if (typeof window === 'undefined') return;
+  const activeNotes = getGlobalActiveNotes();
+  if (!activeNotes.includes(noteId)) {
+    activeNotes.push(noteId);
+  }
+};
+
+const removeFromGlobalActiveNotes = (noteId: string): void => {
+  if (typeof window === 'undefined') return;
+  const activeNotes = getGlobalActiveNotes();
+  const idx = activeNotes.indexOf(noteId);
+  if (idx !== -1) {
+    activeNotes.splice(idx, 1);
+  }
+};
 
 export interface AudioPlaybackOptions {
   startTime?: number;
@@ -69,6 +102,63 @@ export function useAudioPlayer() {
   // ADSR-specific state
   const activeNotesRef = useRef<Map<string, NoteEnvelopeState>>(new Map());
   const lastNoteRef = useRef<NoteEnvelopeState | null>(null);
+  
+  // Track active timers for cleanup
+  const activeTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  // Cleanup function to clear all active timers
+  const clearAllTimers = useCallback(() => {
+    activeTimersRef.current.forEach(timerId => {
+      clearTimeout(timerId);
+    });
+    activeTimersRef.current.clear();
+  }, []);
+
+  // Cleanup function to add a timer to tracking
+  const addTimer = useCallback((timerId: ReturnType<typeof setTimeout>) => {
+    activeTimersRef.current.add(timerId);
+  }, []);
+
+  // Cleanup function to remove a timer from tracking
+  const removeTimer = useCallback((timerId: ReturnType<typeof setTimeout>) => {
+    activeTimersRef.current.delete(timerId);
+  }, []);
+
+  // Centralized cleanup function for note state
+  const cleanupNoteState = useCallback((noteId: string, noteState: NoteEnvelopeState) => {
+    try {
+      // Stop the audio source if it's still playing
+      if (noteState.source && noteState.source.buffer) {
+        noteState.source.stop();
+      }
+    } catch (error) {
+      // Source might already be stopped - this is expected
+    }
+
+    try {
+      // Disconnect audio nodes
+      noteState.source.disconnect();
+      noteState.gainNode.disconnect();
+    } catch (error) {
+      // Nodes might already be disconnected - this is expected
+    }
+
+    // Remove from active notes tracking
+    activeNotesRef.current.delete(noteId);
+    
+    // Remove from global active notes if it's a multisample
+    if (noteId.startsWith('multisample-')) {
+      removeFromGlobalActiveNotes(noteId);
+    }
+    
+    // Update envelope phase
+    noteState.envelopePhase = 'finished';
+    
+    // Clear last note reference if this was the last note
+    if (lastNoteRef.current?.noteId === noteId) {
+      lastNoteRef.current = null;
+    }
+  }, []);
 
   const stopCurrentPlayback = useCallback(() => {
     if (currentSourceRef.current) {
@@ -115,6 +205,23 @@ export function useAudioPlayer() {
 
     return { attackTime, decayTime, sustainLevel, releaseTime };
   }, []);
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      // Clear all active timers when component unmounts
+      clearAllTimers();
+      
+      // Stop all active notes
+      for (const [noteId, noteState] of activeNotesRef.current) {
+        cleanupNoteState(noteId, noteState);
+      }
+      activeNotesRef.current.clear();
+      
+      // Stop current playback
+      stopCurrentPlayback();
+    };
+  }, [clearAllTimers, stopCurrentPlayback]);
 
   // Generate exponential curve points for Web Audio API
   const generateExponentialCurve = useCallback((
@@ -246,37 +353,16 @@ export function useAudioPlayer() {
         noteState.gainNode.gain.setValueCurveAtTime(releaseCurve, currentTime, adsrReleaseTime);
         
         // Schedule cleanup after the ADSR release time
-        setTimeout(() => {
-          try {
-            noteState.source.stop();
-          } catch (error) {
-            // Source might already be stopped
-          }
-          activeNotesRef.current.delete(noteState.noteId);
-          noteState.source.disconnect();
-          noteState.gainNode.disconnect();
-          noteState.envelopePhase = 'finished';
-          
-          // Remove from global active notes
-          if (noteState.noteId.startsWith('multisample-')) {
-            const arr = (window as any).opPatchstudioActiveNotes;
-            if (Array.isArray(arr)) {
-              const idx = arr.indexOf(noteState.noteId);
-              if (idx !== -1) arr.splice(idx, 1);
-            }
-          }
+        const timerId = setTimeout(() => {
+          cleanupNoteState(noteState.noteId, noteState);
+          removeTimer(timerId);
         }, adsrReleaseTime * 1000);
+        
+        // Add timer to tracking
+        addTimer(timerId);
       } else {
         // Instant release - stop immediately
-        try {
-          noteState.source.stop();
-        } catch (error) {
-          // Source might already be stopped
-        }
-        activeNotesRef.current.delete(noteState.noteId);
-        noteState.source.disconnect();
-        noteState.gainNode.disconnect();
-        noteState.envelopePhase = 'finished';
+        cleanupNoteState(noteState.noteId, noteState);
       }
       
       // Don't clean up automatically - let the note loop indefinitely with reduced volume
@@ -290,17 +376,8 @@ export function useAudioPlayer() {
       noteState.releaseTime = currentTime;
     } catch (error) {
       console.warn('Error during ADSR release, falling back to instant stop:', error);
-      // Fallback: stop the source immediately
-      try {
-        noteState.source.stop();
-      } catch (stopError) {
-        // Source might already be stopped
-      }
-      // Clean up immediately
-      activeNotesRef.current.delete(noteId);
-      noteState.source.disconnect();
-      noteState.gainNode.disconnect();
-      noteState.envelopePhase = 'finished';
+      // Fallback: use centralized cleanup
+      cleanupNoteState(noteId, noteState);
       return;
     }
 
@@ -320,15 +397,14 @@ export function useAudioPlayer() {
         // Source might already be stopped
       }
       // Small delay to ensure the gain change has been applied
-      setTimeout(() => {
-        activeNotesRef.current.delete(noteId);
-        noteState.source.disconnect();
-        noteState.gainNode.disconnect();
-        noteState.envelopePhase = 'finished';
+      const timerId = setTimeout(() => {
+        cleanupNoteState(noteId, noteState);
+        removeTimer(timerId);
       }, 10);
+      addTimer(timerId);
     } else {
       // Clean up after release phase
-      setTimeout(() => {
+      const timerId = setTimeout(() => {
         // For looping notes, stop the source explicitly since it won't end naturally
         if (noteState.loopEnabled || noteState.loopOnRelease) {
           try {
@@ -337,11 +413,10 @@ export function useAudioPlayer() {
             // Source might already be stopped
           }
         }
-        activeNotesRef.current.delete(noteId);
-        noteState.source.disconnect();
-        noteState.gainNode.disconnect();
-        noteState.envelopePhase = 'finished';
+        cleanupNoteState(noteId, noteState);
+        removeTimer(timerId);
       }, adsrReleaseTime * 1000);
+      addTimer(timerId);
     }
   }, [releaseNoteWithADSR, convertADSRValues]);
 
@@ -358,8 +433,28 @@ export function useAudioPlayer() {
       if (audioContext.state !== 'running' && typeof audioContext.resume === 'function') {
         console.warn('Audio context not running, attempting to resume...');
         await audioContext.resume();
-        // Add a small delay to ensure context is fully ready
-        await new Promise(resolve => setTimeout(resolve, 10));
+        
+        // Wait for the audio context to be fully running with proper error handling
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds maximum wait time
+        const checkInterval = 100; // Check every 100ms
+        
+        while (attempts < maxAttempts) {
+          const currentState = audioContext.state as string;
+          if (currentState === 'running') {
+            break;
+          }
+          await new Promise(resolve => setTimeout(resolve, checkInterval));
+          attempts++;
+        }
+        
+        const finalState = audioContext.state as string;
+        if (finalState !== 'running') {
+          throw new Error(`Audio context failed to resume after ${maxAttempts * checkInterval}ms. State: ${finalState}`);
+        }
+        
+        // Additional small delay to ensure context is fully stable
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
       
       const playMode = options.playMode || 'poly';
@@ -370,9 +465,7 @@ export function useAudioPlayer() {
       if (playMode === 'mono') {
         // Stop all current notes immediately
         for (const [id, noteState] of activeNotesRef.current) {
-          noteState.source.stop();
-          noteState.gainNode.disconnect();
-          activeNotesRef.current.delete(id);
+          cleanupNoteState(id, noteState);
         }
         lastNoteRef.current = null;
       } else if (playMode === 'legato' && lastNoteRef.current) {
@@ -472,10 +565,7 @@ export function useAudioPlayer() {
 
       // Track all active multisample noteIds globally for robust release
       if (noteId.startsWith('multisample-')) {
-        if (!Array.isArray((window as any).opPatchstudioActiveNotes)) {
-          (window as any).opPatchstudioActiveNotes = [];
-        }
-        (window as any).opPatchstudioActiveNotes.push(noteId);
+        addToGlobalActiveNotes(noteId);
       }
 
       // Set up cleanup when source ends
@@ -483,18 +573,7 @@ export function useAudioPlayer() {
         const noteState = activeNotesRef.current.get(noteId);
         // Only clean up if the note is not in release phase (ADSR will handle cleanup)
         if (noteState && noteState.envelopePhase !== 'release') {
-          activeNotesRef.current.delete(noteId);
-          if (lastNoteRef.current?.noteId === noteId) {
-            lastNoteRef.current = null;
-          }
-          // Remove from global active notes
-          if (noteId.startsWith('multisample-')) {
-            const arr = (window as any).opPatchstudioActiveNotes;
-            if (Array.isArray(arr)) {
-              const idx = arr.indexOf(noteId);
-              if (idx !== -1) arr.splice(idx, 1);
-            }
-          }
+          cleanupNoteState(noteId, noteState);
         }
       };
 
@@ -512,24 +591,7 @@ export function useAudioPlayer() {
         // Force stop the note even if it's in loop on release mode
         const noteState = activeNotesRef.current.get(id);
         if (noteState) {
-          try {
-            noteState.source.stop();
-          } catch (error) {
-            // Source might already be stopped
-          }
-          activeNotesRef.current.delete(id);
-          noteState.source.disconnect();
-          noteState.gainNode.disconnect();
-          noteState.envelopePhase = 'finished';
-          
-          // Remove from global active notes
-          if (id.startsWith('multisample-')) {
-            const arr = (window as any).opPatchstudioActiveNotes;
-            if (Array.isArray(arr)) {
-              const idx = arr.indexOf(id);
-              if (idx !== -1) arr.splice(idx, 1);
-            }
-          }
+          cleanupNoteState(id, noteState);
         }
       } else {
         triggerRelease(id);

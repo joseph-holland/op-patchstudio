@@ -1254,6 +1254,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
         return createDrumSample(index, isInFirst24Slots);
       });
       
+
+
       const newState = {
         ...state,
         drumSettings: action.payload.drumSettings,
@@ -1266,6 +1268,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
         isSessionRestorationModalOpen: false,
         sessionInfo: null
       };
+
+
       
       return newState;
     }
