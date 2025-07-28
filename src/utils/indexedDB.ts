@@ -108,7 +108,6 @@ class IndexedDBManager {
 
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('IndexedDB initialized successfully');
         resolve();
       };
 
@@ -144,7 +143,7 @@ class IndexedDBManager {
           db.createObjectStore(STORES.METADATA, { keyPath: 'key' });
         }
 
-        console.log('IndexedDB schema created/updated');
+
       };
     });
   }

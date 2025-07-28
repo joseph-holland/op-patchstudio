@@ -81,18 +81,7 @@ export class SessionStorageManager {
       isMultisampleKeyboardPinned: state.isMultisampleKeyboardPinned,
     };
 
-    // Debug: Log what we're about to save
-    console.log('Saving session data:', {
-      sessionId,
-      timestamp,
-      drumSamplesCount: drumSamples.length,
-      multisampleFilesCount: multisampleFiles.length,
-      drumSamplesPreview: drumSamples.map(s => ({ 
-        originalIndex: s.originalIndex, 
-        name: s.name, 
-        dataLength: s.data.length 
-      }))
-    });
+
 
     // Save session data
     localStorage.setItem(`${SESSION_STORAGE_KEY}/${sessionId}`, JSON.stringify(sessionData));
@@ -116,18 +105,7 @@ export class SessionStorageManager {
 
       const parsedData = JSON.parse(sessionData) as SessionData;
       
-      // Debug: Log what we loaded
-      console.log('Loaded session data:', {
-        sessionId,
-        timestamp: parsedData.timestamp,
-        drumSamplesCount: parsedData.drumSamples.length,
-        multisampleFilesCount: parsedData.multisampleFiles.length,
-        drumSamplesPreview: parsedData.drumSamples.map(s => ({ 
-          originalIndex: s.originalIndex, 
-          name: s.name, 
-          dataLength: s.data?.length || 0 
-        }))
-      });
+
 
       return parsedData;
     } catch (error) {

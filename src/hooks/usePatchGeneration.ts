@@ -34,7 +34,6 @@ export function usePatchGeneration() {
       downloadBlob(patchBlob, `${finalPatchName}.preset.zip`);
       
       // Show success message (could be enhanced with a proper notification system)
-      console.log(`Generated drum patch: ${finalPatchName}.preset.zip`);
       
     } catch (error) {
       console.error('Error generating drum patch:', error);
@@ -77,7 +76,6 @@ export function usePatchGeneration() {
       downloadBlob(patchBlob, `${finalPatchName}.preset.zip`);
       
       // Show success message
-      console.log(`Generated multisample patch: ${finalPatchName}.preset.zip`);
       
     } catch (error) {
       console.error('Error generating multisample patch:', error);

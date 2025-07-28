@@ -36,46 +36,36 @@ export async function scrapePatreonPosts(): Promise<PatreonPost[]> {
       'https://thingproxy.freeboard.io/fetch/'
     ];
     
-    console.log(`Using campaign ID: ${campaignId}`);
+
 
     // Try different CORS proxies until one works
     let apiResponse: any = null;
     
     for (const proxy of corsProxies) {
       try {
-        console.log(`Trying CORS proxy: ${proxy}`);
         const apiUrlWithParams = `${apiUrl}?filter[campaign_id]=${campaignId}&sort=-published_at&page[size]=5`;
-        console.log('API URL:', apiUrlWithParams);
         
         apiResponse = await axios.get<PatreonApiResponse>(proxy + encodeURIComponent(apiUrlWithParams), {
           headers,
           timeout: 10000
         });
 
-        console.log('API Response:', apiResponse.data);
-        
         // If we get a response with data, break out of the loop
         if (apiResponse.data && Object.keys(apiResponse.data).length > 0) {
-          console.log('Successfully got response with data');
           break;
-        } else {
-          console.log('Empty response, trying next proxy...');
         }
               } catch (error) {
-          console.log(`Proxy ${proxy} failed:`, error);
           continue;
         }
     }
     
     if (!apiResponse || !apiResponse.data || Object.keys(apiResponse.data).length === 0) {
-      console.log('All CORS proxies failed, trying fallback...');
       return getFallbackPosts();
     }
 
     const posts: PatreonPost[] = [];
 
     if (apiResponse.data && apiResponse.data.data) {
-      console.log('Found data array with length:', apiResponse.data.data.length);
       apiResponse.data.data.forEach((post: any) => {
         const { title, content, published_at, url } = post.attributes;
         
@@ -104,16 +94,13 @@ export async function scrapePatreonPosts(): Promise<PatreonPost[]> {
         });
       });
     } else {
-      console.log('No data found in API response');
+      // No data found in API response
     }
 
-    console.log(`Successfully fetched ${posts.length} posts from API`);
-    
     if (posts.length > 0) {
       return posts;
     }
 
-    console.log('No posts found in API response, returning fallback data');
     return getFallbackPosts();
 
   } catch (error) {
