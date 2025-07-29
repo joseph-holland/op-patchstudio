@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { audioContextManager } from '../../utils/audioContext';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { SmallWaveform } from '../common/SmallWaveform';
 import { EnhancedTooltip } from '../common/EnhancedTooltip';
 import { WaveformZoomModal } from '../common/WaveformZoomModal';
+import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 
 import { midiNoteToString, noteStringToMidiValue } from '../../utils/audio';
 
@@ -59,6 +59,7 @@ export function MultisampleSampleTable({
   onBrowseFilesRef
 }: MultisampleSampleTableProps) {
   const { state, dispatch } = useAppContext();
+  const { playWithADSR, releaseNote } = useAudioPlayer();
   const [draggedItem, setDraggedItem] = useState<number | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
       const [isDragOver, setIsDragOver] = useState(false);
@@ -69,6 +70,7 @@ export function MultisampleSampleTable({
   const browseFileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isKeyHelpTooltipVisible, setIsKeyHelpTooltipVisible] = useState(false);
+  const [currentPlayingNoteId, setCurrentPlayingNoteId] = useState<string | null>(null);
 
   // Detect mobile screen size
   React.useEffect(() => {
@@ -383,13 +385,48 @@ export function MultisampleSampleTable({
     if (!sample?.isLoaded || !sample.audioBuffer) return;
 
     try {
-      const audioContext = await audioContextManager.getAudioContext();
-      const source = audioContext.createBufferSource();
-      source.buffer = sample.audioBuffer;
-      source.connect(audioContext.destination);
-      source.start(0);
+      // Get ADSR settings from current multisample settings
+      const adsrSettings = state.multisampleSettings.ampEnvelope;
+      
+      // Get play mode from current multisample settings
+      const playMode = state.multisampleSettings.playmode;
+      
+      // Use the ADSR-enabled audio player with the same functionality as keyboard play
+      const noteId = `multisample-table-${index}-${Date.now()}`;
+      setCurrentPlayingNoteId(noteId);
+      
+      await playWithADSR(sample.audioBuffer, noteId, {
+        playbackRate: 1, // No pitch shifting for table play
+        gain: state.multisampleSettings.gain || 0,
+        pan: 0, // No pan control for multisample
+        adsr: adsrSettings,
+        playMode: playMode as 'poly' | 'mono' | 'legato',
+        velocity: 127, // Full velocity for button clicks
+        // Loop settings
+        loopEnabled: state.multisampleSettings.loopEnabled,
+        loopOnRelease: state.multisampleSettings.loopOnRelease,
+        loopStart: sample.loopStart,
+        loopEnd: sample.loopEnd,
+        // Use in/out points if set
+        inFrame: sample.inPoint ? Math.round(sample.inPoint * sample.audioBuffer.sampleRate) : undefined,
+        outFrame: sample.outPoint ? Math.round(sample.outPoint * sample.audioBuffer.sampleRate) : undefined,
+      });
     } catch (error) {
       console.error('Error playing sample:', error);
+      setCurrentPlayingNoteId(null);
+    }
+  };
+
+  const stopPlayback = () => {
+    if (currentPlayingNoteId) {
+      if (state.multisampleSettings.loopOnRelease) {
+        // For loop on release, trigger release phase
+        releaseNote(currentPlayingNoteId);
+      } else {
+        // For normal playback, stop immediately
+        releaseNote(currentPlayingNoteId, true); // Force stop
+      }
+      setCurrentPlayingNoteId(null);
     }
   };
 
@@ -583,9 +620,15 @@ export function MultisampleSampleTable({
                       {sample?.isLoaded ? (
                         <>
                           <button
-                            onClick={() => playSample(index).catch(error => {
+                            onMouseDown={() => playSample(index).catch(error => {
                               console.error('Error playing sample:', error);
                             })}
+                            onMouseUp={stopPlayback}
+                            onMouseLeave={stopPlayback}
+                            onTouchStart={() => playSample(index).catch(error => {
+                              console.error('Error playing sample:', error);
+                            })}
+                            onTouchEnd={stopPlayback}
                             style={actionButtonStyle}
                             title="play"
                           >
@@ -1056,9 +1099,15 @@ export function MultisampleSampleTable({
                     {sample?.isLoaded ? (
                       <>
                         <button
-                          onClick={() => playSample(index).catch(error => {
+                          onMouseDown={() => playSample(index).catch(error => {
                             console.error('Error playing sample:', error);
                           })}
+                          onMouseUp={stopPlayback}
+                          onMouseLeave={stopPlayback}
+                          onTouchStart={() => playSample(index).catch(error => {
+                            console.error('Error playing sample:', error);
+                          })}
+                          onTouchEnd={stopPlayback}
                           style={actionButtonStyle}
                           title="play"
                         >
