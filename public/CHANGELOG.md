@@ -4,6 +4,11 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.15.4] - 2025-08-07
+
+### fixed
+- fixed issue with exported wave loop start was off by 1 frame
+
 ## [0.15.3] - 2025-07-29
 
 ### fixed
