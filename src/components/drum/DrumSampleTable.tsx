@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { useAppContext } from '../../context/AppContext';
+import { useAppContext, type DrumSample } from '../../context/AppContext';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { triggerRotateOverlay } from '../../App';
 import { isMobile as isMobileDevice, isTablet } from 'react-device-detect';
@@ -256,7 +256,12 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
     closeZoomModal();
   };
 
-
+  const handleSaveForAll = (payload: Partial<DrumSample>) => {
+    dispatch({
+      type: 'UPDATE_ALL_DRUM_SAMPLES',
+      payload,
+    });
+  }
 
   if (isMobile) {
     // Mobile Card Layout
@@ -768,6 +773,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
         initialInPoint={selectedSample?.inPoint || 0}
         initialOutPoint={selectedSample?.outPoint || 0}
         onSave={handleZoomSave}
+        onSaveForAll={handleSaveForAll}
       />
     </div>
   );

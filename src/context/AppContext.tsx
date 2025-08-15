@@ -224,6 +224,8 @@ export type AppAction =
   | { type: 'SET_SESSION_RESTORATION_MODAL_OPEN'; payload: boolean }
   | { type: 'SET_SESSION_INFO'; payload: { timestamp: number; drumSamplesCount: number; multisampleFilesCount: number } | null }
   | { type: 'SET_MIDI_NOTE_MAPPING'; payload: 'C3' | 'C4' }
+  | { type: 'UPDATE_ALL_MULTI_SAMPLES'; payload: Partial<MultisampleFile> }
+  | { type: 'UPDATE_ALL_DRUM_SAMPLES'; payload: Partial<DrumSample> }
   | { type: 'CLEAR_ALL_DRUM_SAMPLES' };
 
 // Initial state for drum samples
@@ -1291,7 +1293,25 @@ function appReducer(state: AppState, action: AppAction): AppState {
         multisampleFiles: updatedMultisampleFiles
       };
     }
-      
+
+    case 'UPDATE_ALL_MULTI_SAMPLES': {
+      return {
+        ...state,
+        multisampleFiles: state.multisampleFiles.map(file => ({
+          ...file, ...action.payload,
+        }))
+      };
+    }
+
+    case 'UPDATE_ALL_DRUM_SAMPLES': {
+      return {
+        ...state,
+        drumSamples: state.drumSamples.map(sample => ({
+          ...sample, ...action.payload,
+        })),
+      };
+    }
+
     default: {
       return state;
     }
