@@ -143,16 +143,9 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
     e.preventDefault();
     
     // Check if this is a file drop (external files)
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      const audioFile = files.find(file => 
-        file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
-      );
-      if (audioFile) {
-        // Always assign the file directly to the target index
-        handleFileSelect(targetIndex, audioFile);
-        return;
-      }
+    const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('audio/'));
+    if (files.length) {
+      files.forEach((file, i) => handleFileSelect(targetIndex + i, file));
     }
     
     // Handle sample assignment and swapping
@@ -518,14 +511,13 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
             <div key={index}>
               <input
                 type="file"
+                multiple
                 accept="audio/*,.wav"
                 style={{ display: 'none' }}
                 ref={(el) => { fileInputRefs.current[index] = el; }}
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    handleFileSelect(index, file);
-                  }
+                  const files = [...(e.target.files || [])];
+                  files.forEach((file, i) => handleFileSelect(index + i, file));
                   e.target.value = '';
                 }}
               />
@@ -705,7 +697,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                         e.currentTarget.style.color = c.textSecondary;
                       }}
                     >
-                      drop sample here or click to browse
+                      drop samples here or click to browse
                     </button>
                   </div>
                 )}
