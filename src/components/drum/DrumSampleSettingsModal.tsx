@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAppContext } from '../../context/AppContext';
+import { useAppContext, type DrumSample } from '../../context/AppContext';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { EnhancedWaveformEditor } from '../common/EnhancedWaveformEditor';
 import { Slider } from '@carbon/react';
@@ -132,6 +132,13 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
     setLocalOutPoint(null);
     onClose();
   };
+
+  const handleSaveForAll = (payload: Partial<DrumSample>) => {
+    dispatch({
+      type: 'UPDATE_ALL_DRUM_SAMPLES',
+      payload,
+    });
+  }
 
   const handlePlaySample = async () => {
     if (!sample?.audioBuffer) return;
@@ -421,6 +428,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
                     setLocalOutPoint(outPoint);
                     setShowZoomModal(false);
                   }}
+                  onSaveForAll={handleSaveForAll}
                 />
               )}
             </div>

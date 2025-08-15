@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useAppContext } from '../../context/AppContext';
+import { useAppContext, type MultisampleFile } from '../../context/AppContext';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { SmallWaveform } from '../common/SmallWaveform';
 import { EnhancedTooltip } from '../common/EnhancedTooltip';
@@ -485,6 +485,13 @@ export function MultisampleSampleTable({
       }
     });
   };
+
+  const handleSaveForAll = (payload: Partial<MultisampleFile>) => {
+    dispatch({
+      type: 'UPDATE_ALL_MULTI_SAMPLES',
+      payload,
+    });
+  }
 
   if (isMobile) {
     // Mobile Card Layout - similar to drum tool
@@ -1180,6 +1187,7 @@ export function MultisampleSampleTable({
         loopEnabled={state.multisampleSettings.loopEnabled}
         loopOnRelease={state.multisampleSettings.loopOnRelease}
         ampEnvelope={state.multisampleSettings.ampEnvelope}
+        onSaveForAll={handleSaveForAll}
       />
     </div>
   );
