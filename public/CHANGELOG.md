@@ -4,6 +4,11 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.15.5] - 2025-09-22
+
+### fixed
+- fixed issue with file name parsing for note values
+
 ## [0.15.4] - 2025-08-07
 
 ### fixed
