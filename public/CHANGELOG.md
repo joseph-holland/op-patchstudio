@@ -9,6 +9,9 @@ the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 ### fixed
 - fixed issue with file name parsing for note values
 
+### added
+- drum tool multi select samples (thanks ish!)
+
 ## [0.15.4] - 2025-08-07
 
 ### fixed

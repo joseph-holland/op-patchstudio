@@ -534,13 +534,14 @@ export function DrumTool() {
               {/* Hidden file input for unassigned samples */}
               <input
                 type="file"
+                multiple
                 accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.ogg,.flac"
                 style={{ display: 'none' }}
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
+                  const files = [...(e.target.files || [])];
+                  files.forEach(file => {
                     handleAddUnassignedSample(file);
-                  }
+                  });
                   // Reset the input
                   e.target.value = '';
                 }}
