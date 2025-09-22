@@ -703,7 +703,13 @@ export function getInvalidPresetNameChars(name: string): string[] {
 
 export function parseFilename(filename: string, mapping: 'C3' | 'C4' = 'C3'): [string, number] {
   const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
-  const match = nameWithoutExt.match(/(.+?)[\s-]*([A-G](?:b|#)?\d|\d{1,3})$/i);
+  
+  // Look for the first occurrence of either:
+  // - A note name (C4, D#5, etc.)
+  // - A number (024, 073, etc.)
+  // This handles formats like "Ariels Room-024-073.wav" where 024 is the note, 073 is velocity
+  // The regex captures everything before the first number/note pattern
+  const match = nameWithoutExt.match(/^(.*?)[\s-]*([A-G](?:b|#)?\d|\d{1,3})/i);
   if (!match) {
     throw new Error(`Filename '${filename}' does not match the expected pattern.`);
   }

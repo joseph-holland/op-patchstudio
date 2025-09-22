@@ -493,6 +493,22 @@ describe('audio utilities', () => {
         "Filename 'invalid.wav' does not match the expected pattern."
       )
     })
+
+    it('should parse first number in multi-number format (note-velocity)', () => {
+      const [name, note] = parseFilename('Ariels Room-024-073.wav', 'C3')
+      expect(name).toBe('Ariels Room')
+      expect(note).toBe(24) // Should get 024 (the note), not 073 (the velocity)
+    })
+
+    it('should handle other multi-number formats', () => {
+      const [name1, note1] = parseFilename('Piano-060-127.wav', 'C3')
+      expect(name1).toBe('Piano')
+      expect(note1).toBe(60) // C4 in MIDI
+
+      const [name2, note2] = parseFilename('Synth 036 064.wav', 'C3')
+      expect(name2).toBe('Synth')
+      expect(note2).toBe(36) // C2 in MIDI
+    })
   })
 
   describe('isPatchSizeValid', () => {
