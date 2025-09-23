@@ -3,6 +3,7 @@ import { EnhancedTooltip } from './EnhancedTooltip';
 import { isMobile, isTablet } from 'react-device-detect';
 import { triggerRotateOverlay } from '../../App';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
+import { type DrumSample, type MultisampleFile } from '../../context/AppContext';
 
 interface WaveformZoomModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ interface WaveformZoomModalProps {
     sustain: number;
     release: number;
   };
+  onSaveForAll: (payload: Partial<DrumSample | MultisampleFile>) => void;
 }
 
 export function WaveformZoomModal({
@@ -36,6 +38,7 @@ export function WaveformZoomModal({
   loopEnabled = false,
   loopOnRelease = false,
   ampEnvelope,
+  onSaveForAll,
 }: WaveformZoomModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -642,6 +645,17 @@ export function WaveformZoomModal({
     handleMouseUp();
   };
 
+  const handleSaveForAll = () => {
+    const { sampleRate } = audioBuffer!;
+    onSaveForAll({
+      inPoint: inFrame / sampleRate,
+      outPoint: outFrame / sampleRate,
+      loopStart: loopStartFrame / sampleRate,
+      loopEnd: loopEndFrame / sampleRate,
+    });
+    onClose();
+  };
+
   // Focus trap: focus first button on open, restore focus on close
   useLayoutEffect(() => {
     if (isOpen) {
@@ -1190,6 +1204,22 @@ export function WaveformZoomModal({
             gap: isMobileDevice() ? '0.75rem' : '1rem',
             flexShrink: 0
           }}>
+            <button
+              onClick={handleSaveForAll}
+              style={{
+                padding: isMobileDevice() ? '0.75rem 1.25rem' : '0.65rem 1rem',
+                border: `1px solid ${c.border}`,
+                borderRadius: '3px',
+                background: 'transparent',
+                color: c.textSecondary,
+                cursor: 'pointer',
+                fontSize: isMobileDevice() ? '1rem' : '0.875rem',
+                minHeight: isMobileDevice() ? '44px' : undefined
+              }}
+            >
+              save for all
+            </button>
+            <div style={{flexGrow: '999'}} />
             <button
               onClick={onClose}
               style={{
