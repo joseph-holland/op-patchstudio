@@ -348,7 +348,15 @@ export function WaveformZoomModal({
     }
   }, [inFrame, outFrame, loopStartFrame, loopEndFrame, isOpen, audioBuffer, drawWaveform, drawMarkers]);
 
-  const handleMouseDown = (e: React.MouseEvent | { clientX: number, clientY: number, preventDefault: () => void, stopPropagation: () => void, nativeEvent: any }) => {
+  interface PointerEvent {
+    clientX: number;
+    clientY: number;
+    preventDefault: () => void;
+    stopPropagation: () => void;
+    nativeEvent: Event;
+  }
+
+  const handleMouseDown = (e: React.MouseEvent | PointerEvent) => {
     if (!audioBuffer) return;
 
     const canvas = canvasRef.current;
@@ -452,7 +460,7 @@ export function WaveformZoomModal({
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.MouseEvent | PointerEvent) => {
     if (!dragging || !audioBuffer) return;
 
     const canvas = canvasRef.current;
@@ -616,13 +624,12 @@ export function WaveformZoomModal({
     const touch = e.touches[0];
     // Reuse mouse logic
     handleMouseDown({
-      ...e,
       clientX: touch.clientX,
       clientY: touch.clientY,
       preventDefault: () => e.preventDefault(),
       stopPropagation: () => e.stopPropagation(),
       nativeEvent: e.nativeEvent,
-    } as any);
+    });
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -632,13 +639,12 @@ export function WaveformZoomModal({
     const touch = e.touches[0];
     // Reuse mouse logic
     handleMouseMove({
-      ...e,
       clientX: touch.clientX,
       clientY: touch.clientY,
       preventDefault: () => e.preventDefault(),
       stopPropagation: () => e.stopPropagation(),
       nativeEvent: e.nativeEvent,
-    } as any);
+    });
   };
 
   const handleTouchEnd = () => {
@@ -647,12 +653,18 @@ export function WaveformZoomModal({
 
   const handleSaveForAll = () => {
     const { sampleRate } = audioBuffer!;
-    onSaveForAll({
+    const payload: any = {
       inPoint: inFrame / sampleRate,
       outPoint: outFrame / sampleRate,
-      loopStart: loopStartFrame / sampleRate,
-      loopEnd: loopEndFrame / sampleRate,
-    });
+    };
+    
+    // Only add loop properties for multisample files that have loop points
+    if (hasLoopPoints) {
+      payload.loopStart = loopStartFrame / sampleRate;
+      payload.loopEnd = loopEndFrame / sampleRate;
+    }
+    
+    onSaveForAll(payload);
     onClose();
   };
 
@@ -1219,7 +1231,6 @@ export function WaveformZoomModal({
             >
               save for all
             </button>
-            <div style={{flexGrow: '999'}} />
             <button
               onClick={onClose}
               style={{

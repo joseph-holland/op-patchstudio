@@ -1297,18 +1297,26 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'UPDATE_ALL_MULTI_SAMPLES': {
       return {
         ...state,
-        multisampleFiles: state.multisampleFiles.map(file => ({
-          ...file, ...action.payload,
-        }))
+        multisampleFiles: state.multisampleFiles.map(file => {
+          // Only update loaded files with valid audio data
+          if (file.isLoaded && file.audioBuffer) {
+            return { ...file, ...action.payload };
+          }
+          return file;
+        })
       };
     }
 
     case 'UPDATE_ALL_DRUM_SAMPLES': {
       return {
         ...state,
-        drumSamples: state.drumSamples.map(sample => ({
-          ...sample, ...action.payload,
-        })),
+        drumSamples: state.drumSamples.map(sample => {
+          // Only update loaded samples with valid audio data
+          if (sample.isLoaded && sample.audioBuffer) {
+            return { ...sample, ...action.payload };
+          }
+          return sample;
+        }),
       };
     }
 
