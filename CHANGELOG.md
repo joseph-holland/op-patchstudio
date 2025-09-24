@@ -11,6 +11,7 @@ the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### added
 - drum tool multi select samples (thanks ish!)
+- save for all button to waveform edit dialog (thanks ish!)
 
 ## [0.15.4] - 2025-08-07
 

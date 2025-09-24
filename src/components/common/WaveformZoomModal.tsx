@@ -3,6 +3,7 @@ import { EnhancedTooltip } from './EnhancedTooltip';
 import { isMobile, isTablet } from 'react-device-detect';
 import { triggerRotateOverlay } from '../../App';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
+import { type DrumSample, type MultisampleFile } from '../../context/AppContext';
 
 interface WaveformZoomModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ interface WaveformZoomModalProps {
     sustain: number;
     release: number;
   };
+  onSaveForAll: (payload: Partial<DrumSample | MultisampleFile>) => void;
 }
 
 export function WaveformZoomModal({
@@ -36,6 +38,7 @@ export function WaveformZoomModal({
   loopEnabled = false,
   loopOnRelease = false,
   ampEnvelope,
+  onSaveForAll,
 }: WaveformZoomModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -345,7 +348,15 @@ export function WaveformZoomModal({
     }
   }, [inFrame, outFrame, loopStartFrame, loopEndFrame, isOpen, audioBuffer, drawWaveform, drawMarkers]);
 
-  const handleMouseDown = (e: React.MouseEvent | { clientX: number, clientY: number, preventDefault: () => void, stopPropagation: () => void, nativeEvent: any }) => {
+  interface PointerEvent {
+    clientX: number;
+    clientY: number;
+    preventDefault: () => void;
+    stopPropagation: () => void;
+    nativeEvent: Event;
+  }
+
+  const handleMouseDown = (e: React.MouseEvent | PointerEvent) => {
     if (!audioBuffer) return;
 
     const canvas = canvasRef.current;
@@ -449,7 +460,7 @@ export function WaveformZoomModal({
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.MouseEvent | PointerEvent) => {
     if (!dragging || !audioBuffer) return;
 
     const canvas = canvasRef.current;
@@ -613,13 +624,12 @@ export function WaveformZoomModal({
     const touch = e.touches[0];
     // Reuse mouse logic
     handleMouseDown({
-      ...e,
       clientX: touch.clientX,
       clientY: touch.clientY,
       preventDefault: () => e.preventDefault(),
       stopPropagation: () => e.stopPropagation(),
       nativeEvent: e.nativeEvent,
-    } as any);
+    });
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -629,17 +639,33 @@ export function WaveformZoomModal({
     const touch = e.touches[0];
     // Reuse mouse logic
     handleMouseMove({
-      ...e,
       clientX: touch.clientX,
       clientY: touch.clientY,
       preventDefault: () => e.preventDefault(),
       stopPropagation: () => e.stopPropagation(),
       nativeEvent: e.nativeEvent,
-    } as any);
+    });
   };
 
   const handleTouchEnd = () => {
     handleMouseUp();
+  };
+
+  const handleSaveForAll = () => {
+    const { sampleRate } = audioBuffer!;
+    const payload: any = {
+      inPoint: inFrame / sampleRate,
+      outPoint: outFrame / sampleRate,
+    };
+    
+    // Only add loop properties for multisample files that have loop points
+    if (hasLoopPoints) {
+      payload.loopStart = loopStartFrame / sampleRate;
+      payload.loopEnd = loopEndFrame / sampleRate;
+    }
+    
+    onSaveForAll(payload);
+    onClose();
   };
 
   // Focus trap: focus first button on open, restore focus on close
@@ -1190,6 +1216,21 @@ export function WaveformZoomModal({
             gap: isMobileDevice() ? '0.75rem' : '1rem',
             flexShrink: 0
           }}>
+            <button
+              onClick={handleSaveForAll}
+              style={{
+                padding: isMobileDevice() ? '0.75rem 1.25rem' : '0.65rem 1rem',
+                border: `1px solid ${c.border}`,
+                borderRadius: '3px',
+                background: 'transparent',
+                color: c.textSecondary,
+                cursor: 'pointer',
+                fontSize: isMobileDevice() ? '1rem' : '0.875rem',
+                minHeight: isMobileDevice() ? '44px' : undefined
+              }}
+            >
+              save for all
+            </button>
             <button
               onClick={onClose}
               style={{
