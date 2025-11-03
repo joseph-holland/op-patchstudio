@@ -48,6 +48,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
   // MIDI event handling
   const { onMidiEvent, state: midiState, initialize, refreshDevices } = useWebMidi();
   const [isMidiSelectorVisible, setIsMidiSelectorVisible] = useState(false);
+  const [isOrganizeMode, setIsOrganizeMode] = useState(false);
 
   // Auto-initialize MIDI if not already initialized
   useEffect(() => {
@@ -60,7 +61,6 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && midiState.isInitialized) {
-
         refreshDevices();
       }
     };
@@ -93,12 +93,12 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
     return () => cleanup();
   }, [onMidiEvent]);
 
-  const loadedSamplesCount = state.drumSamples.filter(sample => sample && sample.isLoaded).length;
+  const loadedSamplesCount = state.drumSamples.filter((sample) => sample && sample.isLoaded).length;
 
   const togglePin = () => {
     const newPinnedState = !isDrumKeyboardPinned;
     setIsDrumKeyboardPinned(newPinnedState);
-    
+
     // If unpinning while stuck, reset stuck state without scrolling
     if (!newPinnedState && isStuck) {
       setDynamicStyles({});
@@ -120,16 +120,30 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
   const tooltipContent = isMobile ? (
     <>
       <h3>keyboard controls</h3>
-      <p><strong>load:</strong> tap empty keys to browse and select files</p>
-      <p><strong>play:</strong> tap keys to play loaded samples</p>
-      <p><strong>pin:</strong> use the pin icon to keep the keyboard at the top of the screen</p>
+      <p>
+        <strong>load:</strong> tap empty keys to browse and select files
+      </p>
+      <p>
+        <strong>play:</strong> tap keys to play loaded samples
+      </p>
+      <p>
+        <strong>pin:</strong> use the pin icon to keep the keyboard at the top of the screen
+      </p>
     </>
   ) : (
     <>
       <h3>keyboard controls</h3>
-      <p><strong>load:</strong> click empty keys to browse files or drag and drop audio files directly onto any key</p>
-      <p><strong>play:</strong> use keyboard keys (<strong>A-J, W, E, R, Y, U</strong>) to trigger samples and <strong>Z</strong> / <strong>X</strong> to switch octaves</p>
-      <p><strong>pin:</strong> use the pin icon to keep the keyboard at the top of the screen</p>
+      <p>
+        <strong>load:</strong> click empty keys to browse files or drag and drop audio files
+        directly onto any key
+      </p>
+      <p>
+        <strong>play:</strong> use keyboard keys (<strong>A-J, W, E, R, Y, U</strong>) to trigger
+        samples and <strong>Z</strong> / <strong>X</strong> to switch octaves
+      </p>
+      <p>
+        <strong>pin:</strong> use the pin icon to keep the keyboard at the top of the screen
+      </p>
     </>
   );
 
@@ -153,7 +167,10 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
         if (rect.top <= 10) {
           // Stick
           setPlaceholderHeight(rect.height);
-          setDynamicStyles({ left: `${rect.left}px`, width: `${rect.width}px` });
+          setDynamicStyles({
+            left: `${rect.left}px`,
+            width: `${rect.width}px`,
+          });
           setIsStuck(true);
         }
       } else {
@@ -200,7 +217,11 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
       {/* Placeholder to avoid layout shift */}
       <div
         ref={placeholderRef}
-        style={{ display: isStuck ? 'block' : 'none', height: `${placeholderHeight}px`, background: '#fff' }}
+        style={{
+          display: isStuck ? 'block' : 'none',
+          height: `${placeholderHeight}px`,
+          background: '#fff',
+        }}
       />
 
       {/* Actual Keyboard Container */}
@@ -231,10 +252,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
             >
               load and play samples
             </h3>
-            <EnhancedTooltip
-              isVisible={isTooltipVisible}
-              content={tooltipContent}
-            >
+            <EnhancedTooltip isVisible={isTooltipVisible} content={tooltipContent}>
               <span
                 style={{ display: 'flex' }}
                 onClick={(e) => {
@@ -244,16 +262,16 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                 onMouseEnter={() => setIsTooltipVisible(true)}
                 onMouseLeave={() => setIsTooltipVisible(false)}
               >
-                <i 
-                  className="fas fa-question-circle" 
-                  style={{ 
-                    fontSize: iconSize, 
+                <i
+                  className="fas fa-question-circle"
+                  style={{
+                    fontSize: iconSize,
                     color: 'var(--color-text-secondary)',
-                    cursor: 'help'
+                    cursor: 'help',
                   }}
                 />
               </span>
-                          </EnhancedTooltip>
+            </EnhancedTooltip>
           </div>
           <div
             style={{
@@ -274,21 +292,66 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                     fontWeight: 500,
                   }}
                 >
-                  <i className="fas fa-check-circle" style={{ color: 'var(--color-text-secondary)', fontSize: iconSize }}></i>
+                  <i
+                    className="fas fa-check-circle"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                      fontSize: iconSize,
+                    }}
+                  ></i>
                   {loadedSamplesCount} / 24 loaded
                 </div>
                 <button
+                  onClick={() => setIsOrganizeMode(!isOrganizeMode)}
+                  style={{
+                    background: isOrganizeMode
+                      ? 'var(--color-interactive-focus)'
+                      : 'var(--color-text-secondary)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '3px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    fontSize: '0.875rem',
+                    color: 'var(--color-white)',
+                    transition: 'all 0.2s ease',
+                    fontFamily: '"Montserrat", "Arial", sans-serif',
+                    fontWeight: 500,
+                    minHeight: '32px',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = isOrganizeMode
+                      ? 'var(--color-interactive-dark)'
+                      : 'var(--color-interactive-focus)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = isOrganizeMode
+                      ? 'var(--color-interactive-focus)'
+                      : 'var(--color-text-secondary)';
+                  }}
+                  title="organize mode: bulk load upper and lower rows"
+                >
+                  <i className="fas fa-layer-group" style={{ fontSize: '0.75rem' }}></i>
+                  <span>organize</span>
+                </button>
+                <button
                   onClick={() => {
                     setIsMidiSelectorVisible(!isMidiSelectorVisible);
-                    const midiSelector = document.querySelector('.midi-device-selector') as HTMLElement;
+                    const midiSelector = document.querySelector(
+                      '.midi-device-selector'
+                    ) as HTMLElement;
                     if (midiSelector) {
                       midiSelector.style.display = isMidiSelectorVisible ? 'none' : 'block';
                     }
                   }}
                   style={{
-                    background: isMidiSelectorVisible 
-                      ? 'var(--color-interactive-focus)' 
-                      : midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0
+                    background: isMidiSelectorVisible
+                      ? 'var(--color-interactive-focus)'
+                      : midiState.devices.filter(
+                            (d) => d.type === 'input' && d.state === 'connected'
+                          ).length > 0
                         ? 'var(--color-text-primary)'
                         : 'var(--color-text-secondary)',
                     border: 'none',
@@ -303,20 +366,24 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                     transition: 'all 0.2s ease',
                     fontFamily: '"Montserrat", "Arial", sans-serif',
                     fontWeight: 500,
-                    minHeight: '32px'
+                    minHeight: '32px',
                   }}
-                  onMouseEnter={e => {
-                    const hasConnectedDevices = midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0;
-                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible 
-                      ? 'var(--color-interactive-dark)' 
+                  onMouseEnter={(e) => {
+                    const hasConnectedDevices =
+                      midiState.devices.filter((d) => d.type === 'input' && d.state === 'connected')
+                        .length > 0;
+                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible
+                      ? 'var(--color-interactive-dark)'
                       : hasConnectedDevices
                         ? 'var(--color-interactive-focus)'
                         : 'var(--color-interactive-focus)';
                   }}
-                  onMouseLeave={e => {
-                    const hasConnectedDevices = midiState.devices.filter(d => d.type === 'input' && d.state === 'connected').length > 0;
-                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible 
-                      ? 'var(--color-interactive-focus)' 
+                  onMouseLeave={(e) => {
+                    const hasConnectedDevices =
+                      midiState.devices.filter((d) => d.type === 'input' && d.state === 'connected')
+                        .length > 0;
+                    e.currentTarget.style.backgroundColor = isMidiSelectorVisible
+                      ? 'var(--color-interactive-focus)'
                       : hasConnectedDevices
                         ? 'var(--color-text-primary)'
                         : 'var(--color-text-secondary)';
@@ -344,23 +411,24 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
               }}
               title={isDrumKeyboardPinned ? 'Unpin keyboard' : 'Pin keyboard to top'}
             >
-              <i className="fas fa-thumbtack" style={{ 
-                fontSize: iconSize,
-              }}></i>
+              <i
+                className="fas fa-thumbtack"
+                style={{
+                  fontSize: iconSize,
+                }}
+              ></i>
             </button>
           </div>
         </div>
 
-
-
         {/* MIDI Device Selector (Hidden by default) */}
-        <div 
+        <div
           className="midi-device-selector"
-          style={{ 
+          style={{
             display: isMidiSelectorVisible ? 'block' : 'none',
             padding: '0.75rem 1rem',
             backgroundColor: 'var(--color-bg-primary)',
-            borderBottom: '1px solid var(--color-border-light)'
+            borderBottom: '1px solid var(--color-border-light)',
           }}
         >
           <MidiDeviceSelector
@@ -374,13 +442,210 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
         </div>
 
         {/* Keyboard */}
-        <DrumKeyboard 
+        <DrumKeyboard
           onFileUpload={onFileUpload}
           selectedMidiChannel={selectedMidiChannel}
           midiState={midiState}
           onMidiEventExternal={onMidiEvent}
+          isOrganizeMode={isOrganizeMode}
         />
+
+        {/* Organize Mode Drop Zones */}
+        {isOrganizeMode && !isMobile && (
+          <div
+            style={{
+              display: 'flex',
+              gap: '1rem',
+              padding: '1rem',
+              borderTop: '1px solid var(--color-border-light)',
+            }}
+          >
+            {/* Kicks Drop Zone */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.8)';
+                e.currentTarget.style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.3)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.3)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+
+                const files = Array.from(e.dataTransfer.files).filter(
+                  (file) =>
+                    file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
+                );
+
+                // White key indices for both octaves (A, S, D, F, G, H, J)
+                const whiteKeyIndices = [
+                  0,
+                  2,
+                  4,
+                  6,
+                  7,
+                  9,
+                  11, // Octave 0
+                  12,
+                  14,
+                  16,
+                  18,
+                  19,
+                  21,
+                  23, // Octave 1
+                ];
+
+                files.forEach((file, index) => {
+                  if (index < whiteKeyIndices.length && onFileUpload) {
+                    onFileUpload(whiteKeyIndices[index], file);
+                  }
+                });
+              }}
+              style={{
+                flex: 1,
+                border: '2px dashed rgba(76, 175, 80, 0.3)',
+                borderRadius: '6px',
+                padding: '2rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                minHeight: '120px',
+              }}
+            >
+              <i
+                className="fas fa-file-audio"
+                style={{
+                  fontSize: '2rem',
+                  color: 'rgba(76, 175, 80, 0.8)',
+                }}
+              ></i>
+              <div
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  color: 'rgba(76, 175, 80, 0.9)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                drop lower row here
+              </div>
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--color-text-secondary)',
+                  textAlign: 'center',
+                }}
+              >
+                bottom row (A, S, D, F, G, H, J)
+                <br />
+                up to 14 files
+              </div>
+            </div>
+
+            {/* Snares Drop Zone */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = 'rgba(255, 152, 0, 0.8)';
+                e.currentTarget.style.backgroundColor = 'rgba(255, 152, 0, 0.1)';
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = 'rgba(255, 152, 0, 0.3)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = 'rgba(255, 152, 0, 0.3)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+
+                const files = Array.from(e.dataTransfer.files).filter(
+                  (file) =>
+                    file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
+                );
+
+                // Black key indices for both octaves (W, E, R, Y, U)
+                const blackKeyIndices = [
+                  1,
+                  3,
+                  5,
+                  8,
+                  10, // Octave 0
+                  13,
+                  15,
+                  17,
+                  20,
+                  22, // Octave 1
+                ];
+
+                files.forEach((file, index) => {
+                  if (index < blackKeyIndices.length && onFileUpload) {
+                    onFileUpload(blackKeyIndices[index], file);
+                  }
+                });
+              }}
+              style={{
+                flex: 1,
+                border: '2px dashed rgba(255, 152, 0, 0.3)',
+                borderRadius: '6px',
+                padding: '2rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                minHeight: '120px',
+              }}
+            >
+              <i
+                className="fas fa-file-audio"
+                style={{
+                  fontSize: '2rem',
+                  color: 'rgba(255, 152, 0, 0.8)',
+                }}
+              ></i>
+              <div
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  color: 'rgba(255, 152, 0, 0.9)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                drop upper row here
+              </div>
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--color-text-secondary)',
+                  textAlign: 'center',
+                }}
+              >
+                top row (W, E, R, Y, U)
+                <br />
+                up to 10 files
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
-}; 
+};
