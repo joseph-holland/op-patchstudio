@@ -1,10 +1,10 @@
 // Audio processing utilities migrated from legacy/lib/audio_tools.js
 // Enhanced with TypeScript types and improved functionality
 
-import { audioContextManager } from "./audioContext";
-import { AUDIO_CONSTANTS } from "./constants";
-import type { FilenameSeparator } from "./constants";
-import { audioBufferToWav } from "./wavExport";
+import { audioContextManager } from './audioContext';
+import { AUDIO_CONSTANTS } from './constants';
+import type { FilenameSeparator } from './constants';
+import { audioBufferToWav } from './wavExport';
 
 // Constants preserved from legacy for compatibility
 const HEADER_LENGTH = 44;
@@ -38,21 +38,14 @@ interface WavMetadata extends WavHeader, SmplChunk {
 // Enhanced WAV metadata parsing with SMPL chunk support
 export async function readWavMetadata(
   file: File,
-  mapping: "C3" | "C4" = "C3"
+  mapping: 'C3' | 'C4' = 'C3'
 ): Promise<WavMetadata> {
   try {
     const arrayBuffer = await file.arrayBuffer();
-    return await readWavMetadataFromArrayBuffer(
-      arrayBuffer,
-      file.name,
-      file.size,
-      mapping
-    );
+    return await readWavMetadataFromArrayBuffer(arrayBuffer, file.name, file.size, mapping);
   } catch (error) {
     throw new Error(
-      `Failed to read WAV metadata: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
+      `Failed to read WAV metadata: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }
 }
@@ -62,7 +55,7 @@ export async function readWavMetadataFromArrayBuffer(
   arrayBuffer: ArrayBuffer,
   filename: string,
   fileSize: number,
-  mapping: "C3" | "C4" = "C3"
+  mapping: 'C3' | 'C4' = 'C3'
 ): Promise<WavMetadata> {
   try {
     // Create separate copies for parsing and decoding to avoid detached buffer issues
@@ -82,13 +75,7 @@ export async function readWavMetadataFromArrayBuffer(
     const duration = audioBuffer.duration;
 
     // Parse SMPL chunk for loop points and MIDI note using the parse buffer
-    const smplData = parseSmplChunk(
-      dataView,
-      header.sampleRate,
-      duration,
-      filename,
-      mapping
-    );
+    const smplData = parseSmplChunk(dataView, header.sampleRate, duration, filename, mapping);
 
     return {
       format: header.format,
@@ -106,9 +93,7 @@ export async function readWavMetadataFromArrayBuffer(
     };
   } catch (error) {
     throw new Error(
-      `Failed to read WAV metadata: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
+      `Failed to read WAV metadata: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }
 }
@@ -116,19 +101,15 @@ export async function readWavMetadataFromArrayBuffer(
 // Parse WAV file header
 function parseWavHeader(dataView: DataView): WavHeader {
   // Check RIFF header
-  const riff = String.fromCharCode(
-    ...Array.from(new Uint8Array(dataView.buffer, 0, 4))
-  );
-  if (riff !== "RIFF") {
-    throw new Error("Invalid WAV file: missing RIFF header");
+  const riff = String.fromCharCode(...Array.from(new Uint8Array(dataView.buffer, 0, 4)));
+  if (riff !== 'RIFF') {
+    throw new Error('Invalid WAV file: missing RIFF header');
   }
 
   // Check WAVE format
-  const wave = String.fromCharCode(
-    ...Array.from(new Uint8Array(dataView.buffer, 8, 4))
-  );
-  if (wave !== "WAVE") {
-    throw new Error("Invalid WAV file: missing WAVE format");
+  const wave = String.fromCharCode(...Array.from(new Uint8Array(dataView.buffer, 8, 4)));
+  if (wave !== 'WAVE') {
+    throw new Error('Invalid WAV file: missing WAVE format');
   }
 
   // Find fmt chunk
@@ -137,14 +118,12 @@ function parseWavHeader(dataView: DataView): WavHeader {
   let dataOffset = -1;
 
   while (offset < dataView.byteLength - 8) {
-    const chunkId = String.fromCharCode(
-      ...Array.from(new Uint8Array(dataView.buffer, offset, 4))
-    );
+    const chunkId = String.fromCharCode(...Array.from(new Uint8Array(dataView.buffer, offset, 4)));
     const chunkSize = dataView.getUint32(offset + 4, true);
 
-    if (chunkId === "fmt ") {
+    if (chunkId === 'fmt ') {
       fmtOffset = offset + 8;
-    } else if (chunkId === "data") {
+    } else if (chunkId === 'data') {
       dataOffset = offset + 8;
       break;
     }
@@ -153,7 +132,7 @@ function parseWavHeader(dataView: DataView): WavHeader {
   }
 
   if (fmtOffset === -1) {
-    throw new Error("Invalid WAV file: missing fmt chunk");
+    throw new Error('Invalid WAV file: missing fmt chunk');
   }
 
   // Parse fmt chunk
@@ -164,17 +143,16 @@ function parseWavHeader(dataView: DataView): WavHeader {
 
   // Map audio format codes to readable names
   const formatNames: Record<number, string> = {
-    1: "PCM",
-    3: "IEEE Float",
-    6: "A-law",
-    7: "μ-law",
-    65534: "Extensible",
+    1: 'PCM',
+    3: 'IEEE Float',
+    6: 'A-law',
+    7: 'μ-law',
+    65534: 'Extensible',
   };
 
   const formatName = formatNames[audioFormat] || `Format ${audioFormat}`;
 
-  const dataLength =
-    dataOffset !== -1 ? dataView.getUint32(dataOffset - 4, true) : 0;
+  const dataLength = dataOffset !== -1 ? dataView.getUint32(dataOffset - 4, true) : 0;
 
   return {
     format: formatName,
@@ -191,7 +169,7 @@ function parseSmplChunk(
   sampleRate: number,
   duration: number,
   filename: string,
-  mapping: "C3" | "C4" = "C3"
+  mapping: 'C3' | 'C4' = 'C3'
 ): SmplChunk {
   let offset = 12;
 
@@ -211,7 +189,7 @@ function parseSmplChunk(
     );
     const chunkSize = dataView.getUint32(offset + 4, true);
 
-    if (chunkId === "smpl") {
+    if (chunkId === 'smpl') {
       // Parse SMPL chunk
       const smplOffset = offset + 8;
 
@@ -286,10 +264,7 @@ export async function normalizeAudioBuffer(
   audioBuffer: AudioBuffer,
   targetLevelDB: number = 0.0
 ): Promise<AudioBuffer> {
-  const normalizeGain = calculatePeakNormalizationGain(
-    audioBuffer,
-    targetLevelDB
-  );
+  const normalizeGain = calculatePeakNormalizationGain(audioBuffer, targetLevelDB);
 
   // Create a new audio buffer with the same properties
   const audioContext = await audioContextManager.getAudioContext();
@@ -448,8 +423,7 @@ export async function convertAudioFormat(
   const normalize = options.normalize || false;
   const normalizeLevel = options.normalizeLevel ?? 0.0; // Default to 0.0 dBFS (will be overridden by specific tool constants)
   const gain = options.gain || 0;
-  const shouldApplyLimiter =
-    options.applyLimiter !== undefined ? options.applyLimiter : false;
+  const shouldApplyLimiter = options.applyLimiter !== undefined ? options.applyLimiter : false;
 
   // Apply trim to loop end if enabled (do this first to get correct duration)
   let processedBuffer = audioBuffer;
@@ -480,10 +454,7 @@ export async function convertAudioFormat(
   // Apply normalization if enabled
   let normalizeGain = 1;
   if (normalize) {
-    normalizeGain = calculatePeakNormalizationGain(
-      processedBuffer,
-      normalizeLevel
-    );
+    normalizeGain = calculatePeakNormalizationGain(processedBuffer, normalizeLevel);
     gainValue *= normalizeGain;
   }
 
@@ -492,9 +463,7 @@ export async function convertAudioFormat(
   // Handle channel conversion
   if (targetChannels !== processedBuffer.numberOfChannels) {
     // Add channel splitter/merger for channel conversion
-    const splitter = offlineContext.createChannelSplitter(
-      processedBuffer.numberOfChannels
-    );
+    const splitter = offlineContext.createChannelSplitter(processedBuffer.numberOfChannels);
     const merger = offlineContext.createChannelMerger(targetChannels);
 
     source.connect(splitter);
@@ -512,10 +481,7 @@ export async function convertAudioFormat(
       gainNode.connect(merger, 0, 1);
     } else {
       // Direct channel mapping - create separate gain nodes for each channel
-      const numChannels = Math.min(
-        targetChannels,
-        processedBuffer.numberOfChannels
-      );
+      const numChannels = Math.min(targetChannels, processedBuffer.numberOfChannels);
       const gainNodes: GainNode[] = [];
 
       for (let i = 0; i < numChannels; i++) {
@@ -545,9 +511,7 @@ export async function convertAudioFormat(
     // Set limiter threshold based on normalization target
     // Add small headroom (0.1dB) to prevent limiting normalized audio
     // Ensure threshold is never positive to prevent clipping
-    const limiterThreshold = normalize
-      ? Math.min(normalizeLevel + 0.1, 0.0)
-      : 0.0;
+    const limiterThreshold = normalize ? Math.min(normalizeLevel + 0.1, 0.0) : 0.0;
     result = await applyLimiter(result, limiterThreshold);
   }
 
@@ -584,7 +548,7 @@ export async function calculatePatchSize(
 export function findNearestZeroCrossing(
   audioBuffer: AudioBuffer,
   framePosition: number,
-  direction: "forward" | "backward" | "both" = "both",
+  direction: 'forward' | 'backward' | 'both' = 'both',
   maxDistance: number = 1000,
   bounds?: { min?: number; max?: number }
 ): number {
@@ -598,19 +562,14 @@ export function findNearestZeroCrossing(
   let minAmplitude = Math.abs(channelData[framePosition]);
 
   const searchStart =
-    direction === "forward"
-      ? framePosition
-      : Math.max(0, framePosition - maxDistance);
+    direction === 'forward' ? framePosition : Math.max(0, framePosition - maxDistance);
   const searchEnd =
-    direction === "backward"
-      ? framePosition
-      : Math.min(length - 1, framePosition + maxDistance);
+    direction === 'backward' ? framePosition : Math.min(length - 1, framePosition + maxDistance);
 
   // Apply bounds if provided
   const boundedSearchStart =
     bounds?.min !== undefined ? Math.max(searchStart, bounds.min) : searchStart;
-  const boundedSearchEnd =
-    bounds?.max !== undefined ? Math.min(searchEnd, bounds.max) : searchEnd;
+  const boundedSearchEnd = bounds?.max !== undefined ? Math.min(searchEnd, bounds.max) : searchEnd;
 
   for (let i = boundedSearchStart; i <= boundedSearchEnd; i++) {
     const amplitude = Math.abs(channelData[i]);
@@ -643,8 +602,7 @@ export function applyZeroCrossingToMarkers(
   loopEnd?: number;
   adjustments: { marker: string; original: number; adjusted: number }[];
 } {
-  const adjustments: { marker: string; original: number; adjusted: number }[] =
-    [];
+  const adjustments: { marker: string; original: number; adjusted: number }[] = [];
 
   // Convert time-based positions to frame positions
   const inFrame = Math.floor(inPoint * audioBuffer.sampleRate);
@@ -654,12 +612,12 @@ export function applyZeroCrossingToMarkers(
   const adjustedInFrame = findNearestZeroCrossing(
     audioBuffer,
     inFrame,
-    "forward",
+    'forward',
     maxSearchDistance
   );
   if (adjustedInFrame !== inFrame) {
     adjustments.push({
-      marker: "inPoint",
+      marker: 'inPoint',
       original: inFrame,
       adjusted: adjustedInFrame,
     });
@@ -669,12 +627,12 @@ export function applyZeroCrossingToMarkers(
   const adjustedOutFrame = findNearestZeroCrossing(
     audioBuffer,
     outFrame,
-    "backward",
+    'backward',
     maxSearchDistance
   );
   if (adjustedOutFrame !== outFrame) {
     adjustments.push({
-      marker: "outPoint",
+      marker: 'outPoint',
       original: outFrame,
       adjusted: adjustedOutFrame,
     });
@@ -693,14 +651,14 @@ export function applyZeroCrossingToMarkers(
     adjustedLoopStart = findNearestZeroCrossing(
       audioBuffer,
       loopStartFrame,
-      "both",
+      'both',
       maxSearchDistance,
       { min: inFrame, max: outFrame }
     );
 
     if (adjustedLoopStart !== loopStartFrame) {
       adjustments.push({
-        marker: "loopStart",
+        marker: 'loopStart',
         original: loopStartFrame,
         adjusted: adjustedLoopStart,
       });
@@ -716,14 +674,14 @@ export function applyZeroCrossingToMarkers(
     adjustedLoopEnd = findNearestZeroCrossing(
       audioBuffer,
       loopEndFrame,
-      "both",
+      'both',
       maxSearchDistance,
       { min: inFrame, max: outFrame }
     );
 
     if (adjustedLoopEnd !== loopEndFrame) {
       adjustments.push({
-        marker: "loopEnd",
+        marker: 'loopEnd',
         original: loopEndFrame,
         adjusted: adjustedLoopEnd,
       });
@@ -735,13 +693,8 @@ export function applyZeroCrossingToMarkers(
     inPoint: adjustedInFrame / audioBuffer.sampleRate,
     outPoint: adjustedOutFrame / audioBuffer.sampleRate,
     loopStart:
-      adjustedLoopStart !== undefined
-        ? adjustedLoopStart / audioBuffer.sampleRate
-        : undefined,
-    loopEnd:
-      adjustedLoopEnd !== undefined
-        ? adjustedLoopEnd / audioBuffer.sampleRate
-        : undefined,
+      adjustedLoopStart !== undefined ? adjustedLoopStart / audioBuffer.sampleRate : undefined,
+    loopEnd: adjustedLoopEnd !== undefined ? adjustedLoopEnd / audioBuffer.sampleRate : undefined,
     adjustments,
   };
 
@@ -749,10 +702,7 @@ export function applyZeroCrossingToMarkers(
 }
 
 // Enhanced resample audio with better quality
-export async function resampleAudio(
-  file: File,
-  targetSampleRate: number
-): Promise<Blob> {
+export async function resampleAudio(file: File, targetSampleRate: number): Promise<Blob> {
   const audioContext = await audioContextManager.getAudioContext();
 
   try {
@@ -761,7 +711,7 @@ export async function resampleAudio(
 
     // Skip resampling if already at target rate
     if (audioBuffer.sampleRate === targetSampleRate) {
-      return new Blob([arrayBuffer], { type: "audio/wav" });
+      return new Blob([arrayBuffer], { type: 'audio/wav' });
     }
 
     const converted = await convertAudioFormat(audioBuffer, {
@@ -769,14 +719,14 @@ export async function resampleAudio(
     });
     return await audioBufferToWav(converted);
   } catch (error) {
-    console.error("Error during audio resampling:", error);
+    console.error('Error during audio resampling:', error);
     throw error;
   }
 }
 
 // Existing functions preserved for compatibility
 export function sanitizeName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9 #\-().]+/g, "");
+  return name.replace(/[^a-zA-Z0-9 #\-().]+/g, '');
 }
 
 /**
@@ -798,11 +748,8 @@ export function getInvalidPresetNameChars(name: string): string[] {
   return invalidChars ? [...new Set(invalidChars)] : [];
 }
 
-export function parseFilename(
-  filename: string,
-  mapping: "C3" | "C4" = "C3"
-): [string, number] {
-  const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
+export function parseFilename(filename: string, mapping: 'C3' | 'C4' = 'C3'): [string, number] {
+  const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
 
   // Look for the first occurrence of either:
   // - A note name (C4, D#5, etc.)
@@ -811,9 +758,7 @@ export function parseFilename(
   // The regex captures everything before the first number/note pattern
   const match = nameWithoutExt.match(/^(.*?)[\s-]*([A-G](?:b|#)?\d|\d{1,3})/i);
   if (!match) {
-    throw new Error(
-      `Filename '${filename}' does not match the expected pattern.`
-    );
+    throw new Error(`Filename '${filename}' does not match the expected pattern.`);
   }
   const baseName = sanitizeName(match[1]);
   const noteOrNumber = match[2];
@@ -825,68 +770,48 @@ export function parseFilename(
 }
 
 export const NOTE_OFFSET = [33, 35, 24, 26, 28, 29, 31];
-export const NOTE_NAMES = [
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B",
-];
+export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-export function midiNoteToString(
-  value: number,
-  mapping: "C3" | "C4" = "C3"
-): string {
-  if (value < 0 || value > 127) return "";
+export function midiNoteToString(value: number, mapping: 'C3' | 'C4' = 'C3'): string {
+  if (value < 0 || value > 127) return '';
   const noteNumber = value % 12;
   // C3=60: octave = Math.floor(value / 12) - 2
   // C4=60: octave = Math.floor(value / 12) - 1
-  const octave =
-    mapping === "C3" ? Math.floor(value / 12) - 2 : Math.floor(value / 12) - 1;
+  const octave = mapping === 'C3' ? Math.floor(value / 12) - 2 : Math.floor(value / 12) - 1;
   return `${NOTE_NAMES[noteNumber]}${octave}`;
 }
 
 const NOTE_NAME_TO_SEMITONE: Record<string, number> = {
   C: 0,
-  "C#": 1,
+  'C#': 1,
   Db: 1,
   D: 2,
-  "D#": 3,
+  'D#': 3,
   Eb: 3,
   E: 4,
   F: 5,
-  "F#": 6,
+  'F#': 6,
   Gb: 6,
   G: 7,
-  "G#": 8,
+  'G#': 8,
   Ab: 8,
   A: 9,
-  "A#": 10,
+  'A#': 10,
   Bb: 10,
   B: 11,
 };
 
-export function noteStringToMidiValue(
-  note: string,
-  mapping: "C3" | "C4" = "C3"
-): number {
+export function noteStringToMidiValue(note: string, mapping: 'C3' | 'C4' = 'C3'): number {
   const match = note.match(/^([A-Ga-g])([#b]?)(-?\d+)$/);
-  if (!match) throw new Error("Bad note format");
+  if (!match) throw new Error('Bad note format');
   const [, letter, accidental, octaveStr] = match;
-  const base = letter.toUpperCase() + (accidental || "");
+  const base = letter.toUpperCase() + (accidental || '');
   const semitone = NOTE_NAME_TO_SEMITONE[base];
-  if (semitone === undefined) throw new Error("Bad note");
+  if (semitone === undefined) throw new Error('Bad note');
   const octave = parseInt(octaveStr, 10);
   // C3=60: (octave + 2) * 12 + semitone
   // C4=60: (octave + 1) * 12 + semitone
-  return (mapping === "C3" ? (octave + 2) * 12 : (octave + 1) * 12) + semitone;
+  return (mapping === 'C3' ? (octave + 2) * 12 : (octave + 1) * 12) + semitone;
 }
 
 // Enhanced base template objects for OP-XY patches
@@ -898,17 +823,17 @@ export const baseMultisampleJson = {
   fx: {
     active: false,
     params: [0, 0, 0, 0, 0, 0, 0, 0],
-    type: "svf",
+    type: 'svf',
   },
   lfo: {
     active: false,
     params: [0, 0, 0, 0, 0, 0, 0, 0],
-    type: "element",
+    type: 'element',
   },
   octave: 0,
-  platform: "OP-XY",
+  platform: 'OP-XY',
   regions: [],
-  type: "multisampler",
+  type: 'multisampler',
   version: 4,
 };
 
@@ -919,23 +844,23 @@ export const baseDrumJson = {
     modulation: {
       aftertouch: { amount: 16383, target: 0 },
     },
-    playmode: "poly",
+    playmode: 'poly',
     transpose: 0,
-    "velocity.sensitivity": 4915, // ~15% of 32767
+    'velocity.sensitivity': 4915, // ~15% of 32767
     volume: 26214, // ~80% of 32767
     width: 0, // 0% stereo width
   },
-  platform: "OP-XY",
-  type: "drum",
+  platform: 'OP-XY',
+  type: 'drum',
   version: 4,
 };
 
 // Utility functions
 export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 mb";
-  if (bytes < 1024) return bytes + " b";
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " kb";
-  return (bytes / 1048576).toFixed(1) + " mb";
+  if (bytes === 0) return '0 mb';
+  if (bytes < 1024) return bytes + ' b';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' kb';
+  return (bytes / 1048576).toFixed(1) + ' mb';
 }
 
 export function isPatchSizeValid(sizeBytes: number): boolean {
@@ -946,9 +871,9 @@ export function getPatchSizeWarning(sizeBytes: number): string | null {
   const percentage = (sizeBytes / PATCH_SIZE_LIMIT) * 100;
 
   if (percentage >= 95) {
-    return "Preset size too large - reduce sample rate, bit depth, or convert to mono";
+    return 'Preset size too large - reduce sample rate, bit depth, or convert to mono';
   } else if (percentage >= 75) {
-    return "Approaching size limit - consider optimizing samples";
+    return 'Approaching size limit - consider optimizing samples';
   }
 
   return null;
@@ -968,52 +893,49 @@ export function getPatchSizeWarning(sizeBytes: number): string | null {
 export function generateFilename(
   presetName: string,
   separator: FilenameSeparator,
-  type: "drum" | "multisample",
+  type: 'drum' | 'multisample',
   index: number,
   _originalName: string,
-  mapping: "C3" | "C4" = "C3",
-  extension: string = "wav"
+  mapping: 'C3' | 'C4' = 'C3',
+  extension: string = 'wav'
 ): string {
   // Normalize separators in preset name and trim leading/trailing separators
   const normalizedPresetName = presetName
     .replace(/[ _-]+/g, separator)
-    .replace(/^[ _-]+|[ _-]+$/g, "");
+    .replace(/^[ _-]+|[ _-]+$/g, '');
 
   // Sanitize preset name - remove invalid characters but keep the chosen separator
-  const allowedChars = separator === " " ? "a-zA-Z0-9 " : "a-zA-Z0-9-";
-  const cleanPresetName = normalizedPresetName.replace(
-    new RegExp(`[^${allowedChars}]`, "g"),
-    ""
-  );
+  const allowedChars = separator === ' ' ? 'a-zA-Z0-9 ' : 'a-zA-Z0-9-';
+  const cleanPresetName = normalizedPresetName.replace(new RegExp(`[^${allowedChars}]`, 'g'), '');
 
-  if (type === "drum") {
+  if (type === 'drum') {
     // Short drum key labels by index (from DrumKeyboard.tsx)
     // Updated to match current drum key mappings
     const drumShortLabels = [
-      "KD1",
-      "KD2",
-      "SD1",
-      "SD2",
-      "RIM",
-      "CLP",
-      "TB",
-      "SH",
-      "CH",
-      "CL1",
-      "OH",
-      "CAB",
-      "LT1",
-      "RC",
-      "MT",
-      "CC",
-      "HT",
-      "COW",
-      "TRI",
-      "LT2",
-      "LC",
-      "WS",
-      "HC",
-      "GUI",
+      'KD1',
+      'KD2',
+      'SD1',
+      'SD2',
+      'RIM',
+      'CLP',
+      'TB',
+      'SH',
+      'CH',
+      'CL1',
+      'OH',
+      'CAB',
+      'LT1',
+      'RC',
+      'MT',
+      'CC',
+      'HT',
+      'COW',
+      'TRI',
+      'LT2',
+      'LC',
+      'WS',
+      'HC',
+      'GUI',
     ];
     const drumLabel = drumShortLabels[index] || `DRUM${index + 1}`;
 
@@ -1035,7 +957,7 @@ export function getEffectiveSampleRate(
 ): number {
   const selected = selectedRate.toString();
 
-  if (selected === "0") {
+  if (selected === '0') {
     // Keep original
     return originalSampleRate;
   }
