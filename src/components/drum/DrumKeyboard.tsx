@@ -193,13 +193,10 @@ export function DrumKeyboard({
   const totalGaps = gap * (numKeys - 1); // 6 gaps between 7 keys
   // Use full viewport width for calculation
   const availableWidth = containerWidth;
-  const keyWidth =
-    isMobile && containerWidth > 0 ? Math.floor((availableWidth - totalGaps) / numKeys) : 56;
+  const keyWidth = isMobile && containerWidth > 0 ? Math.floor((availableWidth - totalGaps) / numKeys) : 56;
 
   // Check if MIDI is connected (initialized and has input devices)
-  const inputDevices = midiState.devices.filter(
-    (device) => device.type === 'input' && device.state === 'connected'
-  );
+  const inputDevices = midiState.devices.filter((device) => device.type === 'input' && device.state === 'connected');
   const isMidiConnected = midiState.isInitialized && inputDevices.length > 0;
 
   const playSample = async (index: number) => {
@@ -209,10 +206,7 @@ export function DrumKeyboard({
     }
     try {
       await play(sample.audioBuffer, {
-        inFrame:
-          sample.inPoint !== undefined
-            ? Math.floor(sample.inPoint * sample.audioBuffer.sampleRate)
-            : 0,
+        inFrame: sample.inPoint !== undefined ? Math.floor(sample.inPoint * sample.audioBuffer.sampleRate) : 0,
         outFrame:
           sample.outPoint !== undefined
             ? Math.floor(sample.outPoint * sample.audioBuffer.sampleRate)
@@ -439,14 +433,7 @@ export function DrumKeyboard({
     } else if (!selectedMidiChannel) {
       // No MIDI channel selected
     }
-  }, [
-    isMidiConnected,
-    selectedMidiChannel,
-    onMidiEvent,
-    handleMidiEvent,
-    midiState.devices,
-    state.currentTab,
-  ]);
+  }, [isMidiConnected, selectedMidiChannel, onMidiEvent, handleMidiEvent, midiState.devices, state.currentTab]);
 
   // Helper functions to create common OPXYKey props
   const createKeyProps = (
@@ -477,8 +464,7 @@ export function DrumKeyboard({
     };
   };
 
-  const createStandardKeyProps = (keyChar: string, octave: number) =>
-    createKeyProps(keyChar, octave, false, 'center');
+  const createStandardKeyProps = (keyChar: string, octave: number) => createKeyProps(keyChar, octave, false, 'center');
 
   const createLargeKeyProps = (keyChar: string, octave: number, circleOffset: 'left' | 'right') =>
     createKeyProps(keyChar, octave, true, circleOffset);
@@ -528,9 +514,7 @@ export function DrumKeyboard({
 
     // Use keyWidth for all proportional sizing
     const baseSize = keyWidth;
-    const width = isLarge
-      ? baseSize * 1.5 + (keyChar === 'W' || keyChar === 'U' ? 1 : 0)
-      : baseSize;
+    const width = isLarge ? baseSize * 1.5 + (keyChar === 'W' || keyChar === 'U' ? 1 : 0) : baseSize;
     const height = baseSize;
     const circleSize = baseSize * (35 / 56);
     const outerRingSize = baseSize * (52 / 56); // Scale outer ring too
@@ -678,9 +662,7 @@ export function DrumKeyboard({
             e.currentTarget.style.boxShadow = isActive
               ? '0 4px 12px rgba(0, 0, 0, 0.18)'
               : '0 2px 6px rgba(0, 0, 0, 0.1)';
-            e.currentTarget.style.borderColor = !isActive
-              ? 'var(--color-key-inactive-border)'
-              : 'var(--color-black)';
+            e.currentTarget.style.borderColor = !isActive ? 'var(--color-key-inactive-border)' : 'var(--color-black)';
           }}
           onDrop={(e) => {
             e.preventDefault();
@@ -696,9 +678,7 @@ export function DrumKeyboard({
             e.currentTarget.style.boxShadow = isActive
               ? '0 4px 12px rgba(0, 0, 0, 0.18)'
               : '0 2px 6px rgba(0, 0, 0, 0.1)';
-            e.currentTarget.style.borderColor = !isActive
-              ? 'var(--color-key-inactive-border)'
-              : 'var(--color-black)';
+            e.currentTarget.style.borderColor = !isActive ? 'var(--color-key-inactive-border)' : 'var(--color-black)';
 
             const files = Array.from(e.dataTransfer.files);
             const audioFile = files.find(
@@ -747,9 +727,7 @@ export function DrumKeyboard({
               width: `${outerRingSize}px`,
               height: `${outerRingSize}px`,
               background: 'transparent',
-              border: !isActive
-                ? '1px solid var(--color-key-inactive-border)'
-                : '1px solid var(--color-black)',
+              border: !isActive ? '1px solid var(--color-key-inactive-border)' : '1px solid var(--color-black)',
               marginLeft: circleStyle.marginLeft === '0' ? '0' : `-${outerRingSize / 2}px`, // Conditional centering
             }}
           >
@@ -827,9 +805,7 @@ export function DrumKeyboard({
             >
               <div
                 style={{
-                  backgroundColor: isWhiteKey
-                    ? 'rgba(76, 175, 80, 0.85)'
-                    : 'rgba(255, 152, 0, 0.85)',
+                  backgroundColor: isWhiteKey ? 'rgba(76, 175, 80, 0.85)' : 'rgba(255, 152, 0, 0.85)',
                   color: '#fff',
                   fontSize: `${baseSize * (7 / 56)}px`,
                   fontWeight: '700',
@@ -974,11 +950,7 @@ export function DrumKeyboard({
                 }}
               >
                 {/* Octave 0 Panel */}
-                <div
-                  role="group"
-                  aria-label="Lower octave drum keys"
-                  style={{ width: '50%', flexShrink: 0 }}
-                >
+                <div role="group" aria-label="Lower octave drum keys" style={{ width: '50%', flexShrink: 0 }}>
                   <div
                     style={{
                       display: 'flex',
@@ -998,21 +970,14 @@ export function DrumKeyboard({
                     {/* Bottom row */}
                     <div style={{ display: 'flex', gap: '1px' }}>
                       {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map((key) => (
-                        <OPXYKey
-                          key={`octave0-mobile-${key}`}
-                          {...createStandardKeyProps(key, 0)}
-                        />
+                        <OPXYKey key={`octave0-mobile-${key}`} {...createStandardKeyProps(key, 0)} />
                       ))}
                     </div>
                   </div>
                 </div>
 
                 {/* Octave 1 Panel */}
-                <div
-                  role="group"
-                  aria-label="Upper octave drum keys"
-                  style={{ width: '50%', flexShrink: 0 }}
-                >
+                <div role="group" aria-label="Upper octave drum keys" style={{ width: '50%', flexShrink: 0 }}>
                   <div
                     style={{
                       display: 'flex',
@@ -1032,10 +997,7 @@ export function DrumKeyboard({
                     {/* Bottom row */}
                     <div style={{ display: 'flex', gap: '1px' }}>
                       {['A', 'S', 'D', 'F', 'G', 'H', 'J'].map((key) => (
-                        <OPXYKey
-                          key={`octave1-mobile-${key}`}
-                          {...createStandardKeyProps(key, 1)}
-                        />
+                        <OPXYKey key={`octave1-mobile-${key}`} {...createStandardKeyProps(key, 1)} />
                       ))}
                     </div>
                   </div>
@@ -1061,8 +1023,7 @@ export function DrumKeyboard({
                 width: '8px',
                 height: '8px',
                 borderRadius: '50%',
-                background:
-                  currentOctave === 0 ? 'var(--color-text-secondary)' : 'var(--color-border-light)',
+                background: currentOctave === 0 ? 'var(--color-text-secondary)' : 'var(--color-border-light)',
                 transition: 'background-color 0.3s ease',
                 margin: '0 4px',
               }}
@@ -1072,8 +1033,7 @@ export function DrumKeyboard({
                 width: '8px',
                 height: '8px',
                 borderRadius: '50%',
-                background:
-                  currentOctave === 1 ? 'var(--color-text-secondary)' : 'var(--color-border-light)',
+                background: currentOctave === 1 ? 'var(--color-text-secondary)' : 'var(--color-border-light)',
                 transition: 'background-color 0.3s ease',
                 margin: '0 4px',
               }}

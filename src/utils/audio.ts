@@ -36,17 +36,12 @@ interface WavMetadata extends WavHeader, SmplChunk {
 }
 
 // Enhanced WAV metadata parsing with SMPL chunk support
-export async function readWavMetadata(
-  file: File,
-  mapping: 'C3' | 'C4' = 'C3'
-): Promise<WavMetadata> {
+export async function readWavMetadata(file: File, mapping: 'C3' | 'C4' = 'C3'): Promise<WavMetadata> {
   try {
     const arrayBuffer = await file.arrayBuffer();
     return await readWavMetadataFromArrayBuffer(arrayBuffer, file.name, file.size, mapping);
   } catch (error) {
-    throw new Error(
-      `Failed to read WAV metadata: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    throw new Error(`Failed to read WAV metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -92,9 +87,7 @@ export async function readWavMetadataFromArrayBuffer(
       fileSize,
     };
   } catch (error) {
-    throw new Error(
-      `Failed to read WAV metadata: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    throw new Error(`Failed to read WAV metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -293,10 +286,7 @@ export async function normalizeAudioBuffer(
  * @param targetLevelDB - Target level in dBFS (default: 0.0)
  * @returns The gain factor to apply, or 1.0 if no normalization needed
  */
-export function calculatePeakNormalizationGain(
-  audioBuffer: AudioBuffer,
-  targetLevelDB: number = 0.0
-): number {
+export function calculatePeakNormalizationGain(audioBuffer: AudioBuffer, targetLevelDB: number = 0.0): number {
   // Find maximum amplitude across all channels
   let maxAmplitude = 0;
   for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
@@ -322,10 +312,7 @@ export function calculatePeakNormalizationGain(
  * @param threshold - Threshold in dBFS (default: -0.1dBFS for safety)
  * @returns A configured DynamicsCompressor node
  */
-export function createLimiter(
-  audioContext: BaseAudioContext,
-  threshold: number = -0.1
-): DynamicsCompressorNode {
+export function createLimiter(audioContext: BaseAudioContext, threshold: number = -0.1): DynamicsCompressorNode {
   const limiter = audioContext.createDynamicsCompressor();
 
   // Professional limiter settings
@@ -344,10 +331,7 @@ export function createLimiter(
  * @param threshold - Threshold in dBFS (default: -0.1dBFS for safety)
  * @returns The limited audio buffer
  */
-export async function applyLimiter(
-  audioBuffer: AudioBuffer,
-  threshold: number = -0.1
-): Promise<AudioBuffer> {
+export async function applyLimiter(audioBuffer: AudioBuffer, threshold: number = -0.1): Promise<AudioBuffer> {
   // Create offline context for processing
   const offlineContext = audioContextManager.createOfflineContext(
     audioBuffer.numberOfChannels,
@@ -377,10 +361,7 @@ export async function applyLimiter(
  * @param loopEnd - The loop end position in samples
  * @returns The trimmed audio buffer
  */
-export async function cutAudioAtLoopEnd(
-  audioBuffer: AudioBuffer,
-  loopEnd: number
-): Promise<AudioBuffer> {
+export async function cutAudioAtLoopEnd(audioBuffer: AudioBuffer, loopEnd: number): Promise<AudioBuffer> {
   // Validate loop end position
   if (loopEnd <= 0 || loopEnd >= audioBuffer.length) {
     return audioBuffer;
@@ -395,11 +376,7 @@ export async function cutAudioAtLoopEnd(
 
   // Create a new audio buffer with the cut length
   const audioContext = await audioContextManager.getAudioContext();
-  const cutBuffer = audioContext.createBuffer(
-    audioBuffer.numberOfChannels,
-    cutPoint,
-    audioBuffer.sampleRate
-  );
+  const cutBuffer = audioContext.createBuffer(audioBuffer.numberOfChannels, cutPoint, audioBuffer.sampleRate);
 
   // Copy the audio data up to the cut point
   for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
@@ -561,14 +538,11 @@ export function findNearestZeroCrossing(
   let bestPosition = framePosition;
   let minAmplitude = Math.abs(channelData[framePosition]);
 
-  const searchStart =
-    direction === 'forward' ? framePosition : Math.max(0, framePosition - maxDistance);
-  const searchEnd =
-    direction === 'backward' ? framePosition : Math.min(length - 1, framePosition + maxDistance);
+  const searchStart = direction === 'forward' ? framePosition : Math.max(0, framePosition - maxDistance);
+  const searchEnd = direction === 'backward' ? framePosition : Math.min(length - 1, framePosition + maxDistance);
 
   // Apply bounds if provided
-  const boundedSearchStart =
-    bounds?.min !== undefined ? Math.max(searchStart, bounds.min) : searchStart;
+  const boundedSearchStart = bounds?.min !== undefined ? Math.max(searchStart, bounds.min) : searchStart;
   const boundedSearchEnd = bounds?.max !== undefined ? Math.min(searchEnd, bounds.max) : searchEnd;
 
   for (let i = boundedSearchStart; i <= boundedSearchEnd; i++) {
@@ -609,12 +583,7 @@ export function applyZeroCrossingToMarkers(
   const outFrame = Math.floor(outPoint * audioBuffer.sampleRate);
 
   // Apply zero-crossing detection to in point (search forward)
-  const adjustedInFrame = findNearestZeroCrossing(
-    audioBuffer,
-    inFrame,
-    'forward',
-    maxSearchDistance
-  );
+  const adjustedInFrame = findNearestZeroCrossing(audioBuffer, inFrame, 'forward', maxSearchDistance);
   if (adjustedInFrame !== inFrame) {
     adjustments.push({
       marker: 'inPoint',
@@ -624,12 +593,7 @@ export function applyZeroCrossingToMarkers(
   }
 
   // Apply zero-crossing detection to out point (search backward)
-  const adjustedOutFrame = findNearestZeroCrossing(
-    audioBuffer,
-    outFrame,
-    'backward',
-    maxSearchDistance
-  );
+  const adjustedOutFrame = findNearestZeroCrossing(audioBuffer, outFrame, 'backward', maxSearchDistance);
   if (adjustedOutFrame !== outFrame) {
     adjustments.push({
       marker: 'outPoint',
@@ -648,13 +612,10 @@ export function applyZeroCrossingToMarkers(
     const outFrame = Math.floor(outPoint * audioBuffer.sampleRate);
 
     // Find zero crossing within the in/out point bounds
-    adjustedLoopStart = findNearestZeroCrossing(
-      audioBuffer,
-      loopStartFrame,
-      'both',
-      maxSearchDistance,
-      { min: inFrame, max: outFrame }
-    );
+    adjustedLoopStart = findNearestZeroCrossing(audioBuffer, loopStartFrame, 'both', maxSearchDistance, {
+      min: inFrame,
+      max: outFrame,
+    });
 
     if (adjustedLoopStart !== loopStartFrame) {
       adjustments.push({
@@ -671,13 +632,10 @@ export function applyZeroCrossingToMarkers(
     const outFrame = Math.floor(outPoint * audioBuffer.sampleRate);
 
     // Find zero crossing within the in/out point bounds
-    adjustedLoopEnd = findNearestZeroCrossing(
-      audioBuffer,
-      loopEndFrame,
-      'both',
-      maxSearchDistance,
-      { min: inFrame, max: outFrame }
-    );
+    adjustedLoopEnd = findNearestZeroCrossing(audioBuffer, loopEndFrame, 'both', maxSearchDistance, {
+      min: inFrame,
+      max: outFrame,
+    });
 
     if (adjustedLoopEnd !== loopEndFrame) {
       adjustments.push({
@@ -692,8 +650,7 @@ export function applyZeroCrossingToMarkers(
   const result = {
     inPoint: adjustedInFrame / audioBuffer.sampleRate,
     outPoint: adjustedOutFrame / audioBuffer.sampleRate,
-    loopStart:
-      adjustedLoopStart !== undefined ? adjustedLoopStart / audioBuffer.sampleRate : undefined,
+    loopStart: adjustedLoopStart !== undefined ? adjustedLoopStart / audioBuffer.sampleRate : undefined,
     loopEnd: adjustedLoopEnd !== undefined ? adjustedLoopEnd / audioBuffer.sampleRate : undefined,
     adjustments,
   };
@@ -900,9 +857,7 @@ export function generateFilename(
   extension: string = 'wav'
 ): string {
   // Normalize separators in preset name and trim leading/trailing separators
-  const normalizedPresetName = presetName
-    .replace(/[ _-]+/g, separator)
-    .replace(/^[ _-]+|[ _-]+$/g, '');
+  const normalizedPresetName = presetName.replace(/[ _-]+/g, separator).replace(/^[ _-]+|[ _-]+$/g, '');
 
   // Sanitize preset name - remove invalid characters but keep the chosen separator
   const allowedChars = separator === ' ' ? 'a-zA-Z0-9 ' : 'a-zA-Z0-9-';
@@ -951,10 +906,7 @@ export function generateFilename(
  * Get the effective sample rate (NO upsampling)
  * Matches legacy behavior: "0"=keep original, "44100"=44.1kHz, "22050"=22kHz, "11025"=11kHz
  */
-export function getEffectiveSampleRate(
-  originalSampleRate: number,
-  selectedRate: string | number
-): number {
+export function getEffectiveSampleRate(originalSampleRate: number, selectedRate: string | number): number {
   const selected = selectedRate.toString();
 
   if (selected === '0') {

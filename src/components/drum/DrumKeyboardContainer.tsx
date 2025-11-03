@@ -134,12 +134,11 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
     <>
       <h3>keyboard controls</h3>
       <p>
-        <strong>load:</strong> click empty keys to browse files or drag and drop audio files
-        directly onto any key
+        <strong>load:</strong> click empty keys to browse files or drag and drop audio files directly onto any key
       </p>
       <p>
-        <strong>play:</strong> use keyboard keys (<strong>A-J, W, E, R, Y, U</strong>) to trigger
-        samples and <strong>Z</strong> / <strong>X</strong> to switch octaves
+        <strong>play:</strong> use keyboard keys (<strong>A-J, W, E, R, Y, U</strong>) to trigger samples and{' '}
+        <strong>Z</strong> / <strong>X</strong> to switch octaves
       </p>
       <p>
         <strong>pin:</strong> use the pin icon to keep the keyboard at the top of the screen
@@ -304,9 +303,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                 <button
                   onClick={() => setIsOrganizeMode(!isOrganizeMode)}
                   style={{
-                    background: isOrganizeMode
-                      ? 'var(--color-interactive-focus)'
-                      : 'var(--color-text-secondary)',
+                    background: isOrganizeMode ? 'var(--color-interactive-focus)' : 'var(--color-text-secondary)',
                     border: 'none',
                     cursor: 'pointer',
                     padding: '0.25rem 0.5rem',
@@ -339,9 +336,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                 <button
                   onClick={() => {
                     setIsMidiSelectorVisible(!isMidiSelectorVisible);
-                    const midiSelector = document.querySelector(
-                      '.midi-device-selector'
-                    ) as HTMLElement;
+                    const midiSelector = document.querySelector('.midi-device-selector') as HTMLElement;
                     if (midiSelector) {
                       midiSelector.style.display = isMidiSelectorVisible ? 'none' : 'block';
                     }
@@ -349,9 +344,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                   style={{
                     background: isMidiSelectorVisible
                       ? 'var(--color-interactive-focus)'
-                      : midiState.devices.filter(
-                            (d) => d.type === 'input' && d.state === 'connected'
-                          ).length > 0
+                      : midiState.devices.filter((d) => d.type === 'input' && d.state === 'connected').length > 0
                         ? 'var(--color-text-primary)'
                         : 'var(--color-text-secondary)',
                     border: 'none',
@@ -370,8 +363,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                   }}
                   onMouseEnter={(e) => {
                     const hasConnectedDevices =
-                      midiState.devices.filter((d) => d.type === 'input' && d.state === 'connected')
-                        .length > 0;
+                      midiState.devices.filter((d) => d.type === 'input' && d.state === 'connected').length > 0;
                     e.currentTarget.style.backgroundColor = isMidiSelectorVisible
                       ? 'var(--color-interactive-dark)'
                       : hasConnectedDevices
@@ -380,8 +372,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                   }}
                   onMouseLeave={(e) => {
                     const hasConnectedDevices =
-                      midiState.devices.filter((d) => d.type === 'input' && d.state === 'connected')
-                        .length > 0;
+                      midiState.devices.filter((d) => d.type === 'input' && d.state === 'connected').length > 0;
                     e.currentTarget.style.backgroundColor = isMidiSelectorVisible
                       ? 'var(--color-interactive-focus)'
                       : hasConnectedDevices
@@ -481,8 +472,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                 e.currentTarget.style.backgroundColor = 'transparent';
 
                 const files = Array.from(e.dataTransfer.files).filter(
-                  (file) =>
-                    file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
+                  (file) => file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
                 );
 
                 // White key indices for both octaves (A, S, D, F, G, H, J)
@@ -575,8 +565,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                 e.currentTarget.style.backgroundColor = 'transparent';
 
                 const files = Array.from(e.dataTransfer.files).filter(
-                  (file) =>
-                    file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
+                  (file) => file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
                 );
 
                 // Black key indices for both octaves (W, E, R, Y, U)
