@@ -1086,6 +1086,41 @@ function appReducer(state: AppState, action: AppAction): AppState {
           detectedNote = midiNoteToString(detectedMidiNote, state.midiNoteMapping);
         }
       }
+
+      // Check if this MIDI note is already assigned to another sample
+      // If so, find the nearest available MIDI note to prevent multiple samples on the same key
+      const existingNotes = new Set(state.multisampleFiles.map(f => f.rootNote));
+      if (existingNotes.has(detectedMidiNote) && action.payload.rootNoteOverride === undefined) {
+        // Find nearest available MIDI note (try going up first, then down)
+        let foundAvailableNote = false;
+
+        // Try going up from detected note
+        for (let offset = 1; offset <= 64; offset++) {
+          const candidateNote = detectedMidiNote + offset;
+          if (candidateNote <= 127 && !existingNotes.has(candidateNote)) {
+            detectedMidiNote = candidateNote;
+            detectedNote = midiNoteToString(candidateNote, state.midiNoteMapping);
+            foundAvailableNote = true;
+            break;
+          }
+        }
+
+        // If still not found, try going down from detected note
+        if (!foundAvailableNote) {
+          for (let offset = 1; offset <= 64; offset++) {
+            const candidateNote = detectedMidiNote - offset;
+            if (candidateNote >= 0 && !existingNotes.has(candidateNote)) {
+              detectedMidiNote = candidateNote;
+              detectedNote = midiNoteToString(candidateNote, state.midiNoteMapping);
+              foundAvailableNote = true;
+              break;
+            }
+          }
+        }
+
+        // If we couldn't find an available note (all 128 MIDI notes are taken, which is unlikely),
+        // we'll keep the detected note and let it replace the existing sample
+      }
       
       // Calculate initial marker positions
       const initialInPoint = 0;

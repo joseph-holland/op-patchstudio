@@ -176,8 +176,11 @@ export async function generateDrumPatch(
     const effectiveSampleRate = targetSampleRate || originalSampleRate;
     const framecount = Math.floor(duration * effectiveSampleRate);
     const getClamped = (val: number, min: number, max: number) => Math.max(min, Math.min(val, max));
-    const sampleStart = 0;
-    const sampleEnd = getClamped(framecount, 1, framecount);
+    const prop = (point: number | undefined, fallback: number) => (typeof point === 'number' ? point : fallback);
+
+    // Calculate sample start/end points using inPoint and outPoint from state
+    const sampleStart = getClamped(Math.floor(framecount * (prop(sample.inPoint, 0) / duration)), 0, framecount - 1);
+    const sampleEnd = getClamped(Math.floor(framecount * (prop(sample.outPoint, duration) / duration)), sampleStart + 1, framecount);
     const region: DrumRegion = {
       "fade.in": 0,
       "fade.out": 0,
@@ -295,7 +298,7 @@ export async function generateMultisamplePatch(
   // Apply multisample preset settings
   if (patchJson.engine && state.multisampleSettings) {
     const settings = state.multisampleSettings;
-    
+
     if (!isNaN(settings.transpose)) patchJson.engine.transpose = settings.transpose;
     if (!isNaN(settings.velocitySensitivity)) {
       patchJson.engine["velocity.sensitivity"] = percentToInternal(settings.velocitySensitivity);
@@ -317,6 +320,31 @@ export async function generateMultisamplePatch(
     }
     if (!isNaN(settings.tuningRoot)) {
       patchJson.engine["tuning.root"] = settings.tuningRoot;
+    }
+  }
+
+  // Apply envelope settings from state
+  if (patchJson.envelope && state.multisampleSettings) {
+    const settings = state.multisampleSettings;
+
+    // Apply amp envelope settings
+    if (settings.ampEnvelope) {
+      patchJson.envelope.amp = {
+        attack: settings.ampEnvelope.attack,
+        decay: settings.ampEnvelope.decay,
+        sustain: settings.ampEnvelope.sustain,
+        release: settings.ampEnvelope.release,
+      };
+    }
+
+    // Apply filter envelope settings
+    if (settings.filterEnvelope) {
+      patchJson.envelope.filter = {
+        attack: settings.filterEnvelope.attack,
+        decay: settings.filterEnvelope.decay,
+        sustain: settings.filterEnvelope.sustain,
+        release: settings.filterEnvelope.release,
+      };
     }
   }
 

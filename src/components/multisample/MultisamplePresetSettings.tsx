@@ -303,8 +303,40 @@ export function MultisamplePresetSettings() {
   const updateAmpEnvelope = (envelope: MultisampleAdvancedSettings['ampEnvelope']) => {
     setSettings(prev => {
       const newSettings = { ...prev, ampEnvelope: envelope };
-      // Only dispatch envelope changes to avoid loops
+      // Dispatch envelope changes to global state
       dispatch({ type: 'SET_MULTISAMPLE_AMP_ENVELOPE', payload: envelope });
+
+      // Also update the imported preset format for patch generation
+      const payload = {
+        engine: {
+          playmode: newSettings.playmode,
+          transpose: newSettings.transpose,
+          'velocity.sensitivity': percentToInternal(newSettings.velocitySensitivity),
+          volume: percentToInternal(newSettings.volume),
+          width: percentToInternal(newSettings.width),
+          highpass: percentToInternal(newSettings.highpass),
+          'portamento.amount': percentToInternal(newSettings.portamentoAmount),
+          'portamento.type': newSettings.portamentoType === 'linear' ? 32767 : 0,
+          'tuning.root': newSettings.tuningRoot,
+        },
+        envelope: {
+          amp: {
+            attack: envelope.attack,
+            decay: envelope.decay,
+            sustain: envelope.sustain,
+            release: envelope.release,
+          },
+          filter: {
+            attack: newSettings.filterEnvelope.attack,
+            decay: newSettings.filterEnvelope.decay,
+            sustain: newSettings.filterEnvelope.sustain,
+            release: newSettings.filterEnvelope.release,
+          },
+        },
+        regions: []
+      };
+      dispatch({ type: 'SET_IMPORTED_MULTISAMPLE_PRESET', payload });
+
       return newSettings;
     });
   };
@@ -312,8 +344,40 @@ export function MultisamplePresetSettings() {
   const updateFilterEnvelope = (envelope: MultisampleAdvancedSettings['filterEnvelope']) => {
     setSettings(prev => {
       const newSettings = { ...prev, filterEnvelope: envelope };
-      // Only dispatch envelope changes to avoid loops
+      // Dispatch envelope changes to global state
       dispatch({ type: 'SET_MULTISAMPLE_FILTER_ENVELOPE', payload: envelope });
+
+      // Also update the imported preset format for patch generation
+      const payload = {
+        engine: {
+          playmode: newSettings.playmode,
+          transpose: newSettings.transpose,
+          'velocity.sensitivity': percentToInternal(newSettings.velocitySensitivity),
+          volume: percentToInternal(newSettings.volume),
+          width: percentToInternal(newSettings.width),
+          highpass: percentToInternal(newSettings.highpass),
+          'portamento.amount': percentToInternal(newSettings.portamentoAmount),
+          'portamento.type': newSettings.portamentoType === 'linear' ? 32767 : 0,
+          'tuning.root': newSettings.tuningRoot,
+        },
+        envelope: {
+          amp: {
+            attack: newSettings.ampEnvelope.attack,
+            decay: newSettings.ampEnvelope.decay,
+            sustain: newSettings.ampEnvelope.sustain,
+            release: newSettings.ampEnvelope.release,
+          },
+          filter: {
+            attack: envelope.attack,
+            decay: envelope.decay,
+            sustain: envelope.sustain,
+            release: envelope.release,
+          },
+        },
+        regions: []
+      };
+      dispatch({ type: 'SET_IMPORTED_MULTISAMPLE_PRESET', payload });
+
       return newSettings;
     });
   };
