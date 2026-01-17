@@ -37,7 +37,7 @@ Last updated: 2026-01-17
   1. Place sample on C3
   2. Place second sample on C4
   3. C3 sample gets replaced/ignored
-- **Reporter**: lazy.pheromone@gmail.com
+- **Reporter**: via Forms
 - **Fix**:
   - Added automatic MIDI note collision detection
   - Samples now auto-assign to nearest available MIDI note when collision detected
@@ -65,14 +65,14 @@ Last updated: 2026-01-17
 - **Description**: Chrome PWA just displays "You're offline" message and doesn't load the app when offline, despite being a PWA
 - **Impact**: Medium - Breaks offline-first promise of PWA
 - **Platform**: Chrome PWA
-- **Reporter**: xury@hotmail.com
+- **Reporter**: via Forms
 
 ### 7. Unable to Load Some OP-1 Drum Presets
 - **Source**: Feedback Form (7/19/2025)
 - **Status**: Open
 - **Description**: Error "import failed: the file does not appear to be a valid OP-1 drum preset" for files that work fine on actual OP-1 device
 - **Impact**: Medium - Import compatibility issue
-- **Reporter**: optann@gmail.com (willing to provide sample files)
+- **Reporter**: via Forms
 - **Note**: Need sample files to reproduce
 
 ---
@@ -80,4 +80,4 @@ Last updated: 2026-01-17
 ## Notes
 - Focus on critical bugs affecting core preset generation first (#1, #2, #3)
 - Multisample keyboard mapping (#3) may be related to envelope issues (#1)
-- Need to request sample files from optann@gmail.com for issue #7
+- Need to request sample files from ... for issue #7
