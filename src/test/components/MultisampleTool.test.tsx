@@ -256,8 +256,7 @@ describe('MultisampleTool ADSR Integration', () => {
       checkCanExport: vi.fn(() => ({ allowed: true })),
       incrementExportCount: vi.fn(),
       activateLicenseKey: vi.fn(),
-      validateCurrentLicense: vi.fn(),
-      deactivateCurrentLicense: vi.fn(),
+      clearLicense: vi.fn(),
     });
 
     // Mock useAudioPlayer

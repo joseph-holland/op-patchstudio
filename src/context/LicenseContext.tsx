@@ -4,16 +4,10 @@ import { TRIAL_CONSTANTS } from '../types/license';
 import {
   licenseStorage,
   calculateTrialDaysRemaining,
-  calculateTrialExportsRemaining,
-  isTrialExpired,
 } from '../utils/licenseStorage';
 import {
   activateLicense,
-  validateLicense,
-  deactivateLicense,
   activationResponseToLicenseInfo,
-  updateLicenseFromValidation,
-  isLicenseValid,
 } from '../utils/lemonSqueezy';
 
 // Initial trial state
@@ -25,6 +19,7 @@ const initialTrialState: TrialInfo = {
 };
 
 // Calculate derived state from license and trial info
+// Freemium model: 14-day full trial, then basic features free, premium locked
 function calculateDerivedState(license: LicenseInfo | null, trial: TrialInfo): {
   isTrialActive: boolean;
   isLicensed: boolean;
@@ -32,11 +27,16 @@ function calculateDerivedState(license: LicenseInfo | null, trial: TrialInfo): {
   trialDaysRemaining: number;
   trialExportsRemaining: number;
 } {
-  const isLicensed = isLicenseValid(license);
+  // License is valid if it exists and has 'active' status
+  // Once activated, we trust the local data forever (no re-validation)
+  const isLicensed = license !== null && license.status === 'active';
   const trialDaysRemaining = calculateTrialDaysRemaining(trial);
-  const trialExportsRemaining = calculateTrialExportsRemaining(trial);
-  const isTrialActive = !isTrialExpired(trial);
+  const isTrialActive = trialDaysRemaining > 0;
   const canUsePremiumFeatures = isLicensed || isTrialActive;
+
+  // Export count no longer matters for freemium - only days
+  const trialExportsRemaining = isTrialActive ?
+    Math.max(0, trial.maxTrialExports - trial.multisampleExportsUsed) : 0;
 
   return {
     isTrialActive,
@@ -112,8 +112,7 @@ function licenseReducer(state: LicenseState, action: LicenseAction): LicenseStat
 interface LicenseContextValue {
   state: LicenseState;
   activateLicenseKey: (licenseKey: string) => Promise<boolean>;
-  validateCurrentLicense: () => Promise<boolean>;
-  deactivateCurrentLicense: () => Promise<boolean>;
+  clearLicense: () => Promise<void>;
   incrementExportCount: () => Promise<void>;
   checkCanExport: () => { allowed: boolean; reason?: string };
 }
@@ -134,31 +133,10 @@ export function LicenseContextProvider({ children }: { children: ReactNode }) {
         const trial = await licenseStorage.initializeTrialIfNeeded();
         dispatch({ type: 'SET_TRIAL', payload: trial });
 
-        // Load existing license
+        // Load existing license - trust it completely, no re-validation
         const license = await licenseStorage.getLicense();
         if (license) {
           dispatch({ type: 'SET_LICENSE', payload: license });
-
-          // Validate license in background (don't block initialization)
-          // Only validate if license was last validated more than 24 hours ago
-          const dayInMs = 24 * 60 * 60 * 1000;
-          if (Date.now() - license.lastValidatedAt > dayInMs) {
-            validateLicense(license.licenseKey, license.instanceId)
-              .then((response) => {
-                if (response.valid) {
-                  const updatedLicense = updateLicenseFromValidation(license, response);
-                  dispatch({ type: 'SET_LICENSE', payload: updatedLicense });
-                  licenseStorage.saveLicense(updatedLicense);
-                } else {
-                  // License no longer valid
-                  dispatch({ type: 'SET_LICENSE', payload: { ...license, status: 'inactive' } });
-                }
-              })
-              .catch((error) => {
-                console.warn('Background license validation failed:', error);
-                // Don't invalidate license on network errors
-              });
-          }
         }
       } catch (error) {
         console.error('Failed to initialize license data:', error);
@@ -171,7 +149,7 @@ export function LicenseContextProvider({ children }: { children: ReactNode }) {
     initializeLicenseData();
   }, []);
 
-  // Activate a license key
+  // Activate a license key - validates ONCE with LemonSqueezy, then trusts local data forever
   const activateLicenseKey = useCallback(async (licenseKey: string): Promise<boolean> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
@@ -200,68 +178,13 @@ export function LicenseContextProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Validate current license
-  const validateCurrentLicense = useCallback(async (): Promise<boolean> => {
-    if (!state.license) return false;
+  // Clear license locally (for testing or user request)
+  const clearLicense = useCallback(async (): Promise<void> => {
+    await licenseStorage.clearLicense();
+    dispatch({ type: 'RESET_LICENSE' });
+  }, []);
 
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'SET_ERROR', payload: null });
-
-    try {
-      const response = await validateLicense(state.license.licenseKey, state.license.instanceId);
-
-      if (response.valid) {
-        const updatedLicense = updateLicenseFromValidation(state.license, response);
-        await licenseStorage.saveLicense(updatedLicense);
-        dispatch({ type: 'SET_LICENSE', payload: updatedLicense });
-        return true;
-      } else {
-        const errorMessage = response.error || 'License is no longer valid';
-        dispatch({ type: 'SET_ERROR', payload: errorMessage });
-        // Update status to inactive
-        const updatedLicense = { ...state.license, status: 'inactive' as const };
-        await licenseStorage.saveLicense(updatedLicense);
-        dispatch({ type: 'SET_LICENSE', payload: updatedLicense });
-        return false;
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to validate license';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
-      return false;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  }, [state.license]);
-
-  // Deactivate current license
-  const deactivateCurrentLicense = useCallback(async (): Promise<boolean> => {
-    if (!state.license) return false;
-
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'SET_ERROR', payload: null });
-
-    try {
-      const response = await deactivateLicense(state.license.licenseKey, state.license.instanceId);
-
-      if (response.deactivated) {
-        await licenseStorage.clearLicense();
-        dispatch({ type: 'RESET_LICENSE' });
-        return true;
-      } else {
-        const errorMessage = response.error || 'Failed to deactivate license';
-        dispatch({ type: 'SET_ERROR', payload: errorMessage });
-        return false;
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to deactivate license';
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
-      return false;
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  }, [state.license]);
-
-  // Increment export count and persist
+  // Increment export count and persist (for analytics, not blocking)
   const incrementExportCount = useCallback(async (): Promise<void> => {
     try {
       const updatedTrial = await licenseStorage.incrementExportCount();
@@ -271,36 +194,30 @@ export function LicenseContextProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Check if user can export (for UI blocking)
+  // Check if user can use premium features (export/download/save)
+  // Freemium model: 14-day trial with full access, then locked
   const checkCanExport = useCallback((): { allowed: boolean; reason?: string } => {
     // Licensed users can always export
     if (state.isLicensed) {
       return { allowed: true };
     }
 
-    // Check trial status
-    if (state.trialDaysRemaining <= 0) {
-      return {
-        allowed: false,
-        reason: 'Your 14-day free trial has ended. Please upgrade to continue exporting multisamples.',
-      };
+    // During trial period - full access
+    if (state.trialDaysRemaining > 0) {
+      return { allowed: true };
     }
 
-    if (state.trialExportsRemaining <= 0) {
-      return {
-        allowed: false,
-        reason: `You've used all ${state.trial.maxTrialExports} trial exports. Please upgrade to continue.`,
-      };
-    }
-
-    return { allowed: true };
-  }, [state.isLicensed, state.trialDaysRemaining, state.trialExportsRemaining, state.trial.maxTrialExports]);
+    // Trial expired - premium features locked
+    return {
+      allowed: false,
+      reason: 'Your 14-day free trial has ended. Upgrade to Pro to export and save multisamples.',
+    };
+  }, [state.isLicensed, state.trialDaysRemaining]);
 
   const value: LicenseContextValue = {
     state,
     activateLicenseKey,
-    validateCurrentLicense,
-    deactivateCurrentLicense,
+    clearLicense,
     incrementExportCount,
     checkCanExport,
   };

@@ -122,73 +122,59 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
             </div>
           )}
 
-          {/* Trial status */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '1rem',
-              marginBottom: '1.5rem',
-            }}
-          >
+          {/* Trial status - only show if trial is active or recently expired */}
+          {state.trialDaysRemaining > 0 ? (
             <div
               style={{
-                flex: 1,
                 backgroundColor: 'var(--color-bg-secondary)',
                 borderRadius: '6px',
                 padding: '1rem',
+                marginBottom: '1.5rem',
                 textAlign: 'center',
               }}
             >
               <div
                 style={{
-                  fontSize: '1.75rem',
+                  fontSize: '1.5rem',
                   fontWeight: '600',
-                  color: state.trialDaysRemaining > 0 ? 'var(--color-interactive-focus)' : 'var(--color-accent-primary)',
+                  color: state.trialDaysRemaining <= 3 ? 'var(--color-accent-primary)' : 'var(--color-interactive-focus)',
                 }}
               >
-                {state.trialDaysRemaining}
+                {state.trialDaysRemaining} {state.trialDaysRemaining === 1 ? 'day' : 'days'}
               </div>
               <div
                 style={{
-                  fontSize: '0.8rem',
+                  fontSize: '0.85rem',
                   color: 'var(--color-text-secondary)',
                   marginTop: '0.25rem',
                 }}
               >
-                days left
+                remaining in your free trial
               </div>
             </div>
+          ) : (
             <div
               style={{
-                flex: 1,
                 backgroundColor: 'var(--color-bg-secondary)',
                 borderRadius: '6px',
                 padding: '1rem',
+                marginBottom: '1.5rem',
                 textAlign: 'center',
               }}
             >
               <div
                 style={{
-                  fontSize: '1.75rem',
-                  fontWeight: '600',
-                  color: state.trialExportsRemaining > 0 ? 'var(--color-interactive-focus)' : 'var(--color-accent-primary)',
-                }}
-              >
-                {state.trialExportsRemaining}
-              </div>
-              <div
-                style={{
-                  fontSize: '0.8rem',
+                  fontSize: '1rem',
                   color: 'var(--color-text-secondary)',
-                  marginTop: '0.25rem',
                 }}
               >
-                exports left
+                <i className="fas fa-clock" style={{ marginRight: '0.5rem' }}></i>
+                your 14-day free trial has ended
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Features list */}
+          {/* What's locked */}
           <div style={{ marginBottom: '1.5rem' }}>
             <h4
               style={{
@@ -198,7 +184,7 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
                 color: 'var(--color-text-primary)',
               }}
             >
-              pro features include:
+              pro unlocks:
             </h4>
             <ul
               style={{
@@ -209,11 +195,27 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
                 lineHeight: '1.8',
               }}
             >
-              <li>unlimited multisample exports</li>
-              <li>unlimited saves to library</li>
-              <li>support development of op-patchstudio</li>
+              <li>export & download multisample presets</li>
+              <li>save multisamples to library</li>
+              <li>send presets to OP-XY</li>
+              <li>file manager & backup features</li>
               <li>future pro features as they're added</li>
             </ul>
+          </div>
+
+          {/* Free forever note */}
+          <div
+            style={{
+              backgroundColor: 'var(--color-bg-secondary)',
+              borderRadius: '6px',
+              padding: '0.75rem 1rem',
+              marginBottom: '1.5rem',
+              fontSize: '0.85rem',
+              color: 'var(--color-text-secondary)',
+            }}
+          >
+            <i className="fas fa-check-circle" style={{ color: 'var(--color-interactive-focus)', marginRight: '0.5rem' }}></i>
+            basic multisample editing & drum tool remain <strong>free forever</strong>
           </div>
 
           {/* License activation section */}
@@ -358,8 +360,17 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
                 }}
               >
                 <i className="fas fa-shopping-cart"></i>
-                purchase license
+                purchase pro license
               </button>
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontSize: '0.8rem',
+                  color: 'var(--color-text-tertiary)',
+                }}
+              >
+                14-day money back guarantee
+              </div>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button
                   onClick={() => setShowLicenseInput(true)}
