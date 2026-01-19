@@ -43,5 +43,7 @@ export const COOKIE_KEYS = {
   MIDI_NOTE_MAPPING: 'opxy_midi_note_mapping',
   DRUM_DEFAULT_SETTINGS: 'opxy_drum_default_settings',
   MULTISAMPLE_DEFAULT_SETTINGS: 'opxy_multisample_default_settings',
+  // License-related keys (primarily stored in IndexedDB, but kept here for reference)
+  LICENSE_UPGRADE_DISMISSED: 'opxy_license_upgrade_dismissed',
   // Add other cookie keys here as needed
 } as const; 

@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext';
+import { useLicense } from '../../context/LicenseContext';
 import { ConfirmationModal } from '../common/ConfirmationModal';
 import { RecordingModal } from '../common/RecordingModal';
+import { UpgradeModal } from '../common/UpgradeModal';
 import { AudioProcessingSection } from '../common/AudioProcessingSection';
 import { GeneratePresetSection } from '../common/GeneratePresetSection';
 import { ErrorDisplay } from '../common/ErrorDisplay';
@@ -17,11 +19,12 @@ import { savePresetToLibrary } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 import { ToggleSwitch } from '../common/ToggleSwitch';
 import { saveMultisampleSettingsAsDefault } from '../../utils/defaultSettings';
-import { AUDIO_CONSTANTS } from '../../utils/constants';
+import { AUDIO_CONSTANTS, FEATURE_FLAGS } from '../../utils/constants';
 
 
 export function MultisampleTool() {
   const { state, dispatch } = useAppContext();
+  const { checkCanExport, incrementExportCount } = useLicense();
   const { handleMultisampleUpload, clearMultisampleFile } = useFileUpload();
   const { generateMultisamplePatchFile } = usePatchGeneration();
   const { playWithADSR, releaseNote } = useAudioPlayer();
@@ -37,6 +40,10 @@ export function MultisampleTool() {
     isOpen: boolean;
     targetIndex: number | null;
   }>({ isOpen: false, targetIndex: null });
+  const [upgradeModal, setUpgradeModal] = useState<{
+    isOpen: boolean;
+    reason?: string;
+  }>({ isOpen: false });
 
   const [targetMidiNote, setTargetMidiNote] = useState<number | null>(null);
   const [selectedMidiChannel, setSelectedMidiChannel] = useState(() => {
@@ -207,9 +214,22 @@ export function MultisampleTool() {
 
 
   const handleSaveToLibrary = async () => {
+    // Check license/trial status for premium feature
+    if (FEATURE_FLAGS.PREMIUM_MULTISAMPLE) {
+      const { allowed, reason } = checkCanExport();
+      if (!allowed) {
+        setUpgradeModal({ isOpen: true, reason });
+        return;
+      }
+    }
+
     try {
       const result = await savePresetToLibrary(state, state.multisampleSettings.presetName, 'multisample');
       if (result.success) {
+        // Increment export count for trial tracking
+        if (FEATURE_FLAGS.PREMIUM_MULTISAMPLE) {
+          await incrementExportCount();
+        }
         dispatch({
           type: 'ADD_NOTIFICATION',
           payload: {
@@ -247,9 +267,22 @@ export function MultisampleTool() {
   };
 
   const handleDownloadPreset = async () => {
+    // Check license/trial status for premium feature
+    if (FEATURE_FLAGS.PREMIUM_MULTISAMPLE) {
+      const { allowed, reason } = checkCanExport();
+      if (!allowed) {
+        setUpgradeModal({ isOpen: true, reason });
+        return;
+      }
+    }
+
     try {
       const patchName = state.multisampleSettings.presetName.trim() || 'multisample_patch';
       await generateMultisamplePatchFile(patchName);
+      // Increment export count for trial tracking
+      if (FEATURE_FLAGS.PREMIUM_MULTISAMPLE) {
+        await incrementExportCount();
+      }
     } catch (error) {
       console.error('Error downloading preset:', error);
     }
@@ -805,6 +838,12 @@ export function MultisampleTool() {
         maxDuration={20}
       />
 
+      {/* Upgrade Modal for premium features */}
+      <UpgradeModal
+        isOpen={upgradeModal.isOpen}
+        onClose={() => setUpgradeModal({ isOpen: false })}
+        reason={upgradeModal.reason}
+      />
 
     </div>
   );

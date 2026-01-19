@@ -2,11 +2,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MultisampleTool } from '../../components/multisample/MultisampleTool';
 import { useAppContext } from '../../context/AppContext';
+import { useLicense } from '../../context/LicenseContext';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { createCompleteMultisampleSettings } from '../utils/testHelpers';
 
 // Mock dependencies
 vi.mock('../../context/AppContext');
+vi.mock('../../context/LicenseContext');
 vi.mock('../../hooks/useAudioPlayer');
 vi.mock('../../utils/audio', () => ({
   audioBufferToWav: vi.fn(() => new ArrayBuffer(8)),
@@ -34,8 +36,13 @@ vi.mock('../../components/common/ConfirmationModal', () => ({
 }));
 
 vi.mock('../../components/common/RecordingModal', () => ({
-  RecordingModal: ({ isOpen }: { isOpen: boolean }) => 
+  RecordingModal: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="recording-modal">Recording Modal</div> : null,
+}));
+
+vi.mock('../../components/common/UpgradeModal', () => ({
+  UpgradeModal: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="upgrade-modal">Upgrade Modal</div> : null,
 }));
 
 vi.mock('../../components/common/AudioProcessingSection', () => ({
@@ -226,6 +233,31 @@ describe('MultisampleTool ADSR Integration', () => {
     (useAppContext as any).mockReturnValue({
       state: defaultState,
       dispatch: vi.fn(),
+    });
+
+    // Mock useLicense - allow exports by default in tests
+    (useLicense as any).mockReturnValue({
+      state: {
+        license: null,
+        trial: {
+          installDate: Date.now(),
+          multisampleExportsUsed: 0,
+          maxTrialExports: 10,
+          trialDurationDays: 14,
+        },
+        isTrialActive: true,
+        isLicensed: false,
+        canUsePremiumFeatures: true,
+        trialDaysRemaining: 14,
+        trialExportsRemaining: 10,
+        isLoading: false,
+        error: null,
+      },
+      checkCanExport: vi.fn(() => ({ allowed: true })),
+      incrementExportCount: vi.fn(),
+      activateLicenseKey: vi.fn(),
+      validateCurrentLicense: vi.fn(),
+      deactivateCurrentLicense: vi.fn(),
     });
 
     // Mock useAudioPlayer

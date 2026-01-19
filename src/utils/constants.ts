@@ -34,6 +34,7 @@ export const MIDI_CONSTANTS = {
 // Feature flags
 export const FEATURE_FLAGS = {
   DONATE_PAGE: true, // Enable/disable donate page tab
+  PREMIUM_MULTISAMPLE: true, // Enable/disable premium gating for multisample exports
 } as const;
 
 // Filename separator options for generated preset files

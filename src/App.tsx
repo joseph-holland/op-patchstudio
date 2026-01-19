@@ -3,6 +3,7 @@ import { AppHeader } from './components/common/AppHeader';
 import { MainTabs } from './components/common/MainTabs';
 import { NotificationSystem } from './components/common/NotificationSystem';
 import { AppContextProvider, useAppContext } from './context/AppContext';
+import { LicenseContextProvider } from './context/LicenseContext';
 import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import { Footer } from './components/common/Footer';
 import { FeedbackPage } from './components/common/FeedbackPage';
@@ -220,9 +221,11 @@ function AppContent() {
 
 function App() {
   return (
-    <AppContextProvider>
-      <AppContent />
-    </AppContextProvider>
+    <LicenseContextProvider>
+      <AppContextProvider>
+        <AppContent />
+      </AppContextProvider>
+    </LicenseContextProvider>
   );
 }
 
