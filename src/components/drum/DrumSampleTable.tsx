@@ -9,12 +9,14 @@ import { WaveformZoomModal } from '../common/WaveformZoomModal';
 import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { DrumSampleSettingsModal } from './DrumSampleSettingsModal';
 import { IconButton } from '../common/IconButton';
+import { getOrganizeModeLabelFull } from './DrumKeyboard';
 
 
 interface DrumSampleTableProps {
   onFileUpload: (index: number, file: File) => void;
   onClearSample: (index: number) => void;
   onRecordSample?: (index: number) => void;
+  isOrganizeMode?: boolean;
 }
 
 // Full drum names from OP-XY documentation - all lowercase
@@ -39,9 +41,18 @@ const c = {
   actionHover: 'var(--color-interactive-dark)',
 };
 
+// Organized indices for organize mode: all lower row first, then all upper row
+const organizedIndices = [
+  // Lower row (14 samples)
+  0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23,
+  // Upper row (10 samples)
+  1, 3, 5, 8, 10, 13, 15, 17, 20, 22
+];
 
+// Default indices (0-23)
+const defaultIndices = Array.from({ length: 24 }, (_, i) => i);
 
-export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }: DrumSampleTableProps) {
+export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample, isOrganizeMode = false }: DrumSampleTableProps) {
   const { state, dispatch } = useAppContext();
   const { play } = useAudioPlayer();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -270,7 +281,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
           flexDirection: 'column',
           gap: '0.75rem'
         }}>
-          {Array.from({ length: 24 }, (_, index) => {
+          {(isOrganizeMode ? organizedIndices : defaultIndices).map((index) => {
             const sample = state.drumSamples[index];
             const isLoaded = sample?.isLoaded;
             
@@ -321,7 +332,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                       alignItems: 'center',
                       gap: '0.5rem'
                     }}>
-                      {drumSampleNames[index]}
+                      {isOrganizeMode ? getOrganizeModeLabelFull(index) : drumSampleNames[index]}
                       {sample?.hasBeenEdited && (
                         <i 
                           className="fas fa-pencil-alt" 
@@ -509,7 +520,8 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
         padding: 0,
         margin: 0
       }}>
-        {state.drumSamples.map((sample, index) => {
+        {(isOrganizeMode ? organizedIndices : defaultIndices).map((index) => {
+          const sample = state.drumSamples[index];
           const isLoaded = sample?.isLoaded;
           
           return (
@@ -581,8 +593,8 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample }:
                       title="drag to reorder"
                     ></i>
                   )}
-                  {index < 24 
-                    ? drumSampleNames[index] 
+                  {index < 24
+                    ? (isOrganizeMode ? getOrganizeModeLabelFull(index) : drumSampleNames[index])
                     : 'unassigned'
                   }
                   {sample?.hasBeenEdited && (

@@ -4,6 +4,17 @@ all notable changes to this project will be documented in this file.
 
 the format is based on [keep a changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.16.0] - 2026-02-04
+
+### added
+- drum tool organize mode for bulk loading samples by keyboard row (lower/upper)
+- support for IEEE Float (FP32) WAV files (e.g., samples from Serum 2)
+
+## [0.15.6] - 2026-02-03
+
+### fixed
+- resolve critical preset generation bugs (#101, #103)
+
 ## [0.15.5] - 2025-09-22
 
 ### fixed

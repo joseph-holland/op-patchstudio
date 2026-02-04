@@ -34,6 +34,7 @@ export function DrumTool() {
     targetIndex: number | null;
   }>({ isOpen: false, targetIndex: null });
   const [bulkEditModal, setBulkEditModal] = useState(false);
+  const [isOrganizeMode, setIsOrganizeMode] = useState(false);
 
   // Detect mobile screen size
   useEffect(() => {
@@ -454,7 +455,11 @@ export function DrumTool() {
       <div style={{
         padding: isMobile ? '1rem 0.5rem' : '2rem 2rem',
       }}>
-        <DrumKeyboardContainer onFileUpload={handleFileUpload} />
+        <DrumKeyboardContainer
+          onFileUpload={handleFileUpload}
+          isOrganizeMode={isOrganizeMode}
+          setIsOrganizeMode={setIsOrganizeMode}
+        />
       </div>
 
       {/* Tabbed Content Area */}
@@ -501,6 +506,7 @@ export function DrumTool() {
               onFileUpload={handleFileUpload}
               onClearSample={handleClearSample}
               onRecordSample={handleOpenRecording}
+              isOrganizeMode={isOrganizeMode}
             />
             {/* Action Buttons Below Table - RESTORED */}
             <div style={{
