@@ -134,14 +134,21 @@ function parseWavHeader(dataView: DataView): WavHeader {
   const sampleRate = dataView.getUint32(fmtOffset + 4, true);
   const bitDepth = dataView.getUint16(fmtOffset + 14, true);
 
-  if (audioFormat !== 1) {
-    throw new Error('Unsupported WAV format: only PCM is supported');
-  }
+  // Map audio format codes to readable names
+  // WebAudioAPI's decodeAudioData handles conversion automatically
+  const formatNames: Record<number, string> = {
+    1: 'PCM',
+    3: 'IEEE Float',
+    6: 'A-law',
+    7: 'μ-law',
+    65534: 'Extensible',
+  };
+  const formatName = formatNames[audioFormat] || `Format ${audioFormat}`;
 
   const dataLength = dataOffset !== -1 ? dataView.getUint32(dataOffset - 4, true) : 0;
 
   return {
-    format: 'PCM',
+    format: formatName,
     sampleRate,
     bitDepth,
     channels,

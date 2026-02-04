@@ -9,6 +9,8 @@ import type { MidiEvent } from '../../utils/midi';
 
 interface DrumKeyboardContainerProps {
   onFileUpload?: (index: number, file: File) => void;
+  isOrganizeMode: boolean;
+  setIsOrganizeMode: (value: boolean) => void;
 }
 
 /**
@@ -16,7 +18,7 @@ interface DrumKeyboardContainerProps {
  * provides identical pin / sticky behaviour while keeping the existing
  * DrumKeyboard component unchanged.
  */
-export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ onFileUpload }) => {
+export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ onFileUpload, isOrganizeMode, setIsOrganizeMode }) => {
   const { state } = useAppContext();
   const containerRef = useRef<HTMLDivElement>(null);
   const placeholderRef = useRef<HTMLDivElement>(null);
@@ -278,6 +280,38 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                   {loadedSamplesCount} / 24 loaded
                 </div>
                 <button
+                  onClick={() => setIsOrganizeMode(!isOrganizeMode)}
+                  style={{
+                    background: isOrganizeMode ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '3px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    fontSize: '0.875rem',
+                    color: 'var(--color-white)',
+                    transition: 'all 0.2s ease',
+                    fontFamily: '"Montserrat", "Arial", sans-serif',
+                    fontWeight: 500,
+                    minHeight: '32px',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-text-primary)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = isOrganizeMode
+                      ? 'var(--color-text-primary)'
+                      : 'var(--color-text-secondary)';
+                  }}
+                  title="Organize mode: bulk load samples by keyboard row"
+                  aria-pressed={isOrganizeMode}
+                >
+                  <i className="fas fa-layer-group" style={{ fontSize: '0.75rem' }}></i>
+                  <span>organize</span>
+                </button>
+                <button
                   onClick={() => {
                     setIsMidiSelectorVisible(!isMidiSelectorVisible);
                     const midiSelector = document.querySelector('.midi-device-selector') as HTMLElement;
@@ -374,12 +408,185 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
         </div>
 
         {/* Keyboard */}
-        <DrumKeyboard 
+        <DrumKeyboard
           onFileUpload={onFileUpload}
           selectedMidiChannel={selectedMidiChannel}
           midiState={midiState}
           onMidiEventExternal={onMidiEvent}
+          isOrganizeMode={isOrganizeMode}
         />
+
+        {/* Organize Mode Drop Zones */}
+        {isOrganizeMode && !isMobile && (
+          <div
+            style={{
+              display: 'flex',
+              gap: '1rem',
+              padding: '1rem',
+              borderTop: '1px solid var(--color-border-light)',
+            }}
+          >
+            {/* Lower Row (White Keys) Drop Zone */}
+            <div
+              role="region"
+              aria-label="Drop zone for lower row samples (LO1-LO14)"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = 'var(--color-text-primary)';
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+
+                const files = Array.from(e.dataTransfer.files).filter(
+                  (file) => file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
+                );
+
+                // White key indices for both octaves (A, S, D, F, G, H, J)
+                const whiteKeyIndices = [
+                  0, 2, 4, 6, 7, 9, 11,    // Octave 0
+                  12, 14, 16, 18, 19, 21, 23, // Octave 1
+                ];
+
+                files.forEach((file, index) => {
+                  if (index < whiteKeyIndices.length && onFileUpload) {
+                    onFileUpload(whiteKeyIndices[index], file);
+                  }
+                });
+              }}
+              style={{
+                flex: 1,
+                border: '2px dashed var(--color-border-medium)',
+                borderRadius: '6px',
+                padding: '2rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                minHeight: '120px',
+              }}
+            >
+              <i
+                className="fas fa-file-audio"
+                style={{ fontSize: '2rem', color: 'var(--color-text-secondary)' }}
+              ></i>
+              <div
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  color: 'var(--color-text-primary)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Drop lower row here
+              </div>
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--color-text-secondary)',
+                  textAlign: 'center',
+                }}
+              >
+                LO1–LO14 (bottom row keys)
+                <br />
+                Up to 14 files
+              </div>
+            </div>
+
+            {/* Upper Row (Black Keys) Drop Zone */}
+            <div
+              role="region"
+              aria-label="Drop zone for upper row samples (UP1-UP10)"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = 'var(--color-text-primary)';
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = 'var(--color-border-medium)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+
+                const files = Array.from(e.dataTransfer.files).filter(
+                  (file) => file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
+                );
+
+                // Black key indices for both octaves (W, E, R, Y, U)
+                const blackKeyIndices = [
+                  1, 3, 5, 8, 10,       // Octave 0
+                  13, 15, 17, 20, 22,   // Octave 1
+                ];
+
+                files.forEach((file, index) => {
+                  if (index < blackKeyIndices.length && onFileUpload) {
+                    onFileUpload(blackKeyIndices[index], file);
+                  }
+                });
+              }}
+              style={{
+                flex: 1,
+                border: '2px dashed var(--color-border-medium)',
+                borderRadius: '6px',
+                padding: '2rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                minHeight: '120px',
+              }}
+            >
+              <i
+                className="fas fa-file-audio"
+                style={{ fontSize: '2rem', color: 'var(--color-text-secondary)' }}
+              ></i>
+              <div
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  color: 'var(--color-text-primary)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Drop upper row here
+              </div>
+              <div
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--color-text-secondary)',
+                  textAlign: 'center',
+                }}
+              >
+                UP1–UP10 (top row keys)
+                <br />
+                Up to 10 files
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

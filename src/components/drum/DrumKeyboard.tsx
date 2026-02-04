@@ -45,14 +45,54 @@ const drumKeyMap = [
   },
 ];
 
+// Organize mode label mapping
+// White key indices (lower row) in order
+const lowerIndices = [0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23];
+// Black key indices (upper row) in order
+const upperIndices = [1, 3, 5, 8, 10, 13, 15, 17, 20, 22];
+
+// Short labels for keyboard: "LO1"-"LO14", "UP1"-"UP10"
+const getOrganizeModeLabel = (idx: number): string => {
+  const lowerPos = lowerIndices.indexOf(idx);
+  if (lowerPos !== -1) {
+    return `LO${lowerPos + 1}`;
+  }
+
+  const upperPos = upperIndices.indexOf(idx);
+  if (upperPos !== -1) {
+    return `UP${upperPos + 1}`;
+  }
+
+  return `${idx + 1}`; // Fallback
+};
+
+// Full labels for sample table: "lower 1"-"lower 14", "upper 1"-"upper 10"
+const getOrganizeModeLabelFull = (idx: number): string => {
+  const lowerPos = lowerIndices.indexOf(idx);
+  if (lowerPos !== -1) {
+    return `lower ${lowerPos + 1}`;
+  }
+
+  const upperPos = upperIndices.indexOf(idx);
+  if (upperPos !== -1) {
+    return `upper ${upperPos + 1}`;
+  }
+
+  return `${idx + 1}`; // Fallback
+};
+
+// Export for use in sample table
+export { getOrganizeModeLabel, getOrganizeModeLabelFull };
+
 interface DrumKeyboardProps {
   onFileUpload?: (index: number, file: File) => void;
   selectedMidiChannel?: number;
   midiState?: WebMidiState;
   onMidiEventExternal?: WebMidiHookReturn['onMidiEvent'];
+  isOrganizeMode?: boolean;
 }
 
-export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: externalMidiState, onMidiEventExternal }: DrumKeyboardProps = {}) {
+export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: externalMidiState, onMidiEventExternal, isOrganizeMode = false }: DrumKeyboardProps = {}) {
   const { state } = useAppContext();
   const [currentOctave, setCurrentOctave] = useState(0);
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set()); // Format: "keyChar:octave" e.g., "A:0", "W:1"
@@ -437,7 +477,8 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
       isActiveOctave: currentOctave === octave,
       showKeyboardLabels: currentOctave === octave && !isMidiConnected,
       isMobile,
-      keyWidth
+      keyWidth,
+      isOrganizeMode,
     };
   };
 
@@ -448,20 +489,21 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
     createKeyProps(keyChar, octave, true, circleOffset);
 
   // OP-XY key component with exact 1:1 and 1:1.5 ratios
-  const OPXYKey = ({ 
-    keyChar, 
-    mapping, 
+  const OPXYKey = ({
+    keyChar,
+    mapping,
     octave, // Add octave to the props
-    isPressed, 
+    isPressed,
     isLarge = false,
     circleOffset = 'center', // 'left', 'right', or 'center'
     isActiveOctave = true,
     showKeyboardLabels = true,
     isMobile = false,
-    keyWidth = 56
-  }: { 
-    keyChar: string; 
-    mapping?: { label: string; idx: number }; 
+    keyWidth = 56,
+    isOrganizeMode = false,
+  }: {
+    keyChar: string;
+    mapping?: { label: string; idx: number };
     octave: number; // Add octave to the type
     isPressed: boolean;
     isLarge?: boolean;
@@ -470,6 +512,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
     showKeyboardLabels?: boolean;
     isMobile?: boolean;
     keyWidth?: number;
+    isOrganizeMode?: boolean;
   }) => {
     const hasContent = mapping && state.drumSamples[mapping.idx]?.isLoaded;
     const isActive = hasContent; // Key is only active when it has content
@@ -703,7 +746,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
             </div>
           </div>
           
-          {/* Drum label overlay - always visible */}
+          {/* Drum label overlay - shows organize mode labels when active */}
           {mapping && (
             <div style={{
               position: 'absolute',
@@ -717,7 +760,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
               pointerEvents: 'none',
               zIndex: 2
             }}>
-              <div 
+              <div
                 id={`drum-key-${mapping.idx}-${octave}`}
                 style={{
                   backgroundColor: 'var(--color-border-primary)', // slate from theme
@@ -730,7 +773,7 @@ export function DrumKeyboard({ onFileUpload, selectedMidiChannel, midiState: ext
                   letterSpacing: '0.5px'
                 }}
               >
-                {mapping.label}
+                {isOrganizeMode ? getOrganizeModeLabel(mapping.idx) : mapping.label}
               </div>
             </div>
           )}
